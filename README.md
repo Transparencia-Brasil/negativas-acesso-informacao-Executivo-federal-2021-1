@@ -13,5 +13,5 @@
 * **Análise dos dados e redação:** Raul de Sá Durlo.
 * **Supervisão:** Marina Atoji e Juliana Sakai.
 * **Direção Executiva:** Manoel Galdino.
-* Agradecimentos ao [Reinaldo Chaves](https://github.com/reichaves), que contribui com o código para a estração dos dados e os *insights* para as análises iniciais.
+* Agradecimentos ao [Reinaldo Chaves](https://github.com/reichaves), que contribuiu com o código para a estração dos dados e os *insights* para as análises iniciais.
 
