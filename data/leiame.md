@@ -8,19 +8,19 @@ Para gerar os gráficos, separamos os datasets em .xlsx:
 * Faça o download [por aqui].
 
 **Grafico 1:**
-pedidos_por_mes.xlsx
+* `pedidos_por_mes.xlsx`
 
 **Grafico 2:**
-acessos_concedidos_mesmo_periodo.xlsx
-pedidos_mesmo_periodo.xlsx
-indice_respostas_concedidas.xlsx
+* `acessos_concedidos_mesmo_periodo.xlsx`  
+* `pedidos_mesmo_periodo.xlsx`  
+* `indice_respostas_concedidas.xlsx`
 
 **Gráfico 3:**
-respostas_comuns.xlsx
-respostas_comuns_gov.xlsx"
+* `respostas_comuns.xlsx`
+* `respostas_comuns_gov.xlsx`
 
 **Gráfico 4:**
-controversos2.xlsx
+* `controversos2.xlsx`
 
 **Grafico 5:**
-recursos_por_instancia_e_resposta.xlsx
+* `recursos_por_instancia_e_resposta.xlsx`
