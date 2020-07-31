@@ -1,7 +1,7 @@
 # Análise das negativas de acesso a informação no Governo Federal.
 
 * Site do e-SIC - [clique aqui](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx)
-* Código para download dos dados do site do e-SIC - [clique aqui](/code/download_dados_cgu.ipynb)
+* Código para preparar os arquivos `xml` com os dados do site do e-SIC - [clique aqui](/code/download_dados_cgu.ipynb)
 * Dicionário de variáveis - [clique aqui](http://www.consultaesic.cgu.gov.br/arquivosRelatorios/PedidosRespostas/Dicionario-Dados-Exportacao.txt)
 * Documentação do código que gera os resultados da análise - [clique aqui](/report/relatorio_bases_cgu.md)
 * Planilhas em excel para reproduzir somente os gráficos - [leia aqui](/data/leiame.md) depois [baixe aqui.](/data)
