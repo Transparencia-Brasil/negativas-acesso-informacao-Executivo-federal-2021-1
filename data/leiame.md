@@ -1,4 +1,4 @@
-Os dados são grandes para subir no github, mas você pode baixar os arquivos em xml no [site do e-SIC](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx)
+Os dados são grandes para subir no github, mas você pode baixar os arquivos em `xml` no [site do e-SIC](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx)
 e gerar os arquivos `pedidos_cgu.csv` e `recursos_cgu.csv` com o arquivo `code/download_dados_cgu.ipynb`
 
 :smiley:
