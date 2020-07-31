@@ -73,7 +73,7 @@ nome_obj <- function(x) print(deparse(substitute(x)))
     do Governo Federal. Optou-se pela manipulação dos arquivos em `xml`.
 
   - O código para extração e tratamento dos arquivos `xml` estão
-    disponibilizados [neste script do Jupyter Notebook.]()
+    disponibilizados [neste script do Jupyter Notebook.](/code/download_dados_cgu.ipynb)
 
   - Na página de downloads do e-SIC também é possível consultar um
     [Dicionário de
