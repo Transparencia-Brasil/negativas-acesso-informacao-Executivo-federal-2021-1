@@ -5,7 +5,7 @@ e gerar os arquivos `pedidos_cgu.csv` e `recursos_cgu.csv` com o arquivo `code/d
 
 Para gerar os gráficos, separamos os datasets em .xlsx:
 
-* Faça o download [por aqui].
+* Faça o download [por aqui](/data).
 
 **Grafico 1:**
 * `pedidos_por_mes.xlsx`
