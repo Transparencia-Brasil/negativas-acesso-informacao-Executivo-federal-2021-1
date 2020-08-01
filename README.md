@@ -4,7 +4,7 @@
 * Código para preparar os arquivos `xml` com os dados do site do e-SIC - [clique aqui](/code/download_dados_cgu.ipynb)
 * Dicionário de variáveis - [clique aqui](http://www.consultaesic.cgu.gov.br/arquivosRelatorios/PedidosRespostas/Dicionario-Dados-Exportacao.txt)
 * Documentação do código que gera os resultados da análise - [clique aqui](/report/relatorio_bases_cgu.md)
-* Planilhas em excel para reproduzir somente os gráficos - [leia aqui](/data/leiame.md) depois [baixe aqui.](/data)
+* Planilhas em excel para reproduzir somente os gráficos - [clique aqui.](/data)
 * Relatório Final - [clique aqui](https://github.com/rdurl0/negativas-acesso-informacao-Executivo-feredal/blob/master/report/An%C3%A1lise%20das%20negativas%20de%20acesso%20a%20informa%C3%A7%C3%A3o%20no%20Governo%20Federal.pdf)
 
 ## Elaboração:
