@@ -5,20 +5,18 @@ e gerar os arquivos `pedidos_cgu.csv` e `recursos_cgu.csv` com o arquivo `code/d
 
 Para gerar os gráficos, separamos os datasets em .xlsx:
 
-* Faça o download [por aqui](/data).
-
 **Grafico 1:**
-* `pedidos_por_mes.xlsx`
+* `pedidos_por_mes.xlsx` - [download](data/pedidos_por_mes.xlsx)
 
 **Grafico 2:**
-* `indice_respostas_concedidas.xlsx`
+* `indice_respostas_concedidas.xlsx` - [download](data/indice_respostas_concedidas.xlsx)
 
 **Gráfico 3:**
-* `respostas_comuns.xlsx`
-* `respostas_comuns_gov.xlsx`
+* `respostas_comuns.xlsx` - [download](data/respostas_comuns.xlsx)
+* `respostas_comuns_gov.xlsx` - [download](data/respostas_comuns_gov.xlsx)
 
 **Gráfico 4:**
-* `controversos2.xlsx`
+* `controversos2.xlsx` - [download](data/controversos2.xlsx)
 
 **Grafico 5:**
-* `recursos_por_instancia_e_resposta.xlsx`
+* `recursos_por_instancia_e_resposta.xlsx` - [download](data/recursos_por_instancia_e_resposta.xlsx)
