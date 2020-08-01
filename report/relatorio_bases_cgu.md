@@ -1,35 +1,24 @@
 Análise das negativas de acesso a informação no Governo Federal
 ================
 
-  - [Equipe](#equipe)
   - [Destaques](#destaques)
-  - [Dados e bibliotecas:](#dados-e-bibliotecas)
+  - [Bibliotecas:](#bibliotecas)
       - [Base Pedidos](#base-pedidos)
       - [Recursos](#recursos)
-      - [Periodicidade](#periodicidade)
   - [Análises para o relatório](#análises-para-o-relatório)
       - [Índice de acessos concedidos](#índice-de-acessos-concedidos)
       - [Repostas mais comuns na comparação entre os
         governos](#repostas-mais-comuns-na-comparação-entre-os-governos)
       - [Alegações controversas](#alegações-controversas)
       - [Recursos](#recursos-1)
-  - [Salva em `xlsx`](#salva-em-xlsx)
-
-## Equipe
-
-Análise dos dados e redação: Raul de Sá Durlo
-
-Supervisão: Marina Atoji e Juliana Sakai
-
-Direção Executiva: Manoel Galdino.
-
-Agradecimentos ao [Reinaldo Chaves](https://github.com/reichaves), que
-contribui com o código para a extração dos dados e *insights* para as
-análises iniciais.
-
------
+  - [Resultados em planilha excel
+    (`xlsxl`)](#resultados-em-planilha-excel-xlsxl)
 
 ## Destaques
+
+**Periodicidade:** De 01/01/2016 até 30/06/2020. Este período cobre o
+final do segundo mandato de Dilma Rousseff, o mandato de Michel Temer e
+o mandato de Jair Bolsonaro até junho de 2020.
 
 Os resultados da análise são destacados a seguir:
 
@@ -37,10 +26,12 @@ Os resultados da análise são destacados a seguir:
     relação ao total de pedidos realizados. A taxa de acessos
     concedidos em 2020 foi de 58% ante uma média de 71,8% verificada nos
     anos anteriores (2016, 2019, 2018 e 2019).
+
   - **O governo Bolsonaro apresenta a pior proporção de acessos
     concedidos sobre o total de respostas** aos pedidos: 65%, contra 73%
     de acessos concedidos durante o governo Temer e 71% no final do
     governo Dilma.
+
   - **A proporção de acessos negados sobre o total de respostas aos
     pedidos aumentou no governo Bolsonaro:** foram 7%, comparados aos 6%
     registrados nos governos Dilma e Temer. Sete dos nove termos
@@ -48,15 +39,28 @@ Os resultados da análise são destacados a seguir:
     crescimento durante o governo Bolsonaro: Trabalho adicional,
     Fishing, Desproporcional, Desarrazoado, Pedido genérico, Dados
     sigilosos, Dados pessoais.
+
   - **O encaminhamento de pedidos feitos via e-SIC à Ouvidoria (e-Ouv)
     se tornou recorrente** e cresceu rapidamente nos últimos meses,
     chegando a 7% do total de respostas. Um dos motivos pode ser a
     pandemia e a criação do auxílio emergencial - cidadãos usaram o
     e-SIC com frequência para tentar tirar dúvidas sobre o benefício.
 
+  - Os dados foram baixados do portal do
+    [e-SIC](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx)
+    do Governo Federal. Optou-se pela manipulação dos arquivos em `xml`.
+
+  - O código para extração e tratamento dos arquivos `xml` estão
+    disponibilizados [neste script do Jupyter
+    Notebook.](/code/download_dados_cgu.ipynb)
+
+  - Na página de downloads do e-SIC também é possível consultar um
+    [Dicionário de
+    dados.](http://www.consultaesic.cgu.gov.br/arquivosRelatorios/PedidosRespostas/Dicionario-Dados-Exportacao.txt)
+
 -----
 
-## Dados e bibliotecas:
+## Bibliotecas:
 
 ``` r
 library(tidyverse)
@@ -64,20 +68,7 @@ library(lubridate)
 library(ggtext)
 library(patchwork)
 library(xlsx)
-
-nome_obj <- function(x) print(deparse(substitute(x))) 
 ```
-
-  - Os dados foram baixados do portal do
-    [e-SIC](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx)
-    do Governo Federal. Optou-se pela manipulação dos arquivos em `xml`.
-
-  - O código para extração e tratamento dos arquivos `xml` estão
-    disponibilizados [neste script do Jupyter Notebook.](/code/download_dados_cgu.ipynb)
-
-  - Na página de downloads do e-SIC também é possível consultar um
-    [Dicionário de
-    dados.](http://www.consultaesic.cgu.gov.br/arquivosRelatorios/PedidosRespostas/Dicionario-Dados-Exportacao.txt)
 
 -----
 
@@ -115,7 +106,7 @@ Inspeciona:
 
 ``` r
 glimpse(pedidos_cgu)
-#> Rows: 435,290
+#> Rows: 439,973
 #> Columns: 24
 #> $ IdPedido                             <dbl> 345365, 345366, 345367, 345368...
 #> $ ProtocoloPedido                      <chr> "99901000001201633", "99902000...
@@ -186,7 +177,7 @@ Inspeciona:
 
 ``` r
 glimpse(recursos_cgu)
-#> Rows: 45,613
+#> Rows: 46,288
 #> Columns: 20
 #> $ IdRecurso                            <dbl> 40311, 40312, 40330, 40452, 40...
 #> $ DescRecurso                          <chr> "Prezados, Recorro da resposta...
@@ -212,26 +203,11 @@ glimpse(recursos_cgu)
 
 -----
 
-### Periodicidade
-
-As bases de dados vão de 2016-01-01 até 2020-07-22. Este período cobre o
-final do segundo mandato de Dilma Rousseff, o mandato de Michel Temer e
-o mandato de Jair Bolsonaro até julho de 2020.
-
------
-
 ## Análises para o relatório
 
 ### Índice de acessos concedidos
 
-  - Gráfico 1: Quantidade *registrada* de pedidos de acesso a
-    informação, em milhares (mês a mês).
-  - gráfico 2: Índice de acessos concedidos (ano a ano)
-      - 2a: Quantidade de pedidos realizados, em milhares;
-      - 2b: Quantidade de acessos concedidos, em milhares;
-      - 2c: Índice de acessos concedidos, em %.
-
-#### Gráfico 1: Pedidos mês a mês
+#### Gráfico 1: Quantidade *registrada* de pedidos de acesso a informação, em milhares (mês a mês).
 
 Prepara a base de pedidos para gerar o gráfico:
 
@@ -242,7 +218,7 @@ pedidos_por_mes <- pedidos_cgu %>%
   ungroup()
 
 glimpse(pedidos_por_mes)
-#> Rows: 54
+#> Rows: 55
 #> Columns: 3
 #> $ DataRegistro          <date> 2016-01-01, 2016-02-01, 2016-03-01, 2016-04-...
 #> $ governo_que_registrou <fct> Dilma II, Dilma II, Dilma II, Dilma II, Dilma...
@@ -285,18 +261,20 @@ Visualiza:
 p
 ```
 
-<img src="relatorio_bases_cgu_files/figure-gfm/unnamed-chunk-9-1.png" style="display: block; margin: auto;" />
+<img src="relatorio_bases_cgu_files/figure-gfm/unnamed-chunk-8-1.png" style="display: block; margin: auto;" />
 
 Guarda evidencia:
 
 ``` r
-objetos <- list()
-objetos <- list("pedidos_por_mes" = pedidos_por_mes) %>% append(objetos)
+# Grafico 1
+write.xlsx(as.data.frame(pedidos_por_mes), "../data/pedidos_por_mes.xlsx")
 ```
 
------
+#### gráfico 2: Índice de acessos concedidos (ano a ano)
 
-#### Gráfico 2: Índice de acessos concedidos (ano a ano)
+  - 2a: Quantidade de pedidos realizados, em milhares;
+  - 2b: Quantidade de acessos concedidos, em milhares;
+  - 2c: Índice de acessos concedidos, em %.
 
 Prepara a base de pedidos para gerar o gráfico:
 
@@ -421,20 +399,20 @@ Visualiza:
 p1 + p2 + p3
 ```
 
-<img src="relatorio_bases_cgu_files/figure-gfm/unnamed-chunk-13-1.png" style="display: block; margin: auto;" />
+<img src="relatorio_bases_cgu_files/figure-gfm/unnamed-chunk-12-1.png" style="display: block; margin: auto;" />
 
 Salva evidencias
 
 ``` r
-objetos <- list("pedidos_mesmo_periodo" = pedidos_mesmo_periodo,
-                "acessos_concedidos_mesmo_periodo" = acessos_concedidos_mesmo_periodo,
-                "indice_respostas_concedidas" = indice_respostas_concedidas) %>%
-  append(objetos)
+# Grafico 2
+write.xlsx(as.data.frame(indice_respostas_concedidas), "../data/indice_respostas_concedidas.xlsx")
 ```
 
 -----
 
 ### Repostas mais comuns na comparação entre os governos
+
+#### Gráfico 3: Tipos de respostas mais comuns fornecidas pelo Executivo federal
 
 Prepara a base que gera o gráfico:
 
@@ -447,15 +425,17 @@ respostas_comuns <- pedidos_cgu %>%
   ungroup() %>%
   group_by(governo_que_respondeu) %>%
   ungroup() %>%
-  mutate(TipoResposta = case_when(
-    TipoResposta == "Órgão não tem competência para responder sobre o assunto" ~
-      "Órgão não tem competência \npara responder sobre o assunto",
-    TRUE ~ TipoResposta
-  ))  %>%
+  mutate(
+    TipoResposta = case_when(
+      TipoResposta == "Órgão não tem competência para responder sobre o assunto" ~
+        "Órgão não tem competência \npara responder sobre o assunto",
+      TRUE ~ TipoResposta
+      )
+    ) %>%
   mutate(TipoResposta = fct_reorder(TipoResposta, qt/100, .desc = T))
 
 glimpse(respostas_comuns)
-#> Rows: 424
+#> Rows: 432
 #> Columns: 4
 #> $ DataResposta          <date> 2016-01-01, 2016-01-01, 2016-01-01, 2016-01-...
 #> $ TipoResposta          <fct> Acesso Concedido, Acesso Negado, Acesso Parci...
@@ -473,7 +453,7 @@ glimpse(aux)
 #> Rows: 3
 #> Columns: 2
 #> $ governo_que_respondeu <fct> Dilma II, Temer, Bolsonaro
-#> $ qt                    <int> 32011, 235966, 162395
+#> $ qt                    <int> 32011, 235966, 171996
 
 # finaliza rcom taxa de tipo/total de respostas --------------------------------
 respostas_comuns_gov <- respostas_comuns %>% 
@@ -506,7 +486,7 @@ rect_gov<- respostas_comuns %>%
             ymin = 0,
             ymax = Inf) %>%
   ungroup() %>%
-  mutate(xmax = lead(xmin, default = floor_date(Sys.Date(), unit = "month")-months(1)))
+  mutate(xmax = lead(xmin, default = floor_date(Sys.Date(), unit = "month") - months(1)))
 
 # plot esquerdo ----------------------------------------------------------------
 p1 <- respostas_comuns %>%
@@ -572,18 +552,21 @@ p2 <- respostas_comuns_gov %>%
 
 Visualiza:
 
-<img src="relatorio_bases_cgu_files/figure-gfm/unnamed-chunk-17-1.png" style="display: block; margin: auto;" />
+<img src="relatorio_bases_cgu_files/figure-gfm/unnamed-chunk-16-1.png" style="display: block; margin: auto;" />
 
 Salva evidência:
 
 ``` r
-objetos <- list("respostas_comuns" = respostas_comuns,
-                "respostas_comuns_gov" = respostas_comuns_gov) %>% append(objetos)
+# Grafico 3
+write.xlsx(as.data.frame(respostas_comuns), "../data/respostas_comuns.xlsx")
+write.xlsx(as.data.frame(respostas_comuns_gov), "../data/respostas_comuns_gov.xlsx")
 ```
 
 -----
 
 ### Alegações controversas
+
+#### Gráfico: Termos controversos nas negativas de acesso a informação do governo Federal
 
 Prepara base que gera o gráfico:
 
@@ -597,7 +580,7 @@ aux_mes <- pedidos_cgu %>%
   ungroup()
 
 glimpse(aux_mes)
-#> Rows: 54
+#> Rows: 55
 #> Columns: 2
 #> $ DataResposta              <date> 2016-01-01, 2016-02-01, 2016-03-01, 2016...
 #> $ total_acessos_negados_mes <int> 181, 284, 399, 427, 587, 511, 298, 321, 2...
@@ -614,7 +597,7 @@ glimpse(aux_gov)
 #> Rows: 3
 #> Columns: 2
 #> $ governo_que_respondeu     <fct> Dilma II, Temer, Bolsonaro
-#> $ total_acessos_negados_gov <int> 1878, 14325, 11484
+#> $ total_acessos_negados_gov <int> 1878, 14325, 12199
 
 # termos controversos ----------------------------------------------------------
 termos_controversos <- c(
@@ -685,7 +668,7 @@ controversos2 <- controversos2 %>%
 
 # inspeciona
 glimpse(controversos2)
-#> Rows: 447
+#> Rows: 455
 #> Columns: 8
 #> $ DataResposta              <date> 2016-01-01, 2016-01-01, 2016-01-01, 2016...
 #> $ governo_que_respondeu     <fct> Dilma II, Dilma II, Dilma II, Dilma II, D...
@@ -780,13 +763,13 @@ p2 <- controversos2 %>%
 
 Visualiza:
 
-<img src="relatorio_bases_cgu_files/figure-gfm/unnamed-chunk-21-1.png" style="display: block; margin: auto;" />
+<img src="relatorio_bases_cgu_files/figure-gfm/unnamed-chunk-20-1.png" style="display: block; margin: auto;" />
 
 Guarda evidência:
 
 ``` r
-objetos <- list("controversos2" = controversos2) %>%
-  append(objetos)
+# Grafico 4
+write.xlsx(as.data.frame(controversos2), "../data/controversos2.xlsx" )
 ```
 
 -----
@@ -796,6 +779,7 @@ objetos <- list("controversos2" = controversos2) %>%
 Prepara a base que gera o gráfico:
 
 ``` r
+#tipo de resposta por recurso e por instância ----------------------------------
 recursos_por_instancia_e_resposta <- recursos_cgu %>%
   filter(month(DataRegistro) < 7) %>%
   group_by(governo_que_registrou, TipoResposta, Instancia) %>%
@@ -810,6 +794,7 @@ glimpse(recursos_por_instancia_e_resposta)
 #> $ Instancia                  <fct> Primeira Instância, Segunda Instância, C...
 #> $ qt_tipo_repostas_instancia <int> 927, 146, 130, 117, 30, 33, 723, 177, 54...
 
+# total respostas por instância ------------------------------------------------
 recursos_por_instancia <- recursos_por_instancia_e_resposta %>% 
   group_by(governo_que_registrou, Instancia) %>%
   summarise(qt_respostas_instancia = sum(qt_tipo_repostas_instancia))
@@ -874,49 +859,18 @@ p <-  recursos_por_instancia_e_resposta %>%
 
 Visualiza:
 
-<img src="relatorio_bases_cgu_files/figure-gfm/unnamed-chunk-25-1.png" style="display: block; margin: auto;" />
+<img src="relatorio_bases_cgu_files/figure-gfm/unnamed-chunk-24-1.png" style="display: block; margin: auto;" />
 
-``` r
-objetos <- list("recursos_por_instancia_e_resposta" = recursos_por_instancia_e_resposta) %>%
-  append(objetos)
-```
-
-## Salva em `xlsx`
-
-``` r
-names(objetos)
-#> [1] "recursos_por_instancia_e_resposta" "controversos2"                    
-#> [3] "respostas_comuns"                  "respostas_comuns_gov"             
-#> [5] "pedidos_mesmo_periodo"             "acessos_concedidos_mesmo_periodo" 
-#> [7] "indice_respostas_concedidas"       "pedidos_por_mes"
-list(objetos) %>% map(~paste0("../data/", names(.x), ".xlsx"))
-#> [[1]]
-#> [1] "../data/recursos_por_instancia_e_resposta.xlsx"
-#> [2] "../data/controversos2.xlsx"                    
-#> [3] "../data/respostas_comuns.xlsx"                 
-#> [4] "../data/respostas_comuns_gov.xlsx"             
-#> [5] "../data/pedidos_mesmo_periodo.xlsx"            
-#> [6] "../data/acessos_concedidos_mesmo_periodo.xlsx" 
-#> [7] "../data/indice_respostas_concedidas.xlsx"      
-#> [8] "../data/pedidos_por_mes.xlsx"
-```
+Salva evidência:
 
 ``` r
 # Grafico 5
 write.xlsx(as.data.frame(recursos_por_instancia_e_resposta), "../data/recursos_por_instancia_e_resposta.xlsx" )
-
-# Grafico 4
-write.xlsx(as.data.frame(controversos2), "../data/controversos2.xlsx" )
-
-# Grafico 3
-write.xlsx(as.data.frame(respostas_comuns), "../data/respostas_comuns.xlsx")
-write.xlsx(as.data.frame(respostas_comuns_gov), "../data/respostas_comuns_gov.xlsx")
-
-# Grafico 2
-write.xlsx(as.data.frame(pedidos_mesmo_periodo), "../data/pedidos_mesmo_periodo.xlsx")
-write.xlsx(as.data.frame(acessos_concedidos_mesmo_periodo), "../data/acessos_concedidos_mesmo_periodo.xlsx")
-write.xlsx(as.data.frame(indice_respostas_concedidas), "../data/indice_respostas_concedidas.xlsx")
-
-# Grafico 1
-write.xlsx(as.data.frame(pedidos_por_mes), "../data/pedidos_por_mes.xlsx")
 ```
+
+## Resultados em planilha excel (`xlsxl`)
+
+Para gerar os gráficos, separamos os datasets em .xlsx: [leia
+aqui](/data/leiame.md) depois [baixe aqui.](/data)
+
+**FIM** :smiley:

@@ -11,8 +11,6 @@ Para gerar os gráficos, separamos os datasets em .xlsx:
 * `pedidos_por_mes.xlsx`
 
 **Grafico 2:**
-* `acessos_concedidos_mesmo_periodo.xlsx`  
-* `pedidos_mesmo_periodo.xlsx`  
 * `indice_respostas_concedidas.xlsx`
 
 **Gráfico 3:**

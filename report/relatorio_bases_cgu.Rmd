@@ -187,7 +187,7 @@ p
 
 Guarda evidencia:
 
-```{r}
+```{r  eval=FALSE}
 # Grafico 1
 write.xlsx(as.data.frame(pedidos_por_mes), "../data/pedidos_por_mes.xlsx")
 ```
@@ -309,7 +309,7 @@ p1 + p2 + p3
 
 Salva evidencias
 
-```{r}
+```{r  eval=FALSE}
 # Grafico 2
 write.xlsx(as.data.frame(indice_respostas_concedidas), "../data/indice_respostas_concedidas.xlsx")
 ```
@@ -457,7 +457,7 @@ comb +
 
 Salva evidência:
 
-```{r}
+```{r eval = FALSE}
 # Grafico 3
 write.xlsx(as.data.frame(respostas_comuns), "../data/respostas_comuns.xlsx")
 write.xlsx(as.data.frame(respostas_comuns_gov), "../data/respostas_comuns_gov.xlsx")
@@ -661,7 +661,7 @@ comb + plot_layout(guides = "collect")  + plot_annotation(
 
 Guarda evidência:
 
-```{r}
+```{r  eval=FALSE}
 # Grafico 4
 write.xlsx(as.data.frame(controversos2), "../data/controversos2.xlsx" )
 ```
@@ -673,6 +673,7 @@ write.xlsx(as.data.frame(controversos2), "../data/controversos2.xlsx" )
 Prepara a base que gera o gráfico:
 
 ```{r}
+#tipo de resposta por recurso e por instância ----------------------------------
 recursos_por_instancia_e_resposta <- recursos_cgu %>%
   filter(month(DataRegistro) < 7) %>%
   group_by(governo_que_registrou, TipoResposta, Instancia) %>%
@@ -680,6 +681,7 @@ recursos_por_instancia_e_resposta <- recursos_cgu %>%
 
 glimpse(recursos_por_instancia_e_resposta)
 
+# total respostas por instância ------------------------------------------------
 recursos_por_instancia <- recursos_por_instancia_e_resposta %>% 
   group_by(governo_que_registrou, Instancia) %>%
   summarise(qt_respostas_instancia = sum(qt_tipo_repostas_instancia))
@@ -736,7 +738,7 @@ p
 
 Salva evidência:
 
-```{r}
+```{r eval=FALSE}
 # Grafico 5
 write.xlsx(as.data.frame(recursos_por_instancia_e_resposta), "../data/recursos_por_instancia_e_resposta.xlsx" )
 ```
