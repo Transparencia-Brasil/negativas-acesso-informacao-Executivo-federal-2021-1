@@ -6,7 +6,7 @@ e gerar os arquivos `pedidos_cgu.csv` e `recursos_cgu.csv` com o arquivo `code/d
 Para gerar os gráficos, separamos os datasets em .xlsx:
 
 **Grafico 1:**
-* `pedidos_por_mes.xlsx` - [download](data/pedidos_por_mes.xlsx)
+* `pedidos_por_mes.xlsx` - [download](https://github.com/rdurl0/negativas-acesso-informacao-Executivo-feredal/blob/master/data/pedidos_por_mes.xlsx?raw=true)
 
 **Grafico 2:**
 * `indice_respostas_concedidas.xlsx` - [download](data/indice_respostas_concedidas.xlsx)
