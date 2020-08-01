@@ -1,3 +1,0 @@
-"0","pedidos_cgu <- read_csv(""../data/pedidos_cgu.csv"") "
-"2","Erro: '../data/pedidos_cgu.csv' does not exist in current working directory ('C:/Users/rauld/OneDrive/Documentos/[documentos]Raul/negativas-acesso-informacao-Executivo-feredal/report').
-"
