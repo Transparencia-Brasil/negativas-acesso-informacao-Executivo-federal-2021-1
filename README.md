@@ -11,8 +11,8 @@
 
 ### [Transparência Brasil](https://www.transparencia.org.br/)
 
-* **Análise dos dados e redação:** Raul de Sá Durlo.
+* **Análise dos dados e redação:** Raul Durlo.
 * **Supervisão:** Marina Atoji e Juliana Sakai.
 * **Direção Executiva:** Manoel Galdino.
-* Agradecimentos ao [Reinaldo Chaves](https://github.com/reichaves), que contribuiu com o código para a extração dos dados e *insights* para as análises iniciais.
+* Agradecimentos ao [Reinaldo Chaves](https://github.com/reichaves), que contribuiu com o código para a extração dos dados.
 
