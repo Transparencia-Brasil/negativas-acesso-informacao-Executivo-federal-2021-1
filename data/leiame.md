@@ -9,14 +9,14 @@ Para gerar os gráficos, separamos os datasets em .xlsx:
 * `pedidos_por_mes.xlsx` - [download](https://github.com/rdurl0/negativas-acesso-informacao-Executivo-feredal/blob/master/data/pedidos_por_mes.xlsx?raw=true)
 
 **Grafico 2:**
-* `indice_respostas_concedidas.xlsx` - [download](data/indice_respostas_concedidas.xlsx)
+* `indice_respostas_concedidas.xlsx` - [download](https://github.com/rdurl0/negativas-acesso-informacao-Executivo-feredal/blob/master/data/indice_respostas_concedidas.xlsx?raw=true)
 
 **Gráfico 3:**
-* `respostas_comuns.xlsx` - [download](data/respostas_comuns.xlsx)
-* `respostas_comuns_gov.xlsx` - [download](data/respostas_comuns_gov.xlsx)
+* `respostas_comuns.xlsx` - [download](https://github.com/rdurl0/negativas-acesso-informacao-Executivo-feredal/blob/master/data/respostas_comuns.xlsx?raw=true)
+* `respostas_comuns_gov.xlsx` - [download](https://github.com/rdurl0/negativas-acesso-informacao-Executivo-feredal/blob/master/data/respostas_comuns_gov.xlsx?raw=true)
 
 **Gráfico 4:**
-* `controversos2.xlsx` - [download](data/controversos2.xlsx)
+* `controversos2.xlsx` - [download](https://github.com/rdurl0/negativas-acesso-informacao-Executivo-feredal/blob/master/data/controversos2.xlsx?raw=true)
 
 **Grafico 5:**
-* `recursos_por_instancia_e_resposta.xlsx` - [download](data/recursos_por_instancia_e_resposta.xlsx)
+* `recursos_por_instancia_e_resposta.xlsx` - [download](https://github.com/rdurl0/negativas-acesso-informacao-Executivo-feredal/blob/master/data/recursos_por_instancia_e_resposta.xlsx?raw=true)
