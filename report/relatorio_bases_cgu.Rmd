@@ -88,7 +88,7 @@ glimpse(pedidos_cgu)
 
 ***
 
-### Recursos
+### Base Recursos
 
 Carrega e faz o tratamento da base de recursos do CGU:
 
@@ -670,6 +670,8 @@ write.xlsx(as.data.frame(controversos2), "../data/controversos2.xlsx" )
 
 ### Recursos 
 
+#### Gráfico 5: Respostas aos recursos, por instâncias e governo (em %)
+
 Prepara a base que gera o gráfico:
 
 ```{r}
@@ -732,7 +734,7 @@ p <-  recursos_por_instancia_e_resposta %>%
 
 Visualiza:
 
-```{r echo=FALSE, fig.width=20, fig.height=15}
+```{r fig.width=20, fig.height=15}
 p
 ```
 

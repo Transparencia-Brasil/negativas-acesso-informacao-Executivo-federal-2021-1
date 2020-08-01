@@ -4,13 +4,13 @@ Análise das negativas de acesso a informação no Governo Federal
   - [Destaques](#destaques)
   - [Bibliotecas:](#bibliotecas)
       - [Base Pedidos](#base-pedidos)
-      - [Recursos](#recursos)
+      - [Base Recursos](#base-recursos)
   - [Análises para o relatório](#análises-para-o-relatório)
       - [Índice de acessos concedidos](#índice-de-acessos-concedidos)
       - [Repostas mais comuns na comparação entre os
         governos](#repostas-mais-comuns-na-comparação-entre-os-governos)
       - [Alegações controversas](#alegações-controversas)
-      - [Recursos](#recursos-1)
+      - [Recursos](#recursos)
   - [Resultados em planilha excel
     (`xlsxl`)](#resultados-em-planilha-excel-xlsxl)
 
@@ -136,7 +136,7 @@ glimpse(pedidos_cgu)
 
 -----
 
-### Recursos
+### Base Recursos
 
 Carrega e faz o tratamento da base de recursos do CGU:
 
@@ -776,6 +776,8 @@ write.xlsx(as.data.frame(controversos2), "../data/controversos2.xlsx" )
 
 ### Recursos
 
+#### Gráfico 5: Respostas aos recursos, por instâncias e governo (em %)
+
 Prepara a base que gera o gráfico:
 
 ``` r
@@ -858,6 +860,10 @@ p <-  recursos_por_instancia_e_resposta %>%
 ```
 
 Visualiza:
+
+``` r
+p
+```
 
 <img src="relatorio_bases_cgu_files/figure-gfm/unnamed-chunk-24-1.png" style="display: block; margin: auto;" />
 
