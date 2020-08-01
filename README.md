@@ -1,4 +1,4 @@
-# Análise das negativas de acesso a informação no Governo Federal.
+# Análise das negativas de acesso a informação no governo Federal.
 
 * Site do e-SIC - [clique aqui](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx)
 * Código para preparar os arquivos `xml` com os dados do site do e-SIC - [clique aqui](/code/download_dados_cgu.ipynb)
