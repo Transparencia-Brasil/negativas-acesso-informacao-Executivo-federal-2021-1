@@ -77,7 +77,7 @@ pedidos_cgu <- pedidos_cgu %>%
     governo_que_registrou = factor(governo_que_registrou,
                                    levels = c("Dilma II", "Temer", "Bolsonaro"))
   ) %>%
-  filter(DataRegistro != floor_date(Sys.Date(), unit = "month"))
+  filter(DataRegistro != as_date("2020-07-01"))
 ```
 
 Inspeciona:
@@ -122,7 +122,7 @@ recursos_cgu <- recursos_cgu %>%
                                                    "Perda de objeto", "Perda de objeto parcial",
                                                    "Acolhimento", "NA"))
   ) %>%
-  filter(DataRegistro != floor_date(Sys.Date(), unit = "month"))
+  filter(DataRegistro != as_date("2020-07-01"))
 ```
 
 Inspeciona:
@@ -326,7 +326,7 @@ Prepara a base que gera o gráfico:
 ```{r}
 # tipo respostas mais comuns histórico -----------------------------------------
 respostas_comuns <- pedidos_cgu %>%
-  filter(DataResposta != floor_date(Sys.Date(), unit = "month")) %>%
+  filter(DataResposta != as_date("2020-07-01")) %>%
   group_by(DataResposta, TipoResposta, governo_que_respondeu) %>%
   summarise(qt = n()) %>%
   ungroup() %>%
@@ -345,7 +345,7 @@ glimpse(respostas_comuns)
 
 # respostas total por governo --------------------------------------------------
 aux <- respostas_comuns %>% 
-  filter(DataResposta != floor_date(Sys.Date(), unit = "month")) %>%
+  #filter(DataResposta != floor_date(Sys.Date(), unit = "month")) %>%
   group_by(governo_que_respondeu) %>%
   summarise(qt = sum(qt)) %>% 
   ungroup()
@@ -354,7 +354,7 @@ glimpse(aux)
 
 # finaliza rcom taxa de tipo/total de respostas --------------------------------
 respostas_comuns_gov <- respostas_comuns %>% 
-  filter(DataResposta != floor_date(Sys.Date(), unit = "month")) %>%
+  filter(DataResposta != as_date("2020-07-01")) %>%
   group_by(governo_que_respondeu, TipoResposta) %>%
   summarise(qt = sum(qt)) %>% 
   ungroup() %>%
@@ -376,7 +376,7 @@ rect_gov<- respostas_comuns %>%
             ymin = 0,
             ymax = Inf) %>%
   ungroup() %>%
-  mutate(xmax = lead(xmin, default = floor_date(Sys.Date(), unit = "month") - months(1)))
+  mutate(xmax = lead(xmin, default = floor_date(Sys.Date(), unit = "month") - months(2)))
 
 # plot esquerdo ----------------------------------------------------------------
 p1 <- respostas_comuns %>%
@@ -474,7 +474,7 @@ Prepara base que gera o gráfico:
 ```{r}
 # Total e pedidos para mês------------------------------------------------------
 aux_mes <- pedidos_cgu %>% 
-  filter(DataResposta != floor_date(Sys.Date(), unit = "month")) %>%
+  filter(DataResposta != as_date("2020-07-01")) %>%
   filter(TipoResposta == "Acesso Negado") %>%
   group_by(DataResposta) %>%
   summarise(total_acessos_negados_mes = n()) %>%
@@ -484,7 +484,7 @@ glimpse(aux_mes)
 
 # Total de acessos negados por governo------------------------------------------
 aux_gov <- pedidos_cgu %>%
-  filter(DataResposta != floor_date(Sys.Date(), unit = "month")) %>%
+  filter(DataResposta != as_date("2020-07-01")) %>%
   filter(TipoResposta == "Acesso Negado") %>%
   group_by(governo_que_respondeu) %>%
   summarise(total_acessos_negados_gov = n()) %>%
@@ -511,7 +511,7 @@ termos_controversos <- c(
 # tbl com termos controversos --------------------------------------------------
 controversos <- pedidos_cgu %>% 
   filter(TipoResposta == "Acesso Negado") %>%
-  filter(DataResposta != floor_date(Sys.Date(), unit = "month")) %>%
+  filter(DataResposta != as_date("2020-07-01")) %>%
   select(DataResposta, TipoResposta, Resposta, governo_que_respondeu, IdPedido) %>%
   filter(str_detect(tolower(Resposta), termos_controversos)) %>%
   mutate(
@@ -743,6 +743,142 @@ Salva evidência:
 ```{r eval=FALSE}
 # Grafico 5
 write.xlsx(as.data.frame(recursos_por_instancia_e_resposta), "../data/recursos_por_instancia_e_resposta.xlsx" )
+```
+
+
+### Recursos por instância e governo das negativas controversas
+
+
+```{r}
+# id's dos pedidos de resposta controversa:
+controversos_id <- controversos %>% distinct(IdPedido) %>% pull()
+
+# receberam resposta controversa e entraram com recurso:
+controversos_recurso <- recursos_cgu %>% filter(IdPedido %in% controversos_id)
+
+# id's dos que receberam resposta controversa e entraram com recurso:
+controversos_id_entraram_recurso <- controversos_recurso %>% distinct(IdRecurso) %>% pull()
+
+# Contagem
+qtde_controversos <- length(controversos_id)
+qtde_controversos_entraram_recurso <- length(controversos_id_entraram_recurso)
+
+qtde_controversos
+qtde_controversos_entraram_recurso
+qtde_controversos - qtde_controversos_entraram_recurso
+
+#tipo de resposta por recurso e por instância ----------------------------------
+recursos_por_instancia_e_resposta <- controversos_recurso %>%
+  filter(month(DataRegistro) < 7) %>%
+  group_by(governo_que_registrou, TipoResposta, Instancia) %>%
+  summarise(qt_tipo_repostas_instancia = n())
+
+# total respostas por instância ------------------------------------------------
+recursos_por_instancia <- recursos_por_instancia_e_resposta %>% 
+  group_by(governo_que_registrou, Instancia) %>%
+  summarise(qt_respostas_instancia = sum(qt_tipo_repostas_instancia))
+
+recursos_por_instancia_e_resposta <- recursos_por_instancia_e_resposta %>%
+  left_join(recursos_por_instancia, by = c("governo_que_registrou", "Instancia")) %>%
+  mutate(perc = round(qt_tipo_repostas_instancia / qt_respostas_instancia, 4))
+```
+
+
+```{r}
+p <- recursos_por_instancia_e_resposta %>% 
+  filter(Instancia != "Pedido de Revisão") %>%
+  ggplot() +
+  geom_bar(aes(x = fct_rev(TipoResposta), y = perc, fill = governo_que_registrou),
+           stat = "identity", position = "dodge", alpha = .7) +
+  coord_flip() +
+  facet_wrap(~Instancia, scales = "free", nrow = 3, ncol = 2) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Respostas aos recursos, por instância e governo, \ndas negativas controversas (em %)",
+    subtitle = NULL,
+    fill = NULL
+  ) +
+  theme_minimal() +
+  scale_fill_manual(
+    values = c("indianred", "gray60", "gray30"),
+    breaks = pedidos_por_mes %>% distinct(governo_que_registrou) %>% pull()
+  ) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  theme(
+    legend.position = "top",
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    axis.text = element_text(size = 24),
+    plot.title = element_text(hjust = .5, vjust = .5, size = 35),
+    plot.subtitle = element_text(hjust = .5, vjust = .5, size = 20),
+    strip.text.x = element_text(size = 26),
+    legend.text = element_text(size = 26)
+    
+  )
+```
+
+Visualiza:
+
+```{r fig.width=20, fig.height=15}
+p
+```
+
+#### Ano a ano
+
+```{r}
+#tipo de resposta por recurso e por instância (ano a ano) ----------------------
+recursos_por_instancia_e_resposta <- controversos_recurso %>%
+  filter(month(DataRegistro) < 7) %>%
+  group_by(ano = year(DataRegistro), TipoResposta, Instancia) %>%
+  summarise(qt_tipo_repostas_instancia = n())
+
+# total respostas por instância (ano a ano) ------------------------------------
+recursos_por_instancia <- recursos_por_instancia_e_resposta %>% 
+  group_by(ano, Instancia) %>%
+  summarise(qt_respostas_instancia = sum(qt_tipo_repostas_instancia))
+
+recursos_por_instancia_e_resposta <- recursos_por_instancia_e_resposta %>%
+  left_join(recursos_por_instancia, by = c("ano", "Instancia")) %>%
+  mutate(perc = round(qt_tipo_repostas_instancia / qt_respostas_instancia, 4))
+
+p <- recursos_por_instancia_e_resposta %>% 
+  filter(Instancia != "Pedido de Revisão") %>%
+  ggplot() +
+  geom_bar(aes(x = fct_rev(TipoResposta), y = perc, fill = factor(ano), color = "black"),
+           stat = "identity", position = "dodge", alpha = .7) +
+  coord_flip() +
+  facet_wrap(~Instancia, scales = "free", nrow = 3, ncol = 2) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Respostas aos recursos, por instâncias e ano (em %)",
+    subtitle = NULL,
+    fill = NULL
+  ) +
+  theme_minimal() +
+  # scale_fill_manual(
+  #   values = c("indianred", "gray60", "gray30"),
+  #   breaks = pedidos_por_mes %>% distinct(governo_que_registrou) %>% pull()
+  # ) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  theme(
+    legend.position = "top",
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    axis.text = element_text(size = 24),
+    plot.title = element_text(hjust = .5, vjust = .5, size = 35),
+    plot.subtitle = element_text(hjust = .5, vjust = .5, size = 20),
+    strip.text.x = element_text(size = 26),
+    legend.text = element_text(size = 26)
+    
+  )
+```
+
+Visualiza:
+
+```{r fig.width=20, fig.height=15}
+p
 ```
 
 ## Resultados em planilha excel (`xlsxl`)

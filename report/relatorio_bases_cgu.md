@@ -11,6 +11,8 @@ Análise das negativas de acesso a informação no Governo Federal
         governos](#repostas-mais-comuns-na-comparação-entre-os-governos)
       - [Alegações controversas](#alegações-controversas)
       - [Recursos](#recursos)
+      - [Recursos por instância e governo das negativas
+        controversas](#recursos-por-instância-e-governo-das-negativas-controversas)
   - [Resultados em planilha excel
     (`xlsxl`)](#resultados-em-planilha-excel-xlsxl)
 
@@ -99,14 +101,14 @@ pedidos_cgu <- pedidos_cgu %>%
     governo_que_registrou = factor(governo_que_registrou,
                                    levels = c("Dilma II", "Temer", "Bolsonaro"))
   ) %>%
-  filter(DataRegistro != floor_date(Sys.Date(), unit = "month"))
+  filter(DataRegistro != as_date("2020-07-01"))
 ```
 
 Inspeciona:
 
 ``` r
 glimpse(pedidos_cgu)
-#> Rows: 439,973
+#> Rows: 435,290
 #> Columns: 24
 #> $ IdPedido                             <dbl> 345365, 345366, 345367, 345368...
 #> $ ProtocoloPedido                      <chr> "99901000001201633", "99902000...
@@ -170,14 +172,14 @@ recursos_cgu <- recursos_cgu %>%
                                                    "Perda de objeto", "Perda de objeto parcial",
                                                    "Acolhimento", "NA"))
   ) %>%
-  filter(DataRegistro != floor_date(Sys.Date(), unit = "month"))
+  filter(DataRegistro != as_date("2020-07-01"))
 ```
 
 Inspeciona:
 
 ``` r
 glimpse(recursos_cgu)
-#> Rows: 46,288
+#> Rows: 45,613
 #> Columns: 20
 #> $ IdRecurso                            <dbl> 40311, 40312, 40330, 40452, 40...
 #> $ DescRecurso                          <chr> "Prezados, Recorro da resposta...
@@ -218,7 +220,7 @@ pedidos_por_mes <- pedidos_cgu %>%
   ungroup()
 
 glimpse(pedidos_por_mes)
-#> Rows: 55
+#> Rows: 54
 #> Columns: 3
 #> $ DataRegistro          <date> 2016-01-01, 2016-02-01, 2016-03-01, 2016-04-...
 #> $ governo_que_registrou <fct> Dilma II, Dilma II, Dilma II, Dilma II, Dilma...
@@ -419,7 +421,7 @@ Prepara a base que gera o gráfico:
 ``` r
 # tipo respostas mais comuns histórico -----------------------------------------
 respostas_comuns <- pedidos_cgu %>%
-  filter(DataResposta != floor_date(Sys.Date(), unit = "month")) %>%
+  filter(DataResposta != as_date("2020-07-01")) %>%
   group_by(DataResposta, TipoResposta, governo_que_respondeu) %>%
   summarise(qt = n()) %>%
   ungroup() %>%
@@ -435,7 +437,7 @@ respostas_comuns <- pedidos_cgu %>%
   mutate(TipoResposta = fct_reorder(TipoResposta, qt/100, .desc = T))
 
 glimpse(respostas_comuns)
-#> Rows: 432
+#> Rows: 424
 #> Columns: 4
 #> $ DataResposta          <date> 2016-01-01, 2016-01-01, 2016-01-01, 2016-01-...
 #> $ TipoResposta          <fct> Acesso Concedido, Acesso Negado, Acesso Parci...
@@ -444,7 +446,7 @@ glimpse(respostas_comuns)
 
 # respostas total por governo --------------------------------------------------
 aux <- respostas_comuns %>% 
-  filter(DataResposta != floor_date(Sys.Date(), unit = "month")) %>%
+  #filter(DataResposta != floor_date(Sys.Date(), unit = "month")) %>%
   group_by(governo_que_respondeu) %>%
   summarise(qt = sum(qt)) %>% 
   ungroup()
@@ -453,11 +455,11 @@ glimpse(aux)
 #> Rows: 3
 #> Columns: 2
 #> $ governo_que_respondeu <fct> Dilma II, Temer, Bolsonaro
-#> $ qt                    <int> 32011, 235966, 171996
+#> $ qt                    <int> 32011, 235966, 162395
 
 # finaliza rcom taxa de tipo/total de respostas --------------------------------
 respostas_comuns_gov <- respostas_comuns %>% 
-  filter(DataResposta != floor_date(Sys.Date(), unit = "month")) %>%
+  filter(DataResposta != as_date("2020-07-01")) %>%
   group_by(governo_que_respondeu, TipoResposta) %>%
   summarise(qt = sum(qt)) %>% 
   ungroup() %>%
@@ -486,7 +488,7 @@ rect_gov<- respostas_comuns %>%
             ymin = 0,
             ymax = Inf) %>%
   ungroup() %>%
-  mutate(xmax = lead(xmin, default = floor_date(Sys.Date(), unit = "month") - months(1)))
+  mutate(xmax = lead(xmin, default = floor_date(Sys.Date(), unit = "month") - months(2)))
 
 # plot esquerdo ----------------------------------------------------------------
 p1 <- respostas_comuns %>%
@@ -573,21 +575,21 @@ Prepara base que gera o gráfico:
 ``` r
 # Total e pedidos para mês------------------------------------------------------
 aux_mes <- pedidos_cgu %>% 
-  filter(DataResposta != floor_date(Sys.Date(), unit = "month")) %>%
+  filter(DataResposta != as_date("2020-07-01")) %>%
   filter(TipoResposta == "Acesso Negado") %>%
   group_by(DataResposta) %>%
   summarise(total_acessos_negados_mes = n()) %>%
   ungroup()
 
 glimpse(aux_mes)
-#> Rows: 55
+#> Rows: 54
 #> Columns: 2
 #> $ DataResposta              <date> 2016-01-01, 2016-02-01, 2016-03-01, 2016...
 #> $ total_acessos_negados_mes <int> 181, 284, 399, 427, 587, 511, 298, 321, 2...
 
 # Total de acessos negados por governo------------------------------------------
 aux_gov <- pedidos_cgu %>%
-  filter(DataResposta != floor_date(Sys.Date(), unit = "month")) %>%
+  filter(DataResposta != as_date("2020-07-01")) %>%
   filter(TipoResposta == "Acesso Negado") %>%
   group_by(governo_que_respondeu) %>%
   summarise(total_acessos_negados_gov = n()) %>%
@@ -597,7 +599,7 @@ glimpse(aux_gov)
 #> Rows: 3
 #> Columns: 2
 #> $ governo_que_respondeu     <fct> Dilma II, Temer, Bolsonaro
-#> $ total_acessos_negados_gov <int> 1878, 14325, 12199
+#> $ total_acessos_negados_gov <int> 1878, 14325, 11484
 
 # termos controversos ----------------------------------------------------------
 termos_controversos <- c(
@@ -618,7 +620,7 @@ termos_controversos <- c(
 # tbl com termos controversos --------------------------------------------------
 controversos <- pedidos_cgu %>% 
   filter(TipoResposta == "Acesso Negado") %>%
-  filter(DataResposta != floor_date(Sys.Date(), unit = "month")) %>%
+  filter(DataResposta != as_date("2020-07-01")) %>%
   select(DataResposta, TipoResposta, Resposta, governo_que_respondeu, IdPedido) %>%
   filter(str_detect(tolower(Resposta), termos_controversos)) %>%
   mutate(
@@ -668,7 +670,7 @@ controversos2 <- controversos2 %>%
 
 # inspeciona
 glimpse(controversos2)
-#> Rows: 455
+#> Rows: 447
 #> Columns: 8
 #> $ DataResposta              <date> 2016-01-01, 2016-01-01, 2016-01-01, 2016...
 #> $ governo_que_respondeu     <fct> Dilma II, Dilma II, Dilma II, Dilma II, D...
@@ -873,6 +875,146 @@ Salva evidência:
 # Grafico 5
 write.xlsx(as.data.frame(recursos_por_instancia_e_resposta), "../data/recursos_por_instancia_e_resposta.xlsx" )
 ```
+
+### Recursos por instância e governo das negativas controversas
+
+``` r
+# id's dos pedidos de resposta controversa:
+controversos_id <- controversos %>% distinct(IdPedido) %>% pull()
+
+# receberam resposta controversa e entraram com recurso:
+controversos_recurso <- recursos_cgu %>% filter(IdPedido %in% controversos_id)
+
+# id's dos que receberam resposta controversa e entraram com recurso:
+controversos_id_entraram_recurso <- controversos_recurso %>% distinct(IdRecurso) %>% pull()
+
+# Contagem
+qtde_controversos <- length(controversos_id)
+qtde_controversos_entraram_recurso <- length(controversos_id_entraram_recurso)
+
+qtde_controversos
+#> [1] 13446
+qtde_controversos_entraram_recurso
+#> [1] 3790
+qtde_controversos - qtde_controversos_entraram_recurso
+#> [1] 9656
+
+#tipo de resposta por recurso e por instância ----------------------------------
+recursos_por_instancia_e_resposta <- controversos_recurso %>%
+  filter(month(DataRegistro) < 7) %>%
+  group_by(governo_que_registrou, TipoResposta, Instancia) %>%
+  summarise(qt_tipo_repostas_instancia = n())
+
+# total respostas por instância ------------------------------------------------
+recursos_por_instancia <- recursos_por_instancia_e_resposta %>% 
+  group_by(governo_que_registrou, Instancia) %>%
+  summarise(qt_respostas_instancia = sum(qt_tipo_repostas_instancia))
+
+recursos_por_instancia_e_resposta <- recursos_por_instancia_e_resposta %>%
+  left_join(recursos_por_instancia, by = c("governo_que_registrou", "Instancia")) %>%
+  mutate(perc = round(qt_tipo_repostas_instancia / qt_respostas_instancia, 4))
+```
+
+``` r
+p <- recursos_por_instancia_e_resposta %>% 
+  filter(Instancia != "Pedido de Revisão") %>%
+  ggplot() +
+  geom_bar(aes(x = fct_rev(TipoResposta), y = perc, fill = governo_que_registrou),
+           stat = "identity", position = "dodge", alpha = .7) +
+  coord_flip() +
+  facet_wrap(~Instancia, scales = "free", nrow = 3, ncol = 2) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Respostas aos recursos, por instância e governo, \ndas negativas controversas (em %)",
+    subtitle = NULL,
+    fill = NULL
+  ) +
+  theme_minimal() +
+  scale_fill_manual(
+    values = c("indianred", "gray60", "gray30"),
+    breaks = pedidos_por_mes %>% distinct(governo_que_registrou) %>% pull()
+  ) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  theme(
+    legend.position = "top",
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    axis.text = element_text(size = 24),
+    plot.title = element_text(hjust = .5, vjust = .5, size = 35),
+    plot.subtitle = element_text(hjust = .5, vjust = .5, size = 20),
+    strip.text.x = element_text(size = 26),
+    legend.text = element_text(size = 26)
+    
+  )
+```
+
+Visualiza:
+
+``` r
+p
+```
+
+<img src="relatorio_bases_cgu_files/figure-gfm/unnamed-chunk-28-1.png" style="display: block; margin: auto;" />
+
+#### Ano a ano
+
+``` r
+#tipo de resposta por recurso e por instância (ano a ano) ----------------------
+recursos_por_instancia_e_resposta <- controversos_recurso %>%
+  filter(month(DataRegistro) < 7) %>%
+  group_by(ano = year(DataRegistro), TipoResposta, Instancia) %>%
+  summarise(qt_tipo_repostas_instancia = n())
+
+# total respostas por instância (ano a ano) ------------------------------------
+recursos_por_instancia <- recursos_por_instancia_e_resposta %>% 
+  group_by(ano, Instancia) %>%
+  summarise(qt_respostas_instancia = sum(qt_tipo_repostas_instancia))
+
+recursos_por_instancia_e_resposta <- recursos_por_instancia_e_resposta %>%
+  left_join(recursos_por_instancia, by = c("ano", "Instancia")) %>%
+  mutate(perc = round(qt_tipo_repostas_instancia / qt_respostas_instancia, 4))
+
+p <- recursos_por_instancia_e_resposta %>% 
+  filter(Instancia != "Pedido de Revisão") %>%
+  ggplot() +
+  geom_bar(aes(x = fct_rev(TipoResposta), y = perc, fill = factor(ano), color = "black"),
+           stat = "identity", position = "dodge", alpha = .7) +
+  coord_flip() +
+  facet_wrap(~Instancia, scales = "free", nrow = 3, ncol = 2) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Respostas aos recursos, por instâncias e ano (em %)",
+    subtitle = NULL,
+    fill = NULL
+  ) +
+  theme_minimal() +
+  # scale_fill_manual(
+  #   values = c("indianred", "gray60", "gray30"),
+  #   breaks = pedidos_por_mes %>% distinct(governo_que_registrou) %>% pull()
+  # ) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  theme(
+    legend.position = "top",
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    axis.text = element_text(size = 24),
+    plot.title = element_text(hjust = .5, vjust = .5, size = 35),
+    plot.subtitle = element_text(hjust = .5, vjust = .5, size = 20),
+    strip.text.x = element_text(size = 26),
+    legend.text = element_text(size = 26)
+    
+  )
+```
+
+Visualiza:
+
+``` r
+p
+```
+
+<img src="relatorio_bases_cgu_files/figure-gfm/unnamed-chunk-30-1.png" style="display: block; margin: auto;" />
 
 ## Resultados em planilha excel (`xlsxl`)
 
