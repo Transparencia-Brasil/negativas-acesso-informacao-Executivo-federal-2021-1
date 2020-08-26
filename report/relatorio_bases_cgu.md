@@ -108,7 +108,7 @@ Inspeciona:
 
 ``` r
 glimpse(pedidos_cgu)
-#> Rows: 435,290
+#> Rows: 436,179
 #> Columns: 24
 #> $ IdPedido                             <dbl> 345365, 345366, 345367, 345368...
 #> $ ProtocoloPedido                      <chr> "99901000001201633", "99902000...
@@ -179,7 +179,7 @@ Inspeciona:
 
 ``` r
 glimpse(recursos_cgu)
-#> Rows: 45,613
+#> Rows: 45,686
 #> Columns: 20
 #> $ IdRecurso                            <dbl> 40311, 40312, 40330, 40452, 40...
 #> $ DescRecurso                          <chr> "Prezados, Recorro da resposta...
@@ -220,7 +220,7 @@ pedidos_por_mes <- pedidos_cgu %>%
   ungroup()
 
 glimpse(pedidos_por_mes)
-#> Rows: 54
+#> Rows: 55
 #> Columns: 3
 #> $ DataRegistro          <date> 2016-01-01, 2016-02-01, 2016-03-01, 2016-04-...
 #> $ governo_que_registrou <fct> Dilma II, Dilma II, Dilma II, Dilma II, Dilma...
@@ -294,7 +294,7 @@ glimpse(pedidos_mesmo_periodo)
 #> Rows: 5
 #> Columns: 2
 #> $ DataRegistro <date> 2016-01-01, 2017-01-01, 2018-01-01, 2019-01-01, 2020-...
-#> $ qt           <int> 43743, 47997, 49743, 49975, 62073
+#> $ qt           <int> 43743, 47997, 49743, 49975, 62758
 
 # Acessos concedidos 
 acessos_concedidos_mesmo_periodo <- pedidos_cgu %>%
@@ -309,7 +309,7 @@ glimpse(acessos_concedidos_mesmo_periodo)
 #> Rows: 5
 #> Columns: 2
 #> $ DataRegistro <date> 2016-01-01, 2017-01-01, 2018-01-01, 2019-01-01, 2020-...
-#> $ qt           <int> 31180, 34933, 36124, 34747, 36119
+#> $ qt           <int> 31180, 34933, 36124, 34747, 36544
 
 # Índices de acessos concedidos
 indice_respostas_concedidas <- pedidos_mesmo_periodo %>%
@@ -320,8 +320,8 @@ glimpse(indice_respostas_concedidas)
 #> Rows: 5
 #> Columns: 4
 #> $ DataRegistro              <date> 2016-01-01, 2017-01-01, 2018-01-01, 2019...
-#> $ qt_pedidos                <int> 43743, 47997, 49743, 49975, 62073
-#> $ qt_concedidos             <int> 31180, 34933, 36124, 34747, 36119
+#> $ qt_pedidos                <int> 43743, 47997, 49743, 49975, 62758
+#> $ qt_concedidos             <int> 31180, 34933, 36124, 34747, 36544
 #> $ indice_acessos_concedidos <dbl> 0.7127998, 0.7278163, 0.7262127, 0.695287...
 ```
 
@@ -437,7 +437,7 @@ respostas_comuns <- pedidos_cgu %>%
   mutate(TipoResposta = fct_reorder(TipoResposta, qt/100, .desc = T))
 
 glimpse(respostas_comuns)
-#> Rows: 424
+#> Rows: 432
 #> Columns: 4
 #> $ DataResposta          <date> 2016-01-01, 2016-01-01, 2016-01-01, 2016-01-...
 #> $ TipoResposta          <fct> Acesso Concedido, Acesso Negado, Acesso Parci...
@@ -455,7 +455,7 @@ glimpse(aux)
 #> Rows: 3
 #> Columns: 2
 #> $ governo_que_respondeu <fct> Dilma II, Temer, Bolsonaro
-#> $ qt                    <int> 32011, 235966, 162395
+#> $ qt                    <int> 32011, 235965, 162610
 
 # finaliza rcom taxa de tipo/total de respostas --------------------------------
 respostas_comuns_gov <- respostas_comuns %>% 
@@ -582,7 +582,7 @@ aux_mes <- pedidos_cgu %>%
   ungroup()
 
 glimpse(aux_mes)
-#> Rows: 54
+#> Rows: 55
 #> Columns: 2
 #> $ DataResposta              <date> 2016-01-01, 2016-02-01, 2016-03-01, 2016...
 #> $ total_acessos_negados_mes <int> 181, 284, 399, 427, 587, 511, 298, 321, 2...
@@ -599,7 +599,7 @@ glimpse(aux_gov)
 #> Rows: 3
 #> Columns: 2
 #> $ governo_que_respondeu     <fct> Dilma II, Temer, Bolsonaro
-#> $ total_acessos_negados_gov <int> 1878, 14325, 11484
+#> $ total_acessos_negados_gov <int> 1878, 14325, 11510
 
 # termos controversos ----------------------------------------------------------
 termos_controversos <- c(
@@ -670,7 +670,7 @@ controversos2 <- controversos2 %>%
 
 # inspeciona
 glimpse(controversos2)
-#> Rows: 447
+#> Rows: 452
 #> Columns: 8
 #> $ DataResposta              <date> 2016-01-01, 2016-01-01, 2016-01-01, 2016...
 #> $ governo_que_respondeu     <fct> Dilma II, Dilma II, Dilma II, Dilma II, D...
@@ -893,11 +893,11 @@ qtde_controversos <- length(controversos_id)
 qtde_controversos_entraram_recurso <- length(controversos_id_entraram_recurso)
 
 qtde_controversos
-#> [1] 13446
+#> [1] 13458
 qtde_controversos_entraram_recurso
-#> [1] 3790
+#> [1] 3805
 qtde_controversos - qtde_controversos_entraram_recurso
-#> [1] 9656
+#> [1] 9653
 
 #tipo de resposta por recurso e por instância ----------------------------------
 recursos_por_instancia_e_resposta <- controversos_recurso %>%
