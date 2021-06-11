@@ -1,7 +1,10 @@
 ---
 title: 'Negativas de acesso a informação no governo Federal'
 subtite: '2015 até 04/2021'
-output: github_document
+output:
+    github_document:
+      toc: true
+      toc_depth: 3
 ---
 
 ```{r setup, include=FALSE}
@@ -10,21 +13,25 @@ knitr::opts_chunk$set(
   comment = "#>",
   message = F,
   warning = F,
-  fig.align="center",
+  fig.align = "center",
   echo = F
 )
 ```
+
+## Relatório
+
+* Relatório com visualizações e código fonte da análise dos dados - **[CLIQUE AQUI](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/negativas-de-acesso-a-informacao.html)**
 
 ## Base de dados
 
 * Site do e-SIC/CGU - [clique aqui](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx)
 * Dicionário de variáveis - [clique aqui](http://www.consultaesic.cgu.gov.br/arquivosRelatorios/PedidosRespostas/Dicionario-Dados-Exportacao.txt)
 
-### Download da base bruta
+#### Download da base bruta
 
 * Os dados brutos estão disponíveis ano a ano no site do e-sic da Controladoria Geral da União. Para baixar manualmente [acesse o site do esic](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx), selecione ano e formato (trabalhamos com XML) e clique em download.  
 
-#### Arquivos:
+##### Arquivos:
 
 ```{r fig.width=15}
 library(here)
@@ -62,17 +69,24 @@ here(glue("dados/load/xml")) %>%
   kableExtra::kbl(format = "pipe", align = "cccr", format.args = list(decimal.mark = ","))
 ```
 
-### Download da base pré-processada
+#### Download da base pré-processada
+
+##### RDS
 
 * **PEDIDOS** - formato RDS ([link para download](https://drive.google.com/file/d/1TKnHS2YLZW6BC9ubKqvvoTG9Dg1vVyOO/view?usp=sharing))
 * **RECURSOS** - formato RDS ([link para download](https://drive.google.com/file/d/17Kh-jtamT-Q-nBZExwHXQjj3L1kDgmZJ/view?usp=sharing))
 
-* Preview: pedidos 
+##### CSV
+
+* **PEDIDOS** - formato CSV ([link para download](https://drive.google.com/file/d/1R8_M5AVYJfS_8jYFP9NVuVfFtJQrbtlb/view?usp=sharing))
+* **RECURSOS** - formato CSV ([link para download](https://drive.google.com/file/d/1ZyMi4AFHq32WayrXPc0wrsgMcv3dG7tp/view?usp=sharing))
+
+##### Preview: pedidos 
 ```{r}
 glimpse(readRDS(here("dados/load/rds/pedidos-cgu.rds")))
 ```
 
-* Preview: recursos
+##### Preview: recursos
 ```{r}
 glimpse(readRDS(here("dados/load/rds/recursos-cgu.rds")))
 ```
