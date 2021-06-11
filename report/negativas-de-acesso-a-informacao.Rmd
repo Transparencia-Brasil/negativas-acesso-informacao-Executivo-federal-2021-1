@@ -1,0 +1,529 @@
+---
+title: 'Negativas de acesso a informação no governo Federal'
+subtite: '2015 até 04/2021'
+output:
+  html_document:
+    code_folding: hide
+    toc: true
+    toc_depth: 4
+    theme: paper
+    toc_float:
+      collapsed: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = T,
+  comment = "#>",
+  message = F,
+  warning = F,
+  fig.align = "center",
+  echo = T
+)
+```
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(glue)
+library(here)
+library(ggtext)
+library(patchwork)
+```
+
+```{r}
+aep_colors <- c(
+  
+  Laranja = "#F9A521",
+  Rosa = "#D81755",
+  Cinza = "#969696",
+  Marrom = "#B27D5C"
+  
+  )
+```
+
+
+```{r}
+pedidos_cgu <- readRDS(here("dados/load/rds/pedidos-cgu.rds")) %>% 
+  mutate(
+    paleta_governo_registrou = case_when(
+      governo_que_registrou == "Bolsonaro" ~ "Rosa",
+      governo_que_registrou == "Temer" ~ "Cinza",
+      governo_que_registrou == "Dilma II" ~ "Laranja"
+    ),
+    paleta_governo_respondeu = case_when(
+      governo_que_respondeu == "Bolsonaro" ~ "Rosa",
+      governo_que_respondeu == "Temer" ~ "Cinza",
+      governo_que_respondeu == "Dilma II" ~ "Laranja"
+  ))
+recursos_cgu <- readRDS(here("dados/load/rds/recursos-cgu.rds"))
+```
+
+## Pedidos mês a mês
+
+```{r}
+ pedidos_por_mes <- pedidos_cgu %>% 
+  group_by(data_registro, governo_que_registrou) %>%
+  summarise(qt = n()) %>%
+  ungroup()
+
+ p <- pedidos_por_mes %>% 
+  ggplot() +
+  geom_bar(
+    aes(x = data_registro, y = qt, fill = governo_que_registrou, color = governo_que_registrou),
+    stat = "identity", alpha = .5
+  ) +
+  theme_minimal() +
+  scale_fill_manual(
+    values = unname(aep_colors[c("Laranja", "Cinza", "Rosa")]),
+    breaks =  unique(pedidos_por_mes$governo_que_registrou)
+  ) +
+  scale_color_manual(
+    values = unname(aep_colors[c("Laranja", "Cinza", "Rosa")]),
+    breaks =  unique(pedidos_por_mes$governo_que_registrou)
+  ) +
+  scale_y_continuous(breaks = seq(0, 12500, 5000), limits = c(0, 13500), labels = seq(0,12.5,5)) +
+  scale_x_date(breaks = scales::date_breaks("3 months"), date_labels = "%m-%y") +
+  labs(
+    y = "Quantidade de registros (mil)",
+    x = NULL,
+    fill = NULL,
+    title = "Quantidade *registrada* de pedidos de acesso a informação",
+    subtitle = "Poder executivo - por mês de **data de registro** do pedido"
+  ) +
+  theme(
+    axis.text.x = element_text(hjust = .5, vjust = .5, angle = 90),
+    plot.title = element_markdown(),
+    plot.subtitle = element_markdown(),
+    legend.position = c(.22, .95),
+    legend.direction = "horizontal"
+  ) +
+   guides(color = FALSE)
+
+p
+```
+
+
+## Pedidos considerando o mesmo período de mandato
+
+```{r fig.width=10, fig.height=4}
+# Quantidades de pedidos, em milhares
+pedidos_mesmo_periodo <- pedidos_cgu %>%
+  select(data_registro, id_pedido) %>%
+  filter(month(data_registro) < 5) %>%
+  mutate(data_registro = floor_date(data_registro, unit = "year")) %>%
+  group_by(data_registro) %>%
+  summarise(qt = n()) %>%
+  ungroup()
+
+# Acessos concedidos 
+acessos_concedidos_mesmo_periodo <- pedidos_cgu %>% 
+  filter(decisao == "Acesso Concedido") %>%
+  select(data_registro, id_pedido) %>%
+  filter(month(data_registro) < 5) %>%
+  mutate(data_registro = floor_date(data_registro, unit = "year")) %>%
+  group_by(data_registro) %>%
+  summarise(qt = n(), .groups = "drop")
+
+# Índices de acessos concedidos
+indice_respostas_concedidas <- pedidos_mesmo_periodo %>%
+  left_join(acessos_concedidos_mesmo_periodo, by = "data_registro", suffix = c("_pedidos", "_concedidos")) %>%
+  mutate(indice_acessos_concedidos = qt_concedidos / qt_pedidos)
+
+# A quantidade de pedidos aumentou...
+p1 <- pedidos_mesmo_periodo %>%
+  mutate(qt = round(qt/1e3, 2)) %>%
+  ggplot() +
+  geom_bar(aes(x = data_registro, y = qt), stat = "identity", fill = "royalblue4", alpha = .7) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Quantidade de *pedidos realizados*, <br>em milhares"
+  ) +
+  geom_text(aes(x = data_registro, y = qt, label = format(qt, nsmall = 2L, decimal.mark = ",")),
+                vjust = -1, size = 3) +
+  theme_minimal() +
+  theme(
+    plot.title = element_markdown(vjust = .5, hjust = .5, size = 9),
+    plot.subtitle = element_markdown(vjust = .5, hjust = .5),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    axis.text.x = element_text(vjust = 7)
+  )  +
+  scale_y_continuous(breaks = seq(0, 65, 20), limits = c(0,65))
+
+#...mas a quantidade de acessos continuou estável...
+p2 <- acessos_concedidos_mesmo_periodo %>%
+  mutate(qt = round(qt/1000, 2)) %>%
+  ggplot() +
+  geom_bar(aes(x = data_registro, y = qt), stat = "identity", fill = "royalblue4", alpha = .7) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Quantidade de *acessos concedidos*, <br>em milhares"
+  ) +
+  geom_text(aes(x = data_registro, y = qt, label = format(qt, nsmall = 2L, decimal.mark = ",")),
+            vjust = -1, size = 3) +
+  theme_minimal() +
+  theme(
+    plot.title = element_markdown(vjust = .5, hjust = .5, size = 9),
+    plot.subtitle = element_markdown(vjust = .5, hjust = .5),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    axis.text.x = element_text(vjust = 7)
+  ) +
+  scale_y_continuous(breaks = seq(0, 40, 20), limits = c(0,40))
+
+#...como consequência, a taxa de acessos concedidos caiu.
+p3 <- indice_respostas_concedidas %>%
+  ggplot() +
+  geom_bar(aes(x = data_registro, y = indice_acessos_concedidos), fill = "royalblue4",
+           stat = "identity", alpha = .7) +
+  geom_text(aes(x = data_registro, y = indice_acessos_concedidos, 
+                label = round(indice_acessos_concedidos*100,1)), vjust = -1, size = 3) +
+  scale_y_continuous(labels = scales::percent_format(), limits = c(0,.8)) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Índice de acessos concedidos, <br>em %"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_markdown(vjust = .5, hjust = .5, size = 9),
+    plot.subtitle = element_markdown(vjust = .5, hjust = .5),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    axis.text.x = element_text(vjust = 7)
+  )
+
+p1 + p2 + p3
+```
+
+## Respostas mais comuns entre os governos
+
+```{r fig.height=15, fig.width=10}
+#
+# data wrangling
+#
+
+# tipo respostas mais comuns histórico -----------------------------------------
+respostas_comuns <- pedidos_cgu %>%
+  filter(data_resposta != as_date("2020-07-01")) %>%
+  group_by(data_resposta, decisao, governo_que_respondeu) %>%
+  summarise(qt = n()) %>%
+  ungroup() %>%
+  group_by(governo_que_respondeu) %>%
+  ungroup() %>%
+  mutate(
+    decisao = case_when(
+      decisao == "Órgão não tem competência para responder sobre o assunto" ~
+        "Órgão não tem competência \npara responder sobre o assunto",
+      TRUE ~ decisao
+      )
+    ) %>%
+  mutate(decisao = fct_reorder(decisao, qt/100, .desc = T))
+
+# respostas total por governo --------------------------------------------------
+aux <- respostas_comuns %>% 
+  #filter(data_resposta != floor_date(Sys.Date(), unit = "month")) %>%
+  group_by(governo_que_respondeu) %>%
+  summarise(qt = sum(qt)) %>% 
+  ungroup()
+
+# finaliza rcom taxa de tipo/total de respostas --------------------------------
+respostas_comuns_gov <- respostas_comuns %>% 
+  filter(data_resposta != as_date("2020-07-01")) %>%
+  group_by(governo_que_respondeu, decisao) %>%
+  summarise(qt = sum(qt)) %>% 
+  ungroup() %>%
+  left_join(aux, by = "governo_que_respondeu", suffix = c("_tipo_resposta", "_respostas_total")) %>%
+  mutate(perc = round(qt_tipo_resposta / qt_respostas_total, 2))
+
+#
+# plot
+#
+
+# cores de fundo ---------------------------------------------------------------
+rect_gov <- respostas_comuns %>% 
+  filter(data_resposta %in% ymd(c("2015-02-01", "2016-06-01", "2019-02-01"))) %>%
+  group_by(governo_que_respondeu) %>%
+  summarise(xmin = min(data_resposta) - months(1),
+            #xmax = max(data_resposta),
+            ymin = 0,
+            ymax = Inf) %>%
+  ungroup() %>%
+  mutate(xmax = lead(xmin, default = floor_date(Sys.Date(), unit = "month") - months(1)))
+
+# plot esquerdo ----------------------------------------------------------------
+p1 <- respostas_comuns %>%
+  ggplot() +
+  geom_line(aes(x = data_resposta, y = qt/1000, show.legend = F)) +
+  geom_vline(xintercept = ymd(c("2016-05-01", "2019-01-01")), lty = 3) +
+  geom_rect(
+    data = rect_gov,
+    aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = governo_que_respondeu), 
+    alpha = .2, show.legend = F
+  ) +
+  scale_fill_manual(
+    values = unname(aep_colors[c("Laranja", "Cinza", "Rosa")]),
+    breaks =  unique(pedidos_por_mes$governo_que_registrou)
+  ) +
+  scale_color_manual(
+    values = unname(aep_colors[c("Laranja", "Cinza", "Rosa")]),
+    breaks =  unique(pedidos_por_mes$governo_que_registrou)
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    legend.text = element_text(size = 8),
+    axis.text.x = element_text(hjust = .5, vjust = .5, angle = 90),
+    plot.title = element_text(vjust = .5, hjust = .5),
+    plot.subtitle = element_text(vjust = .5, hjust = .5),
+    panel.grid.minor = element_blank()
+  ) +
+  scale_color_brewer(palette = "Set1") +
+  scale_x_date(breaks = scales::date_breaks("3 months"), date_labels = "%m-%y") +
+  labs(
+    x = NULL,
+    y = NULL,
+    subtitle = "Em milhares - mês a mês",
+    color = NULL,
+    fill = NULL
+  ) +
+  facet_wrap(~ decisao, scales = 'free', ncol = 1)
+
+# plot direito -----------------------------------------------------------------
+p2 <- respostas_comuns_gov %>% 
+  ggplot(aes(x = governo_que_respondeu, y = perc, fill = governo_que_respondeu)) +
+  geom_bar(stat = "identity", alpha = .7) +
+  geom_text(aes(label = scales::percent(perc, accuracy = 1)),
+            size = 3, hjust = 1.1, check_overlap = T) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1), expand = c(0, 0)) +
+  coord_flip() +
+  facet_wrap(~ decisao, scales = "free_x", ncol = 1) +
+  labs(
+    x = NULL,
+    y = NULL,
+    fill = NULL,
+    subtitle = "% do total de respostas por governo"
+  ) +
+  theme_minimal() +
+  scale_fill_manual(
+    values = unname(aep_colors[c("Laranja", "Cinza", "Rosa")]),
+    breaks =  unique(pedidos_por_mes$governo_que_registrou)
+  ) +
+  scale_color_manual(
+    values = unname(aep_colors[c("Laranja", "Cinza", "Rosa")]),
+    breaks =  unique(pedidos_por_mes$governo_que_registrou)
+  ) +
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    plot.title = element_text(hjust = .5, vjust = .5),
+    plot.subtitle = element_text(hjust = .5, vjust = .5)
+  )
+
+comb <- p1 + p2 & theme(legend.position = "top")
+comb + 
+  plot_layout(guides = "collect") +
+  plot_annotation(
+      title = 'Tipos de respostas mais comuns fornecidas pelo \npoder Executivo federal',
+      subtitle = "Janeiro de 2015 até Junho de 2020",
+      theme = theme(plot.title = element_text(size = 18, face = "bold", hjust = .5, vjust = .5),
+                    plot.subtitle = element_text(size = 14, hjust = .5, vjust = .5),
+                    legend.position = "top")
+  )
+```
+
+
+## Alegações controversas (REGEX com termos-chave)
+
+```{r fig.height=25, fig.width=15}
+# Total e pedidos para mês------------------------------------------------------
+aux_mes <- pedidos_cgu %>% 
+  filter(data_resposta != as_date("2020-07-01")) %>%
+  filter(decisao == "Acesso Negado") %>%
+  group_by(data_resposta) %>%
+  summarise(total_acessos_negados_mes = n()) %>%
+  ungroup()
+
+# Total de acessos negados por governo------------------------------------------
+aux_gov <- pedidos_cgu %>%
+  filter(data_resposta != as_date("2020-07-01")) %>%
+  filter(decisao == "Acesso Negado") %>%
+  group_by(governo_que_respondeu) %>%
+  summarise(total_acessos_negados_gov = n()) %>%
+  ungroup()
+
+# termos controversos ----------------------------------------------------------
+termos_controversos <- c(
+  'desarrazoado',
+  'fishing',
+  'desproporciona[l|is]',
+  'seguranca nacional',
+  'seguranca do estado',
+  'sigilo',
+  'processo decisorio em curso',
+  'documento preparatorio',
+  'trabalho[s]? adiciona',
+  'dado[s]? pesso',
+  'generico',
+  'lgpd',
+  'lei geral de proteção de dados pessoais',
+  'lei [n.|numero]? 13\\.?709',
+  'lei [n.|numero]? 13\\.?853'
+  ) %>%
+  paste0(collapse = "|")
+
+# tbl com termos controversos --------------------------------------------------
+controversos <- pedidos_cgu %>% 
+  filter(decisao == "Acesso Negado") %>%
+  filter(data_resposta != as_date("2020-05-01")) %>%
+  select(data_resposta, decisao, resposta, governo_que_respondeu, id_pedido) %>%
+  mutate(resposta = stringi::stri_trans_general(tolower(resposta), "Latin-ASCII")) %>% 
+  filter(str_detect(resposta, termos_controversos)) %>%
+  mutate(
+    controversos_desarrazoado = str_detect(resposta,'desarrazoado'), 
+    controversos_fishing  = str_detect(resposta,'fishing'),
+    controversos_desproporcional =  str_detect(resposta,'desproporciona[l|is]'),
+    controversos_seguranca =  str_detect(resposta,'segurança [nacional|do estado]'),
+    controversos_sigilo = str_detect(resposta,'sigilo'),
+    controversos_decisao =  str_detect(resposta,'processo decis[ó|o]rio em curso|documento preparat[ó|o]rio'),
+    controversos_trabalho_adic = str_detect(resposta,'trabalho[s]? adiciona'),
+    controversos_dados_pessoais =  str_detect(resposta,'dado[s]? pesso'),
+    controversos_generico =  str_detect(resposta,'gen[e|é]rico'),
+    controversos_lgpd = str_detect(resposta, 'lei geral de proteção de dados pessoais|13\\.?709|13\\.?853|lgpd'),
+    ) %>% 
+  inner_join(aux_mes, by = c("data_resposta")) %>%          # acesso negado/mês
+  inner_join(aux_gov, by = c("governo_que_respondeu")) %>%  # acesso negado/governo
+  pivot_longer(names_to = "controversos", cols = starts_with("controversos"), 
+               values_to = "prevalencia", names_prefix = "controversos_")
+
+# Agrupa prevalência de palavras -----------------------------------------------
+controversos2 <- controversos %>%
+  group_by(data_resposta, 
+           governo_que_respondeu,
+           total_acessos_negados_gov,
+           total_acessos_negados_mes,
+           controversos,
+           prevalencia) %>%
+  summarise(qt_prevalencia = n()) %>%
+  ungroup() 
+
+# Remove pedidos sem os termos e trata base ------------------------------------
+controversos2 <- controversos2 %>% 
+  filter(prevalencia == TRUE) %>%
+  mutate(controversos = case_when(
+    controversos == "desarrazoado" ~ "Desarrazoado",
+    controversos == "fishing" ~ "Fishing",
+    controversos == "desproporcional" ~ "Desproporcional",
+    controversos == "seguranca" ~ "Segurança Nacional",
+    controversos == "sigilo" ~ "Dados sigilosos",
+    controversos == "decisao" ~ "Processo decisório em curso",
+    controversos == "trabalho_adic" ~"Trabalho adicional",
+    controversos == "dados_pessoais" ~ "Dados pessoais",
+    controversos == "generico" ~ "Pedido genérico",
+    controversos ==  "lgpd" ~ "LGPD",
+    TRUE ~ controversos
+  )) %>%
+  mutate(controversos = fct_reorder(controversos, prevalencia),
+         perc = round(qt_prevalencia / total_acessos_negados_mes, 4))
+
+# Posso somar a prevalência (ou não-prevalência, se prevalencia==FALSE) de um termo, por governante:
+controversos_gov <- controversos2 %>%
+  group_by(governo_que_respondeu, controversos, prevalencia) %>%
+  summarise(qt_prevalencia_por_gov = sum(qt_prevalencia), .groups = "drop")
+
+# plot esquerdo ----------------------------------------------------------------
+p1 <- controversos2 %>%
+  ggplot() +
+  geom_line(aes(x = data_resposta, y = qt_prevalencia)) +
+  geom_smooth(aes(x = data_resposta, y = qt_prevalencia), method = "lm") +
+  geom_rect(
+    data = rect_gov,
+    aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = governo_que_respondeu), 
+    alpha = .3, show.legend = F
+  ) +
+  scale_fill_manual(
+    values = unname(aep_colors[c("Laranja", "Cinza", "Rosa")]),
+    breaks =  unique(pedidos_por_mes$governo_que_registrou)
+  ) +
+  scale_color_manual(
+    values = unname(aep_colors[c("Laranja", "Cinza", "Rosa")]),
+    breaks =  unique(pedidos_por_mes$governo_que_registrou)
+  ) +
+  scale_x_date(breaks = scales::date_breaks("3 months"), date_labels = "%m-%y") +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    legend.text = element_text(size = 15),
+    axis.text.x = element_text(hjust = .5, vjust = .5, angle = 45, size = 12),
+    axis.text.y = element_text(size = 12),
+    plot.title = element_text(vjust = .5, hjust = .5),
+    plot.subtitle = element_markdown(vjust = .5, hjust = .5, size = 18),
+    panel.grid.minor = element_blank(),
+    strip.text.x = element_text(size = 18)
+  ) +
+  labs(
+    x = NULL,
+    y = NULL,
+    subtitle = "**Total \n(números absolutos)**",
+    color = NULL,
+    fill = NULL
+  ) +
+  facet_wrap(~controversos, scales = 'free', ncol = 1)
+
+# plot direita -----------------------------------------------------------------
+p2 <- controversos2 %>%
+  ggplot() +
+  geom_line(aes(x = data_resposta, y = perc)) +
+  geom_smooth(aes(x = data_resposta, y = perc), method = "lm") +
+  geom_rect(
+    data = rect_gov,
+    aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = governo_que_respondeu), 
+    alpha = .3, show.legend = T
+  ) +
+  scale_fill_manual(
+    values = unname(aep_colors[c("Laranja", "Cinza", "Rosa")]),
+    breaks =  unique(pedidos_por_mes$governo_que_registrou)
+  ) +
+  scale_color_manual(
+    values = unname(aep_colors[c("Laranja", "Cinza", "Rosa")]),
+    breaks =  unique(pedidos_por_mes$governo_que_registrou)
+  ) +
+  scale_x_date(breaks = scales::date_breaks("3 months"), date_labels = "%m-%y") +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    legend.text = element_text(size = 15),
+    axis.text.x = element_text(hjust = .5, vjust = .5, angle = 45, size = 12),
+    axis.text.y = element_text(size = 12),
+    plot.title = element_markdown(vjust = .5, hjust = .5),
+    plot.subtitle = element_markdown(vjust = .5, hjust = .5, size = 18),
+    panel.grid.minor = element_blank(),
+    strip.text.x = element_text(size = 18)
+  ) +
+  labs(
+    x = NULL,
+    y = NULL,
+    subtitle = "**Em percentual (%)**",
+    color = NULL,
+    fill = NULL
+  )  +
+  #scale_y_continuous(scales::percent) +
+  facet_wrap(~controversos, scales = 'free', ncol = 1)
+
+comb <- p1 + p2
+comb + plot_layout(guides = "collect")  + plot_annotation(
+  title = 'Termos controversos nas negativas de acesso a informação do \nGoverno Federal',
+  subtitle = "Janeiro de 2015 até Junho de 2020",
+  caption = "Alguns termos podem aparecer mais de uma vez em uma mesma resposta.",
+  theme = theme(plot.title = element_text(size = 25, face = "bold", hjust = .5, vjust = .5),
+                plot.subtitle = element_text(size = 17, hjust = .5, vjust = .5),
+                plot.caption =  element_text(size = 12, hjust = .5, vjust = .5),
+                legend.position = "top")
+)
+```
