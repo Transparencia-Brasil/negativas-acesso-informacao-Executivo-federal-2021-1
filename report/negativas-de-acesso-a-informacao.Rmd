@@ -806,7 +806,7 @@ ts_controversos_fcast_tidy %>%
     geom_ribbon(aes(ymin = lo.80, ymax = hi.80, fill = key), 
                 fill = "#596DD5", color = NA, size = 0, alpha = 0.8) +
     geom_line() +
-    labs(title = "Bike Quantity Sold By Secondary Category",
+    labs(title = "Termos controversos nas negativas de acesso a informação",
          subtitle = "ETS Model Forecasts",
          x = "", y = "Units") +
     scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
