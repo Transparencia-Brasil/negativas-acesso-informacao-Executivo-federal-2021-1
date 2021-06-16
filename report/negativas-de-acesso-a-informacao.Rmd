@@ -141,7 +141,8 @@ pedidos_por_mes %>%
   theme(
     axis.text.x = element_text(hjust = .5, vjust = .5, angle = 90),
     legend.position = c(.1, .9),
-    panel.grid.minor = element_blank()
+    panel.grid.minor = element_blank(),
+    legend.background = element_rect(fill = alpha(aep_colors[["cinza"]], .2), color = aep_colors[["cinza"]])
   ) +
   guides(color = FALSE)
 ```
@@ -229,7 +230,8 @@ p3 <- indice_respostas_concedidas %>%
   geom_bar(aes(x = data_registro, y = indice_acessos_concedidos), fill = tb_colors[["laranja"]],
            stat = "identity", alpha = .7, color = "black") +
   geom_text(aes(x = data_registro, y = indice_acessos_concedidos, 
-                label = scales::percent(indice_acessos_concedidos, accuracy = 0.1)), vjust = -1, size = 2.8) +
+                label = scales::percent(indice_acessos_concedidos, accuracy = 0.1, decimal.mark = ",")),
+            vjust = -1, size = 2.8) +
   scale_y_continuous(labels = scales::percent_format(), limits = c(0, .75)) +
   labs(
     x = NULL,
@@ -327,9 +329,9 @@ p1 <- respostas_comuns %>%
 p2 <- respostas_comuns_gov %>% 
   ggplot(aes(x = fct_rev(governo_que_respondeu), y = perc, fill = governo_que_respondeu)) +
   geom_col(alpha = .7) +
-  geom_text(aes(label = scales::percent(perc, accuracy = 0.1)),
+  geom_text(aes(label = scales::percent(perc, accuracy = 0.1, decimal.mark = ",")),
             size = 3, hjust = 1.1, check_overlap = T) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 1))   +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1, decimal.mark = ","))   +
   coord_flip() +
   labs(
     x = NULL,
@@ -354,7 +356,7 @@ comb <- p1 + p2 & theme(legend.position = "none")
 comb + plot_layout(widths = c(2.7, 1))
 ```
 
-## Alegações controversas
+## Acesso negado
 
 ```{r fig.height=25, fig.width=15}
 # termos controversos ----------------------------------------------------------
@@ -427,6 +429,100 @@ controversos <- pedidos_cgu %>%
   pivot_longer(names_to = "controversos", cols = starts_with("controversos"), 
                values_to = "prevalencia", names_prefix = "controversos_")
 
+```
+
+```{r}
+especificacao_decisao_negada <- pedidos_cgu %>% 
+  select(id_pedido, especificacao_decisao, governo_que_respondeu) %>% 
+  left_join(controversos, .) %>%
+  filter(prevalencia == T) %>% 
+  group_by(especificacao_decisao, controversos, governo_que_respondeu) %>% 
+  summarise(qt_especificacao_por_termo_controverso = n(), .groups = "drop") %>% 
+  group_by(especificacao_decisao, governo_que_respondeu) %>% 
+  mutate(qt_especificacao_decisao = sum(qt_especificacao_por_termo_controverso)) %>% 
+  ungroup() %>% 
+  group_by(governo_que_respondeu) %>% 
+  mutate(qt_governo_negou = sum(qt_especificacao_por_termo_controverso)) %>% 
+  ungroup() %>% 
+  arrange(-qt_governo_negou, -qt_especificacao_decisao, -qt_especificacao_por_termo_controverso) %>%
+  mutate(perc = qt_especificacao_por_termo_controverso / qt_especificacao_decisao,
+         especificacao_decisao = str_wrap(especificacao_decisao, 45))
+```
+
+#### Especificação das decisões de acesso negado
+##### Percentual da justificativa nos pedidos com acesso negados
+
+```{r fig.height=6.5, fig.width=7}
+especificacao_decisao_negada %>% 
+  mutate(
+    especificacao_decisao = str_replace_all(especificacao_decisao, fixed("\n"), " ")
+  ) %>% 
+  select(
+    especificacao_decisao,
+    governo_que_respondeu,
+    qt_governo_negou,
+    qt_especificacao_decisao
+  ) %>% 
+  distinct() %>% 
+  mutate(perc = qt_especificacao_decisao / qt_governo_negou) %>% 
+  ggplot(
+    aes(
+      x = reorder(especificacao_decisao, -perc),
+      y = perc,
+      fill = governo_que_respondeu,
+      color = governo_que_respondeu
+    )
+  ) +
+  geom_bar(position = "dodge", stat = "identity", alpha = .7, width = .6) +
+  geom_text(
+    aes(label = scales::percent(perc, accuracy = 1, decimal.mark = ",")),
+    hjust = -.2,
+    check_overlap = T,
+    size = 2.5,
+    color = "gray20",
+    position = position_dodge(width = .7)
+  ) +
+  geom_text(
+    aes(label = reorder(especificacao_decisao, -perc), 
+        x = reorder(especificacao_decisao, -perc)), 
+    y = 0,
+    color = "gray10",
+    check_overlap = T,
+    size = 3,
+    hjust = 0,
+    vjust = -3,
+    fontface = "bold"
+  ) +
+  coord_flip() +
+  labs(
+    x = "Especificação da decisão, por governo",
+    y = "% do total pedidos com acesso negado",
+    fill = NULL
+  ) +
+  theme_minimal() + 
+  scale_fill_manual(values = paleta_governo) +
+  scale_color_manual(values = paleta_governo, guide = FALSE) +
+  scale_y_continuous(
+    labels = scales::percent_format(decimal.mark = ","), 
+    expand = c(0 , 0), 
+    limits = c(0 ,.35)
+  ) +
+  theme(
+    #legend.position = "top",
+    legend.justification = "left",
+    axis.text.y = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    legend.direction = "vertical",
+    legend.position = c(0.80, 0.9),
+    legend.background = element_rect(fill = alpha(aep_colors[["cinza"]], .2), color = aep_colors[["cinza"]])
+    
+  ) + guides(fill = guide_legend(reverse = T))
+```
+
+
+
+```{r}
 # Agrupa prevalência de palavras -----------------------------------------------
 controversos2 <- controversos %>%
   group_by(data_resposta, 
@@ -513,7 +609,7 @@ p2 <- controversos2 %>%
   scale_fill_manual(values = paleta_governo) +
   scale_color_manual(values = paleta_governo) +
   scale_x_date(breaks = scales::date_breaks("3 months"), date_labels = "%m-%y", expand = c(0 ,0)) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 1), expand = c(0 ,0)) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1, decimal.mark = ","), expand = c(0 ,0)) +
   theme_minimal() +
   theme(
     legend.position = "top",
@@ -540,5 +636,184 @@ comb + plot_annotation(
   caption = "Alguns termos podem aparecer mais de uma vez em uma mesma resposta.",
   theme = theme(plot.caption =  element_text(size = 12, hjust = 0, vjust = 0))
 )
+```
+
+#### Especificação das decisões de acesso negado
+##### Justificativa resumida inserida pelos órgãos do Governo Federal
+Os quadrantes em cinza significa que não houve detecção de termos no corpo dos pedidos com a especificação da negativa
+
+```{r fig.height=5.5, fig.width=8}
+especificacao_decisao_negada %>% 
+   mutate(controversos = case_when(
+    controversos == "desarrazoado" ~ "Desarrazoado",
+    controversos == "fishing" ~ "Fishing",
+    controversos == "desproporcional" ~ "Desproporcional",
+    controversos == "seguranca" ~ "Segurança Nacional",
+    controversos == "sigilo" ~ "Dados sigilosos",
+    controversos == "decisao" ~ "Processo decisório em curso",
+    controversos == "trabalho_adic" ~"Trabalho adicional",
+    controversos == "dados_pessoais" ~ "Dados pessoais",
+    controversos == "generico" ~ "Pedido genérico",
+    controversos ==  "lgpd" ~ "LGPD",
+    TRUE ~ controversos
+    ) %>% str_wrap(10)
+  ) %>% 
+  group_by(especificacao_decisao, controversos) %>% 
+  summarise(qt_controverso = sum(qt_especificacao_por_termo_controverso), .groups = "drop") %>% 
+  group_by(especificacao_decisao) %>% 
+  mutate(qt_decisao = sum(qt_controverso)) %>% ungroup() %>% 
+  complete(especificacao_decisao, controversos) %>%
+  mutate(perc = qt_controverso / qt_decisao) %>% 
+  ggplot(aes(x = controversos, y = especificacao_decisao, fill = perc)) +
+  geom_tile(color = "gray80", size = 1.5) +
+  geom_text(
+    aes(label = scales::percent(perc, accuracy = 0.1, decimal.mark = ","), color = perc),
+    check_overlap = T,
+    size = 3,
+    show.legend = F
+  ) +
+  scale_fill_viridis_c(
+    na.value = "gray90",
+    direction = -1,
+    option = "inferno",
+    labels = scales::percent_format(decimal.mark = ",")
+  ) +
+  scale_color_viridis_c(
+    option = "inferno",
+    direction = 1, 
+    na.value = "gray80"
+  ) +
+  labs(
+    y = "Especificação da negativa",
+    x = "Prevalência do termo controverso nas respostas dos órgãos públicos",
+    fill = "%"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 55, hjust = 1.05, vjust = 1.05),
+    axis.ticks = element_blank(),
+    panel.grid = element_blank()
+  )
+```
+
+
+http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DetalhePedido/DetalhePedido.aspx?
+
+```{r fig.height=12.5, fig.width=15}
+acessos_negados <- pedidos_cgu %>%
+  filter(decisao == "Acesso Negado") %>%
+  group_by(data_resposta, governo_que_respondeu, especificacao_decisao) %>% 
+  summarise(qt_especificacao_decisao = n(), .groups = "drop")
+  
+acessos_negados %>%
+  ggplot() +
+  geom_line(aes(x = data_resposta, y = qt_especificacao_decisao)) + 
+  geom_rect(
+    data = rect_gov,
+    aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, fill = governo_que_respondeu), 
+    alpha = .2, show.legend = T
+  ) +
+  scale_fill_manual(values = paleta_governo) +
+  scale_color_manual(values = paleta_governo) +
+  scale_x_date(breaks = scales::date_breaks("3 months"), date_labels = "%m-%y", expand = c(0 ,0)) +
+  theme_minimal() +
+  labs(
+    fill = NULL,
+    x = NULL,
+    y = NULL
+  ) +
+  theme(
+    legend.position = "top",
+    legend.justification = "left",
+    legend.text = element_text(size = 15),
+    axis.text.x = element_text(hjust = .5, vjust = .5, angle = 45, size = 12),
+    axis.text.y = element_text(size = 12),
+    plot.subtitle = element_text(vjust = 0, hjust = 0, size = 18),
+    panel.grid.minor = element_blank(),
+    strip.text.x = element_text(size = 18, hjust = 0, vjust = 0)
+  ) +
+  facet_wrap( ~ reorder(especificacao_decisao, -qt_especificacao_decisao), scales = "free", ncol = 2)
+```
+
+### Uso da LGPD nas negativas de acesso a informação
+
+```{r}
+
+library(timetk)
+library(sweep)
+library(forecast)
+
+# Step 1: Coerce to a ts object class.
+ts_controversos_nest <- controversos %>% 
+  select(data_resposta, id_pedido, controversos, governo_que_respondeu, prevalencia) %>% 
+  filter(prevalencia) %>% 
+  complete(data_resposta, controversos, fill = list(prevalencia = 0)) %>% 
+  group_by(data_resposta, controversos) %>% 
+  summarise(prevalencia = sum(prevalencia), .groups = "drop") %>% 
+  group_by(controversos) %>% 
+  nest() %>% 
+  ungroup() %>% 
+  mutate(data_ts = map(data, tk_ts, select = -data_resposta, start = 2015, fre = 12),
+         fit_ets = map(data_ts, ets))
+
+# Step 2: Apply a model (or set of models)
+# sw_tidy
+ts_controversos_nest %>% 
+  mutate(tidy = map(fit_ets, sw_tidy)) %>%
+    unnest(tidy) %>%
+    spread(key = controversos, value = estimate)
+
+# sw_glance
+ts_controversos_nest %>%
+    mutate(glance = map(fit_ets, sw_glance)) %>%
+    unnest(glance)
+
+# sw_augment
+augment_fit_ets <- ts_controversos_nest %>%
+    mutate(augment = map(fit_ets, sw_augment, timetk_idx = TRUE, rename_index = "date")) %>%
+    unnest(augment)
+
+augment_fit_ets %>%
+    ggplot(aes(x = date, y = .resid, group = controversos)) +
+    geom_hline(yintercept = 0, color = "grey40") +
+    geom_line() +
+    geom_smooth(method = "loess", color = aep_colors[["marrom"]]) +
+    labs(title = "Termos controversos nas negativas de acesso a informação",
+         subtitle = "ETS Model Residuals", x = "") + 
+    theme_minimal() +
+    facet_wrap(~ controversos, scale = "free_y", ncol = 3) +
+    scale_x_date(date_labels = "%Y")
+    
+# sw_tidy_decomp
+ts_controversos_nest %>%
+    mutate(decomp = map(fit_ets, sw_tidy_decomp, timetk_idx = TRUE, rename_index = "date")) %>%
+    unnest(decomp)
+
+# Step 3: Forecast the models (similar to predict)
+ts_controversos_fcast <- ts_controversos_nest %>%
+    mutate(fcast_ets = map(fit_ets, forecast, h = 12))
+ts_controversos_fcast
+
+# Step 4: Tidy the forecast
+ts_controversos_fcast_tidy <- ts_controversos_fcast %>%
+    mutate(sweep = map(fcast_ets, sw_sweep, fitted = FALSE, timetk_idx = TRUE)) %>%
+    unnest(sweep)
+
+ts_controversos_fcast_tidy %>%
+    ggplot(aes(x = index, y = prevalencia, color = key, group = controversos)) +
+    geom_ribbon(aes(ymin = lo.95, ymax = hi.95), 
+                fill = "#D5DBFF", color = NA, size = 0) +
+    geom_ribbon(aes(ymin = lo.80, ymax = hi.80, fill = key), 
+                fill = "#596DD5", color = NA, size = 0, alpha = 0.8) +
+    geom_line() +
+    labs(title = "Bike Quantity Sold By Secondary Category",
+         subtitle = "ETS Model Forecasts",
+         x = "", y = "Units") +
+    scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+  # scale_fill_manual(values = paleta_governo) +
+  # scale_color_manual(values = paleta_governo) +
+    facet_wrap(~ controversos, scales = "free_y", ncol = 3) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
