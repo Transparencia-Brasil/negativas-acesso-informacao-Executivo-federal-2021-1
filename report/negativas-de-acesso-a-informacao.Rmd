@@ -79,30 +79,43 @@ pedidos_cgu <- readRDS(here("dados/load/rds/pedidos-cgu.rds")) %>%
   mutate(across(starts_with("ts_"), ~ dmy(.x))) %>% 
   filter(data_registro < as_date("2021-06-01"),
          data_resposta < as_date("2021-06-01"))
+
+recursos_cgu <- readRDS(here("dados/load/rds/recursos-cgu.rds"))
 ```
 
 ## Introdução
 
-O objetivo deste relatório é apresentar uma avaliação a respeito das negativas de acesso aos pedidos de informação feitos para os órgãos e entidades do poder Executivo federal via [LAI](http://www.planalto.gov.br/ccivil_03/_ato2011-2014/2011/lei/l12527.htm) e registrados no [portal da Acesso a Informação do Governo Federal](http://www.consultaesic.cgu.gov.br/busca/SitePages/Principal.aspx). 
+O objetivo deste relatório é apresentar uma avaliação a respeito das negativas de acesso aos pedidos de informação feitos para os órgãos e entidades do poder Executivo federal via [LAI][site_lai] e registrados no [portal da Acesso a Informação do Governo Federal][site_consultaesic]. 
 
 As negativas de acesso a informação foram analisadas considerando as classificações de atendimento que os próprios órgãos do Governo Federal atribuem aos pedidos de informação que recebem. As classificações de pedidos de informação utilizadas pelo Governo Federal são:
 
- * **Acesso concedido:** fornecimento da informação demandada.
- * **Acesso parcialmente concedido:** fornecimento de parte da informação demandada e negativa ou não atendimento de parte do pedido.
- * **Acesso negado:** negativa de fornecimento da informação demandada.
- * **Informação inexistente.**
- * **Não se trata de solicitação de informação.**
- * **Órgão não tem competência para responder sobre o assunto.**
- * **Pergunta Duplicada/Repetida.**
+ * Acesso concedido: fornecimento da informação demandada.
+ * Acesso parcialmente concedido: fornecimento de parte da informação demandada e negativa ou não atendimento de parte do pedido.
+ * Acesso negado: negativa de fornecimento da informação demandada.
+ * Informação inexistente.
+ * Não se trata de solicitação de informação.
+ * Órgão não tem competência para responder sobre o assunto.
+ * Pergunta Duplicada/Repetida.
+
+Além das classificações de atendimento, a Controladoria Geral da União atribui uma especificação que justifica a decisão sobre o pedido de informação encaminhado aos órgãos do Executivo. Neste relatório, foram consideradas somente as especificações atribuídas aos pedidos com acesso negado (tabela completa em anexo), sendo elas:
+
+ * Pedido incompreensível
+ * Processo decisório em curso
+ * Informação sigilosa classificada conforme a Lei 12.527/2011
+ * Informação sigilosa de acordo com legislação específica
+ * Pedido exige tratamento adicional de dados
+ * Dados pessoais
+ * Pedido desproporcional ou desarrazoado
+ * Pedido genérico
 
 A análise cobre o período de 01/01/2015 até 31/05/2021, abrangendo o final do segundo mandato de Dilma Rousseff (até meados de maio de 2016), todo o mandato de Michel Temer (de meados de maio de 2016 até dezembro de 2018) e o mandato de Jair Bolsonaro (de janeiro de 2019 até maio de 2021). Especificamente, foram analisados os seguintes aspectos:
 
  * A frequência total de pedidos de acesso a informação e a proporção de respostas atendidas (classificadas como "acesso concedido") ano a ano, categorizando o período analisado por governo.
  * A frequência das classificações de atendimento atribuídas pelos órgãos, categorizadas por governo.
  * A prevalência de termos considerados controversos no texto das respostas de “Acesso negado”, a saber: “Trabalho adicional”, “Fishing”, “Desproporcional”, “Desarrazoado”, “Dados sigilosos”, “Dados pessoais”, “Pedido genérico”, “Processo decisório em curso” e “Segurança Nacional” e "Lei Geral de Proteção de Dados"
- * A evolução das negativas de pedidos de acesso a informação no contexto da nova [Lei Geral de Proteção de Dados](http://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm).
+ * A evolução das negativas de pedidos de acesso a informação no contexto da nova [Lei Geral de Proteção de Dados][site_lgpd].
  
-É importante ressaltar que este relatório não considera possíveis distorções que as classificações supracitadas estão sujeitas no que tange ao mérito da resposta fornecida pelos órgãos do Executivo federal. Em [estudos anteriores](https://www.transparencia.org.br/downloads/publicacoes/Alteracoes_atendimento_pedidos_de_informacao_e_MP_928.pdf), foram detectadas inconsistências entre a classificação da resposta atribuída por um órgão e a real qualidade dessa resposta em relação ao que foi objetivamente solicitado pelo requerente do pedido, demonstrando casos onde o órgão considerou o acesso concedido quando a real resposta ao pedido foi uma negativa.
+É importante ressaltar que este relatório não considera possíveis distorções que as classificações supracitadas estão sujeitas no que tange ao mérito da resposta fornecida pelos órgãos do Executivo federal. Em [estudos anteriores][relatorio_tb], foram detectadas inconsistências entre a classificação da resposta atribuída por um órgão e a real qualidade dessa resposta em relação ao que foi objetivamente solicitado pelo requerente do pedido, demonstrando casos onde o órgão considerou o acesso concedido quando a real resposta ao pedido foi uma negativa.
 
 Os dados de utilizados neste relatório foram coletados do [e-sic do Governo Federal](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx). A coleta, tratamento e análise dos dados está documentada para fins de reproducibilidade no [GitHub da Transparência Brasil](https://github.com/Transparencia-Brasil/negativas-acesso-informacao-Executivo-federal-2021-1).
 
@@ -111,6 +124,12 @@ Os resultados da análise são destacados a seguir:
 * Queda pelo terceiro ano consecutivo de pedidos de informação com acessos concedidos pelos órgãos do poder Executivo Federal, atingindo o menor patamar em 2021. Durante o Governo Bolsonaro a proporção entre pedidos realizados e acessos concedidos recuou **6 p.p**, saindo de um patamar de 73% em 2018 para 67% em 2021.
 * Resultados relacionados aos termos controversos (em breve).
 * Resultados relacionados à introdução da LGPD nas negativas de acesso a informação. (em breve)
+
+## Dados de pedidos de acesso a informação via LAI
+
+A Controladoria Geral da União, através do [portal da Acesso a Informação do Governo Federal](http://www.consultaesic.cgu.gov.br/busca/SitePages/Principal.aspx) disponibiliza os dados de solicitações de acesso a informação realidas aos órgãos públicos do poder Executivo federal.
+
+Em maio de 2021 a base registrava `r n_distinct(pedidos_cgu$id_pedido)` pedidos armazenados com repostas para `r n_distinct(pedidos_cgu$orgaodestinatario)` órgãos e entidades do poder Executivo federal. 
 
 #### Pedidos de acesso a informação - quantidades de registros mês a mês
 ##### Poder executivo
@@ -431,7 +450,10 @@ controversos <- pedidos_cgu %>%
 
 ```
 
-```{r}
+#### Especificação das decisões de acesso negado
+##### Percentual da justificativa nos pedidos com acesso negados - comparação entre os governos (período completo)
+
+```{r fig.height=6.5, fig.width=7}
 especificacao_decisao_negada <- pedidos_cgu %>% 
   select(id_pedido, especificacao_decisao, governo_que_respondeu) %>% 
   left_join(controversos, .) %>%
@@ -447,12 +469,7 @@ especificacao_decisao_negada <- pedidos_cgu %>%
   arrange(-qt_governo_negou, -qt_especificacao_decisao, -qt_especificacao_por_termo_controverso) %>%
   mutate(perc = qt_especificacao_por_termo_controverso / qt_especificacao_decisao,
          especificacao_decisao = str_wrap(especificacao_decisao, 45))
-```
 
-#### Especificação das decisões de acesso negado
-##### Percentual da justificativa nos pedidos com acesso negados
-
-```{r fig.height=6.5, fig.width=7}
 especificacao_decisao_negada %>% 
   mutate(
     especificacao_decisao = str_replace_all(especificacao_decisao, fixed("\n"), " ")
@@ -518,9 +535,43 @@ especificacao_decisao_negada %>%
     legend.background = element_rect(fill = alpha(aep_colors[["cinza"]], .2), color = aep_colors[["cinza"]])
     
   ) + guides(fill = guide_legend(reverse = T))
+
 ```
 
+#### Especificação das decisões de acesso negado
+##### Percentual da justificativa nos pedidos com acesso negados
 
+De janeiro a maio do ano de referência
+
+```{r fig.height=10, fig.width=8}
+pedidos_cgu %>% 
+  select(id_pedido, especificacao_decisao, governo_que_respondeu) %>% 
+  left_join(controversos, .) %>%
+  filter(prevalencia == T)  %>% 
+  transmute(ano = year(data_resposta),
+            mes = month(data_resposta),
+            dia = day(ts_resposta),
+            governo_que_respondeu,
+            id_pedido,
+            controversos,
+            especificacao_decisao = str_wrap(especificacao_decisao, 30)) %>% 
+  filter(mes < 6) %>% 
+  group_by(ano, especificacao_decisao) %>% 
+  summarise(qt_espec = n(), .groups = "drop") %>% 
+  group_by(ano) %>% 
+  mutate(perc = qt_espec / sum(qt_espec)) %>% 
+  ungroup() %>%
+  ggplot(aes(x = ano, y = perc, color = especificacao_decisao)) +
+  geom_point(show.legend = F) +
+  geom_line(show.legend = F) +
+  facet_wrap( ~ reorder(especificacao_decisao, -perc), ncol = 2, scales = "free") +
+  scale_y_continuous(labels = scales::percent_format(decimal.mark = ",", accuracy = 1)) +
+  theme_minimal() +
+  labs(
+    x = NULL,
+    y = "% de pedidos com acesso negado"
+  )
+```
 
 ```{r}
 # Agrupa prevalência de palavras -----------------------------------------------
@@ -773,16 +824,16 @@ augment_fit_ets <- ts_controversos_nest %>%
     mutate(augment = map(fit_ets, sw_augment, timetk_idx = TRUE, rename_index = "date")) %>%
     unnest(augment)
 
-augment_fit_ets %>%
-    ggplot(aes(x = date, y = .resid, group = controversos)) +
-    geom_hline(yintercept = 0, color = "grey40") +
-    geom_line() +
-    geom_smooth(method = "loess", color = aep_colors[["marrom"]]) +
-    labs(title = "Termos controversos nas negativas de acesso a informação",
-         subtitle = "ETS Model Residuals", x = "") + 
-    theme_minimal() +
-    facet_wrap(~ controversos, scale = "free_y", ncol = 3) +
-    scale_x_date(date_labels = "%Y")
+# augment_fit_ets %>%
+#     ggplot(aes(x = date, y = .resid, group = controversos)) +
+#     geom_hline(yintercept = 0, color = "grey40") +
+#     geom_line() +
+#     geom_smooth(method = "loess", color = aep_colors[["marrom"]]) +
+#     labs(title = "Termos controversos nas negativas de acesso a informação",
+#          subtitle = "ETS Model Residuals", x = "") + 
+#     theme_minimal() +
+#     facet_wrap(~ controversos, scale = "free_y", ncol = 3) +
+#     scale_x_date(date_labels = "%Y")
     
 # sw_tidy_decomp
 ts_controversos_nest %>%
@@ -817,3 +868,13 @@ ts_controversos_fcast_tidy %>%
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
+```{r}
+kableExtra::kbl(
+  pedidos_cgu %>% distinct(especificacao_decisao)
+) %>% kableExtra::kable_paper()
+```
+
+[site_lai]: http://www.planalto.gov.br/ccivil_03/_ato2011-2014/2011/lei/l12527.htm
+[site_consultaesic]: http://www.consultaesic.cgu.gov.br/busca/SitePages/Principal.aspx
+[site_lgpd]: http://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm
+[relatorio_tb]: https://www.transparencia.org.br/downloads/publicacoes/Alteracoes_atendimento_pedidos_de_informacao_e_MP_928.pdf

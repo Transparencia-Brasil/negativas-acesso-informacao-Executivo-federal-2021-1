@@ -55,6 +55,8 @@ recursos_cgu <- dados_cgu_nested(path_files_xml_recursos$file, path_files_xml_re
 pedidos_cgu <- pedidos_cgu %>% 
   janitor::clean_names() %>% 
   mutate(
+    ts_registro = data_registro,
+    ts_resposta = data_resposta,
     data_registro = dmy(data_registro) %>% floor_date(unit = "month"),
     data_resposta = dmy(data_resposta) %>% floor_date(unit = "month"),
     governo_que_respondeu = case_when(
@@ -67,15 +69,15 @@ pedidos_cgu <- pedidos_cgu %>%
       data_registro < as_date("2019-01-01") ~ "Temer",
       TRUE ~ "Bolsonaro"
     ),
-    governo_que_respondeu = factor(governo_que_respondeu,
-                                   levels = c("Dilma II", "Temer", "Bolsonaro")),
-    governo_que_registrou = factor(governo_que_registrou,
-                                   levels = c("Dilma II", "Temer", "Bolsonaro"))
+    governo_que_respondeu = factor(governo_que_respondeu, levels = c("Dilma II", "Temer", "Bolsonaro")),
+    governo_que_registrou = factor(governo_que_registrou, levels = c("Dilma II", "Temer", "Bolsonaro"))
   )
 
 recursos_cgu <- recursos_cgu %>%
   janitor::clean_names() %>% 
   mutate(
+    ts_registro = data_registro,
+    ts_resposta = data_resposta,
     data_registro = dmy(data_registro) %>% floor_date(unit = "month"),
     data_resposta = dmy(data_resposta) %>% floor_date(unit = "month"),
     governo_que_respondeu = case_when(
@@ -88,10 +90,8 @@ recursos_cgu <- recursos_cgu %>%
       data_registro < as_date("2019-01-01") ~ "Temer",
       TRUE ~ "Bolsonaro"
     ),
-    governo_que_respondeu = factor(governo_que_respondeu,
-                                   levels = c("Dilma II", "Temer", "Bolsonaro")),
-    governo_que_registrou = factor(governo_que_registrou,
-                                   levels = c("Dilma II", "Temer", "Bolsonaro"))
+    governo_que_respondeu = factor(governo_que_respondeu, levels = c("Dilma II", "Temer", "Bolsonaro")),
+    governo_que_registrou = factor(governo_que_registrou, levels = c("Dilma II", "Temer", "Bolsonaro"))
   )
 
 saveRDS(pedidos_cgu, here("dados/load/rds/pedidos-cgu.rds"))
