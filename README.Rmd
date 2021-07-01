@@ -22,6 +22,8 @@ knitr::opts_chunk$set(
 
 * Relatório com visualizações e código fonte da análise dos dados - **[CLIQUE AQUI](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/negativas-de-acesso-a-informacao.html)**
 
+* Versão anual (em andamento): **[CLIQUE AQUI](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/negativas-de-acesso-a-informacao-2.html)**
+
 ## Base de dados
 
 * Site do e-SIC/CGU - [clique aqui](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx)

@@ -11,6 +11,9 @@ Negativas de acesso a informação no governo Federal
     **[CLIQUE
     AQUI](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/negativas-de-acesso-a-informacao.html)**
 
+-   Versão anual (em andamento): **[CLIQUE
+    AQUI](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/negativas-de-acesso-a-informacao-2.html)**
+
 ## Base de dados
 
 -   Site do e-SIC/CGU - [clique
@@ -58,7 +61,7 @@ Negativas de acesso a informação no governo Federal
 ##### Preview: pedidos
 
     #> Rows: 581,036
-    #> Columns: 23
+    #> Columns: 25
     #> $ id_ano_base              <chr> "_2021", "_2021", "_2021", "_2021", "_2021", ~
     #> $ id_pedido                <chr> "2793736", "2793760", "2793766", "2793772", "~
     #> $ protocolo_pedido         <chr> "23658000001202168", "18830000001202180", "23~
@@ -80,13 +83,15 @@ Negativas de acesso a informação no governo Federal
     #> $ resposta                 <chr> "Senhor (a) cidadão (a)    Em atenção ao pedi~
     #> $ decisao                  <chr> "Acesso Concedido", "Acesso Concedido", "Aces~
     #> $ especificacao_decisao    <chr> "Resposta solicitada inserida no Fala.Br", "R~
+    #> $ ts_registro              <chr> "01/01/2021", "01/01/2021", "01/01/2021", "01~
+    #> $ ts_resposta              <chr> "21/01/2021", "04/01/2021", "25/01/2021", "15~
     #> $ governo_que_respondeu    <fct> Bolsonaro, Bolsonaro, Bolsonaro, Bolsonaro, B~
     #> $ governo_que_registrou    <fct> Bolsonaro, Bolsonaro, Bolsonaro, Bolsonaro, B~
 
 ##### Preview: recursos
 
     #> Rows: 72,580
-    #> Columns: 19
+    #> Columns: 21
     #> $ id_ano_base           <chr> "_2021", "_2021", "_2021", "_2021", "_2021", "_2~
     #> $ id_recurso            <chr> "129788", "129836", "129869", "129888", "129898"~
     #> $ desc_recurso          <chr> "Se a pergunta não deve ser respondida pelo órgã~
@@ -104,6 +109,8 @@ Negativas de acesso a informação no governo Federal
     #> $ resposta_recurso      <chr> "Prezado (a) senhor (a),    Em atenção ao recurs~
     #> $ tipo_resposta         <chr> "Não conhecimento", "Não conhecimento", "Não con~
     #> $ id_recurso_precedente <chr> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, ~
+    #> $ ts_registro           <chr> "05/01/2021", "06/01/2021", "07/01/2021", "07/01~
+    #> $ ts_resposta           <chr> "08/01/2021", "06/01/2021", "12/01/2021", "12/01~
     #> $ governo_que_respondeu <fct> Bolsonaro, Bolsonaro, Bolsonaro, Bolsonaro, Bols~
     #> $ governo_que_registrou <fct> Bolsonaro, Bolsonaro, Bolsonaro, Bolsonaro, Bols~
 
