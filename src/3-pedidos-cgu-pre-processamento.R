@@ -12,7 +12,7 @@ dir.create(here("dados/load/rds"))
 dir.create(here("dados/load/csv"))
 
 # extract zip files
-walk(path_files_zip,  ~ unzip(.x, exdir = , here("dados/load/xml")))
+walk(path_files_zip,  unzip, exdir = here("dados/load/xml"))
 
 # exclui bases que não serão trabalhadas
 list.files(here("dados/load/xml"), pattern = "Solicitantes", full.names = T) %>% 
@@ -22,10 +22,10 @@ list.files(here("dados/load/xml"), pattern = "Solicitantes", full.names = T) %>%
 extract_data_from_xml <- function(path) {
   
   path %>%
-    file(encoding = "utf-16") %>%
-    readLines() %>%   
+    file(open = "r", encoding = "UTF-16LE") %>%
+    readLines(encoding = "UTF-16LE") %>%   
     str_replace_all("&", "") %>% 
-    xml2::read_xml(encoding = "utf-16") %>%
+    xml2::read_xml(encoding = "UTF-16LE") %>%
     xml2::as_list() %>%
     purrr::pluck(1) %>%
     purrr::map_df(attributes)
@@ -34,8 +34,12 @@ extract_data_from_xml <- function(path) {
 
 # seleciona xml files:
 path_files_xml_pedidos <- tibble(file = list.files(here("dados/load/xml"), pattern = "Pedidos", full.names = T),
-                                 id = str_extract(file, "_\\d{4}")) 
+                                 id = str_extract(file, "_\\d{4}"))
+
 path_files_xml_recursos <- tibble(file = list.files(here("dados/load/xml"), pattern = "Recursos", full.names = T),
+                                  id = str_extract(file, "_\\d{4}"))
+
+path_files_xml_solicitantes <- tibble(file = list.files(here("dados/load/xml"), pattern = "Solicitantes", full.names = T),
                                   id = str_extract(file, "_\\d{4}"))
 
 dados_cgu_nested <- function(xml_path, xml_id) {
@@ -97,17 +101,8 @@ recursos_cgu <- recursos_cgu %>%
 saveRDS(pedidos_cgu, here("dados/load/rds/pedidos-cgu.rds"))
 saveRDS(recursos_cgu, here("dados/load/rds/recursos-cgu.rds"))
 
-write.csv2(as.data.frame(pedidos_cgu),
-           file = here("dados/load/csv/pedidos-cgu.csv"),
-           row.names = F,
-           na = "",
-           fileEncoding = "UTF-8")
-
-write.csv2(as.data.frame(recursos_cgu),
-           file = here("dados/load/csv/recursos-cgu.csv"),
-           row.names = F,
-           na = "",
-           fileEncoding = "UTF-8")
+write_csv(pedidos_cgu, file = here("dados/load/csv/pedidos-cgu.csv"))
+write_csv(recursos_cgu, file = here("dados/load/csv/recursos-cgu.csv"))
 
 test <- read_delim(here("dados/load/csv/pedidos-cgu.csv"), ";", col_types = cols())
 glimpse(test)
