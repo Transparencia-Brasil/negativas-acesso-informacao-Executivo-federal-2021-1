@@ -8,7 +8,7 @@ recursos <- readRDS(here("dados/load/rds/recursos_clean.rds"))
 
 # termos controversos ----------------------------------------------------------
 
-pedidos <- pedidos %>% 
+controversos <- pedidos %>% 
   rename(resposta_pedido = resposta) %>% 
   mutate(
     controversos_desarrazoado = str_detect(resposta_pedido,'desarrazoado|desproporciona'), 
@@ -25,4 +25,3 @@ pedidos %>%
   select(id_pedido, starts_with("controversos")) %>% 
   pivot_longer(names_to = "controversos", cols = starts_with("controversos"), 
                values_to = "prevalencia", names_prefix = "controversos_")
-
