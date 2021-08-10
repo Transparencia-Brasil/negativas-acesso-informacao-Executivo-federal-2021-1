@@ -2,13 +2,12 @@
 title: 'Negativas de acesso a informação no governo Federal'
 subtitle: 'Órgãos e entidades do poder Executivo - janeiro de 2015 até 2021'
 output:
-  html_document:
+  html_document: 
     code_folding: hide
-    toc: true
+    toc: yes
     toc_depth: 4
     theme: paper
-    toc_float:
-      collapsed: false
+    df_print: default
 editor_options: 
   chunk_output_type: console
 ---
@@ -19,8 +18,9 @@ knitr::opts_chunk$set(
   comment = "#>",
   message = F,
   warning = F,
-  fig.align = "left",
-  echo = T
+  echo = T,
+  fig.width = 8,
+  fig.height = 5
 )
 ```
 
@@ -31,6 +31,8 @@ library(glue)
 library(here)
 library(ggtext)
 library(patchwork)
+library(kableExtra)
+library(hrbrthemes)
 
 set.seed(1014)
 
@@ -71,70 +73,100 @@ tb_colors <- c(
   azul = "#41ACBD"
   
   )
+
+cores_decisao <- c(
+  
+  "Acesso Concedido" = tb_colors[["azul"]],
+  "Não se trata de solicitação de informação" = aep_colors[["marrom"]],
+  "Acesso Negado" = aep_colors[["rosa"]],
+  "Acesso Parcialmente Concedido" = aep_colors[["laranja"]],
+  "Pergunta Duplicada/Repetida" = aep_colors[["cinza"]],
+  "Órgão não tem competência para responder sobre o assunto" = tb_colors[["cinza_escuro"]],
+  "Informação Inexistente" = tb_colors[["cinza_quase_branco"]]
+
+  )
 ```
 
-```{r echo = FALSE}
+```{r}
 periodo_final <- "2021-07-01"
+instancias_recursais <- c("Primeira Instância",
+                          "Segunda Instância",
+                          "Terceira Instância",
+                          "CGU",
+                          "CMRI",
+                          "Pedido de Revisão",
+                          "Não houve recurso")
 
 pedidos_cgu <- readRDS(here("dados/load/rds/pedidos-clean.rds")) %>%
-  filter(data_registro <= periodo_final,
-         data_resposta <= periodo_final)
+  filter(data_resposta <= periodo_final, data_resposta <= periodo_final)
 
 recursos_cgu <- readRDS(here("dados/load/rds/recursos-clean.rds")) %>%
-  filter(data_registro <= periodo_final,
-         data_resposta <= periodo_final)
-
-
-# respostas total por governo --------------------------------------------------
-# aux <- respostas_comuns %>% 
-#   group_by(governo_que_respondeu) %>%
-#   summarise(qt = sum(qt), .groups = "drop") %>% 
-#   ungroup()
-
-# finaliza rcom taxa de tipo/total de respostas --------------------------------
-# respostas_comuns_gov <- respostas_comuns %>% 
-#   group_by(governo_que_respondeu, decisao) %>%
-#   summarise(qt = sum(qt), .groups = "drop") %>% 
-#   left_join(aux, by = "governo_que_respondeu", suffix = c("_tipo_resposta", "_respostas_total")) %>%
-#   mutate(perc = qt_tipo_resposta / qt_respostas_total)
-
+  filter(data_resposta <= periodo_final, data_resposta <= periodo_final) %>% 
+  mutate(instancia = ordered(instancia, levels = instancias_recursais))
 ```
 
-O objetivo deste relatório é apresentar uma avaliação a respeito das negativas de acesso aos pedidos de informação feitos para os órgãos e entidades do poder Executivo federal via [LAI][site_lai] e registrados no [portal da Acesso a Informação do Governo Federal][site_consultaesic]. 
+> **Tipo recurso**: motivo da abertura do recurso
 
-As negativas de acesso a informação foram analisadas considerando as classificações de atendimento que os próprios órgãos do Governo Federal atribuem aos pedidos de informação que recebem. As classificações de pedidos de informação utilizadas pelo Governo Federal são:
+- Informação incompleta
+- Outros
+- Justificativa para o sigilo insatisfatória/não informada
+- ~~Informação recebida não corresponde à solicitada~~
+- ~~Ausência de justificativa legal para classificação~~
+- ~~Grau de classificação inexistente~~
+- ~~Informação recebida por meio diferente do solicitado~~
+- ~~Resposta não foi dada no prazo~~
+- ~~Informação classificada por autoridade sem competência~~
+- ~~Autoridade classificadora não informada~~
+- ~~Grau de sigilo não informado~~
+- ~~Data da classificação (de início ou fim) não informada~~
+- ~~Prazo de classificação inadequado para o grau de sigilo~~
+- ~~Não concorda com a transformação do pedido em manifestação de ouvidoria~~
+- ~~Deferimento de pedido de revisão para transformar pedido em manifestação~~
 
- * Acesso concedido: fornecimento da informação demandada.
- * Acesso parcialmente concedido: fornecimento de parte da informação demandada e negativa ou não atendimento de parte do pedido.
- * Acesso negado: negativa de fornecimento da informação demandada.
- * Informação inexistente.
- * Não se trata de solicitação de informação.
- * Órgão não tem competência para responder sobre o assunto.
- * Pergunta Duplicada/Repetida.
+> **Instância**: descrição da instância do recurso
 
-Além das classificações de atendimento, a Controladoria Geral da União atribui uma especificação que justifica a decisão sobre o pedido de informação encaminhado aos órgãos do Executivo. Neste relatório, foram consideradas somente as especificações atribuídas aos pedidos com acesso negado (tabela completa em anexo), sendo elas:
+- Primeira Instância
+- Segunda Instância
+- Terceira Instância
+- CGU
+- CMRI
+- ~~Pedido de Revisão~~
+- Não houve recurso
 
- * Pedido incompreensível
- * Processo decisório em curso
- * Informação sigilosa classificada conforme a Lei 12.527/2011
- * Informação sigilosa de acordo com legislação específica
- * Pedido exige tratamento adicional de dados
- * Dados pessoais
- * Pedido desproporcional ou desarrazoado
- * Pedido genérico
+> **Decisão**: tipo de resposta dada ao pedido
 
-A análise cobre o período de 01/01/2015 até 31/05/2021, abrangendo o final do segundo mandato de Dilma Rousseff (até meados de maio de 2016), todo o mandato de Michel Temer (de meados de maio de 2016 até dezembro de 2018) e o mandato de Jair Bolsonaro (de janeiro de 2019 até maio de 2021). Especificamente, foram analisados os seguintes aspectos:
+-   Acesso Concedido
+-   Pergunta Duplicada/Repetida
+-   Acesso Parcialmente Concedido
+-   Acesso Negado
+-   Não se trata de solicitação de informação
+-   Órgão não tem competência para responder sobre o assunto
+-   Informação InexistenteAcesso concedido
 
- * A frequência total de pedidos de acesso a informação e a proporção de respostas atendidas (classificadas como "acesso concedido") ano a ano, categorizando o período analisado por governo.
- * A frequência das classificações de atendimento atribuídas pelos órgãos, categorizadas por governo.
- * A prevalência de termos considerados controversos no texto das respostas de “Acesso negado”, a saber: “Trabalho adicional”, “Fishing”, “Desproporcional”, “Desarrazoado”, “Dados sigilosos”, “Dados pessoais”, “Pedido genérico”, “Processo decisório em curso” e “Segurança Nacional” e "Lei Geral de Proteção de Dados"
- * A evolução das negativas de pedidos de acesso a informação no contexto da nova [Lei Geral de Proteção de Dados][site_lgpd].
- 
-É importante ressaltar que este relatório não considera possíveis distorções que as classificações supracitadas estão sujeitas no que tange ao mérito da resposta fornecida pelos órgãos do Executivo federal. Em [estudos anteriores][relatorio_tb], foram detectadas inconsistências entre a classificação da resposta atribuída por um órgão e a real qualidade dessa resposta em relação ao que foi objetivamente solicitado pelo requerente do pedido, demonstrando casos onde o órgão considerou o acesso concedido quando a real resposta ao pedido foi uma negativa.
+> **Índice de acesso a informação**: proporção de solicitações atendidas em relação às decisões de Acesso Negado, Acesso Concedido, Acesso Parcialmente Concedido, Órgão não tem competencia para responder sobre assunto, Informação Ineistente, ~~Não se trata de solicitação de informação~~, ~~Pergunta Duplicada~~
 
-Os dados de utilizados neste relatório foram coletados do [e-sic do Governo Federal](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx). A coleta, tratamento e análise dos dados está documentada para fins de reproducibilidade no [GitHub da Transparência Brasil](https://github.com/Transparencia-Brasil/negativas-acesso-informacao-Executivo-federal-2021-1).
+### To do
 
-#### Pedidos de acesso a informação - quantidades de registros mês a mês
+> **Termos controversos**: termos que indicam negativas ou descumprimento da LAI (previsão: sprint **26/08**)
+
+- Pedido desarrazoado ou desproporcional (`desarrazoado|desproporciona`)
+- Fishing expedition (`fishing`)
+- Segurança Nacional (`segurança [nacional|do estado]`)
+- Sigilo (`sigilo`)
+- Decisão em curso (`processo decisorio em curso|documento preparatorio`)
+- Trabalho adicional (`trabalho[s]? adiciona`)
+- Pedido Genérico (`generico`)
+- LGPD (`lei geral de proteção de dados|lei de protecao de dados pessoais|13\\.?709|13\\.?853|lgpd`)
+
+> **Análise de série temporal**: Reprocessar forecasting e iniciar análise de série temporal (sazonalidade, estacionariedade, modelos autorregressivos básicos) (previsão: sprint **09/09**)
+
+> **Análise por órgãos**: Listar órgãos que mais negam informações (previsão: sprint **23/09**)
+
+> **Análise por tempo de resposta**: Qual período mais descumpriu prazos da LAI? Quais órgãos? (previsão: sprint **07/10**)
+
+<br/><br/>
+
+## Pedidos de acesso a informação
 
 ```{r}
 pedidos_por_mes <- pedidos_cgu %>% 
@@ -156,103 +188,23 @@ pedidos_por_mes %>%
     y = "Quantidade",
     x = NULL,
     fill = NULL,
-    title = NULL,
-    subtitle = NULL
+    title = "Quantidade de pedidos de acesso a informação mês a mês"
   ) +
   theme(
     axis.text.x = element_text(hjust = .5, vjust = .5, angle = 90),
     legend.position = c(.1, .9),
     panel.grid.minor = element_blank(),
-    legend.background = element_rect(fill = alpha(aep_colors[["cinza"]], .2), color = aep_colors[["cinza"]])
+    legend.background = element_rect(
+      fill = alpha(aep_colors[["cinza"]], .2),
+      color = aep_colors[["cinza"]]
+    )
   ) +
   guides(color = "none")
 ```
 
-O índice de acessos concedidos aos pedidos de informação é o percentual de pedidos em que o Governo Federal concede acesso ao requerente em relação ao total de pedidos registrados no [e-sic do Governo Federal][site_consultaesic]. Além de "acesso concedido", o Governo Federal classifica as respostas aos pedidos de informação via LAI como *"Não se trata de solicitação de informação"*, *"Acesso negado"*, *"Acesso parcialmente concedido"*, *"Informação inexistente"*, *"Órgão não tem competência para responder sobre o assunto"*, *"Pergunta duplicada/repetida"*.
+<br/><br/>
 
-#### Atendimento da LAI ano a ano - 2015 a 2021
-
-```{r}
-pedidos_por_ano <- pedidos_cgu %>% 
-  select(data_registro, id_pedido) %>% 
-  mutate(data_registro = floor_date(data_registro, unit = "year")) %>% 
-  group_by(data_registro) %>% 
-  summarise(qt = n() / 1e3, .groups = "drop") %>% 
-  mutate(ano = ordered(year(data_registro)), categoria = "Total")
-
-pedidos_por_ano_concedidos <- pedidos_cgu %>% 
-  filter(decisao == "Acesso Concedido") %>%
-  select(data_registro, id_pedido) %>%
-  mutate(data_registro = floor_date(data_registro, unit = "year")) %>%
-  group_by(data_registro) %>%
-  summarise(qt = n() / 1e3, .groups = "drop") %>% 
-  mutate(ano = ordered(year(data_registro)), categoria = "Acesso Concedido")
-
-indice_respostas_concedidas <- pedidos_por_ano %>%
-  left_join(
-    pedidos_por_ano_concedidos, 
-    by = "data_registro",
-    suffix = c("_pedidos", "_concedidos")
-  ) %>%
-  mutate(indice_acessos_concedidos = qt_concedidos / qt_pedidos)
-```
-
-```{r}
-pedidos_por_ano %>% 
-  bind_rows(pedidos_por_ano_concedidos) %>% 
-  ggplot(aes(x = data_registro, y = qt, fill = categoria, color = categoria)) +
-  geom_point(size = 14, alpha = .3, shape = 21) +
-  geom_line(size = 1.5, alpha = .6) +
-  geom_text(aes(label = round(qt, 1)), color = "black") +
-  labs(x = NULL, y = "Quantidade (mil)", fill = NULL, color = NULL) +
-  theme_minimal() + 
-  scale_color_manual(values = c(aep_colors[["rosa"]], aep_colors[["cinza"]])) +
-  scale_fill_manual(values = c(aep_colors[["rosa"]], aep_colors[["cinza"]])) +
-  scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
-  theme(
-    legend.position = "top",
-    legend.justification = "left",
-    legend.direction = "horizontal",
-    panel.grid.minor.x = element_blank()
-  )
-```
-
-> Em 2021 o Governo Federal contabilizou `r pedidos_por_ano$qt[7]` mil pedidos de informação, concedendo o acesso para `r pedidos_por_ano_concedidos$qt[7]` mil deles (`r scales::percent(indice_respostas_concedidas[[7, 8]])`).
-
-#### Índice de acessos concedidos
-
-```{r}
-indice_respostas_concedidas %>%
-  ggplot() +
-  geom_bar(aes(
-    x = data_registro,
-    y = indice_acessos_concedidos),
-    fill = tb_colors[["laranja"]],
-    stat = "identity",
-    alpha = .7,
-    color = "black"
-  ) +
-  geom_text(aes(
-    x = data_registro,
-    y = indice_acessos_concedidos, 
-    label = scales::percent(indice_acessos_concedidos, accuracy = 0.1, decimal.mark = ",")),
-    vjust = -1
-  ) +
-  scale_y_continuous(labels = scales::percent_format(), limits = c(0, .75)) +
-  labs(
-    x = NULL,
-    y = NULL,
-    title = NULL
-  ) +
-  theme_minimal() +
-  theme(
-    panel.grid.minor = element_blank(),
-    panel.grid.major.x = element_blank(),
-    axis.text.x = element_text(vjust = 7)
-  )
-```
-
-#### Decisão das solicitações mês a mês (linhas, esquerda) e % anual (barras, direita)
+## Atendimento da Lei de Acesso a Informação
 
 ```{r fig.height=15, fig.width=10}
 # cores de fundo ---------------------------------------------------------------
@@ -268,13 +220,7 @@ rect_gov <- tibble(
 decisao <- pedidos_cgu %>%
   group_by(data_resposta, decisao, governo_que_respondeu) %>%
   summarise(qt = n(), .groups = "drop") %>%
-  mutate(
-    decisao = case_when(
-      decisao == "Órgão não tem competência para responder sobre o assunto" ~
-        "Órgão não tem competência \npara responder sobre o assunto",
-      TRUE ~ decisao
-      ) %>% fct_reorder(qt, .desc = T)
-    )
+  mutate(decisao = fct_reorder(str_wrap(decisao, 40), qt, .desc = T))
 
 # plot esquerdo ----------------------------------------------------------------
 p1 <- decisao %>%
@@ -307,6 +253,9 @@ p1 <- decisao %>%
   facet_wrap(~ reorder(decisao, -qt), scales = 'free', ncol = 1)
 
 # plot direito -----------------------------------------------------------------
+cores_decisao2 <- cores_decisao
+cores_decisao2[["Informação Inexistente"]] <- "gray40"
+
 p2 <- decisao %>% 
   group_by(ano = year(data_resposta), decisao) %>% 
   summarise(qt = sum(qt), .groups = "drop") %>% 
@@ -315,13 +264,15 @@ p2 <- decisao %>%
          perc_ano = qt / qt_ano) %>% 
   ungroup() %>% 
   arrange(decisao, ano) %>% 
-  ggplot(aes(x = perc_ano, y = reorder(ano, -ano))) +
+  ggplot(aes(x = perc_ano, y = reorder(ano, -ano), fill = decisao, color = decisao)) +
   facet_wrap(~ reorder(decisao, -perc_ano), ncol = 1, scales = "free_x") +
-  geom_col(aes(x = 1), fill = tb_colors[["cinza_quase_branco"]], color = "white") +
-  geom_col(alpha = .6, fill = tb_colors["azul"], color = tb_colors["azul"]) +
+  geom_col(aes(x = 1), alpha = .3, fill = tb_colors[["cinza_quase_branco"]], color = "white") +
+  geom_col(alpha = .6) +
   geom_text(aes(label = scales::percent(perc_ano, accuracy = 0.1, decimal.mark = ",")),
              size = 2.8, hjust = -.1, check_overlap = T) +
   theme_minimal() +
+  scale_fill_manual(values = cores_decisao) +
+  scale_color_manual(values = cores_decisao2) +
   scale_y_discrete(expand = c(0, 0)) +
   scale_x_continuous(expand = c(0, 0), labels = scales::percent_format(), limits = c(0,1),
                      breaks = c(0,.3, .6, .9)) +
@@ -342,87 +293,331 @@ p2 <- decisao %>%
   )
 
 comb <- p1 + p2 & theme(legend.position = "none")
-comb + plot_layout(widths = c(2.7, 1))
+comb + 
+  plot_layout(widths = c(2.5, 1)) +
+  plot_annotation(title = "Atendimento da LAI mês a mês (linhas, esquerda) e % anual (barras, direita)")
 ```
 
-### Especificação da decisão
-
-```{r}
-decisao_por_ano_especificada <- pedidos_cgu %>% 
-  transmute(
-    ano = year(data_resposta),
-    id_pedido,
-    decisao,
-    especificacao_decisao = replace_na(especificacao_decisao, "Sem especificação (campo não preenchido)"),
-    decisao = case_when(
-      decisao == "Acesso Concedido" ~ decisao,
-      decisao == "Acesso Negado" ~ decisao,
-      decisao == "Acesso Parcialmente Concedido" ~ decisao,
-      TRUE ~ "Acesso Não Concedido - Outro Motivo*"
-    )
-  ) %>% 
-  count(ano, decisao, especificacao_decisao) %>% 
-  group_by(ano) %>% 
-  mutate(n_ano = sum(n)) %>% 
-  ungroup() %>% 
-  group_by(ano, decisao) %>% 
-  mutate(n_ano_decisao = sum(n)) %>% 
-  ungroup() %>% 
-  mutate(perc_ano = n / n_ano)
+```{r echo = FALSE}
+rm(p1)
+rm(p2)
+rm(comb)
 ```
 
+<br/><br/>
+
 ```{r}
-plot_decisao_por_ano_especificada <- function(df, decisao_acesso) {
+pedidos_por_ano_e_decisao <- function(df, catg_decisao) {
+  
+  if (catg_decisao != "Total") df <- filter(df, decisao == catg_decisao)
+  
   df %>% 
-    filter(decisao == decisao_acesso) %>% 
-    ggplot(aes(x = ano, y = perc_ano, fill = str_wrap(especificacao_decisao, 30))) +
-    geom_area(show.legend = F, alpha = .5) +
-    geom_point(show.legend = F) +
-    theme_minimal() +
-    scale_y_continuous(labels = scales::percent) +
-    facet_wrap(. ~ reorder(str_wrap(especificacao_decisao, 70), -perc_ano, sum),
-               scales = "free_x", ncol = 2) +
-    scale_x_continuous(breaks = 2015:2021, labels = 2015:2021) +
-    theme(strip.text = element_text(hjust = 0, face = "bold")) +
-    labs(y = "% do total de pedidos", x = NULL, fill = NULL)
+    select(data_resposta, id_pedido) %>%
+    mutate(data_resposta = floor_date(data_resposta, unit = "year")) %>%
+    group_by(data_resposta) %>%
+    summarise(qt = n() / 1e3, .groups = "drop") %>% 
+    mutate(ano = ordered(year(data_resposta)), categoria = catg_decisao)
+
 }
 ```
 
-</br></br>
+```{r echo=FALSE, eval = FALSE}
 
-#### Acesso concedido
+## Acessos concedidos relativamente às demais decisões
 
-```{r fig.height=8}
-plot_decisao_por_ano_especificada(decisao_por_ano_especificada, "Acesso Concedido")
+c("Total","Acesso Concedido") %>% 
+  map_df(~ pedidos_por_ano_e_decisao(pedidos_cgu, .x))  %>% 
+  ggplot(aes(x = data_resposta, y = qt, fill = categoria, color = categoria)) +
+  geom_point(size = 10, alpha = .4, shape = 21) +
+  geom_line(size = 1.5, alpha = .4) +
+  geom_text(aes(label = round(qt, 1)), color = "black", check_overlap = T, size = 3.5) +
+  labs(
+    x = NULL,
+    y = "Quantidade (mil)",
+    fill = NULL,
+    color = NULL,
+    title = "Total de pedidos de acesso a informação e acessos concedidos"
+  ) +
+  theme_minimal() + 
+  scale_color_manual(values = c(tb_colors[["azul"]], aep_colors[["cinza"]])) +
+  scale_fill_manual(values = c(tb_colors[["azul"]], aep_colors[["cinza"]])) +
+  scale_x_date(date_breaks = "1 year", date_labels = "%Y") +
+  theme(
+    legend.position = "top",
+    legend.justification = "left",
+    legend.direction = "horizontal",
+    panel.grid.minor.x = element_blank()
+  )
 ```
 
-</br></br>
+<br/><br/>
 
-#### Acesso Negado
-
-```{r fig.height=8}
-plot_decisao_por_ano_especificada(decisao_por_ano_especificada, "Acesso Negado")
-```
-
-</br></br>
-
-#### Acesso parcialmente concedido
-
-```{r fig.height=8}
-plot_decisao_por_ano_especificada(decisao_por_ano_especificada, "Acesso Parcialmente Concedido")
-```
-
-</br></br>
-
-#### Acesso não concedido - outros motivos
-
-> * Informação inexistente, não se trata de solicitação de informação, órgão não tem competência para responder sobre o assunto, pergunta duplicada/repetida
+### Índice de acessos concedidos
 
 ```{r}
-plot_decisao_por_ano_especificada(decisao_por_ano_especificada, "Acesso Não Concedido - Outro Motivo*")
+names(cores_decisao) <- str_wrap(names(cores_decisao), 40)
+
+pedidos_cgu %>% 
+  group_by(data_resposta = year(data_resposta), decisao) %>%
+  summarise(qt = n() / 1e3, .groups = "drop") %>% 
+  mutate(decisao = fct_reorder(str_wrap(decisao, 40), qt)) %>% 
+  group_by(data_resposta) %>% 
+  mutate(qt_ano = sum(qt)) %>% 
+  ungroup() %>%
+  ggplot(aes(x = data_resposta, y = qt / qt_ano, fill = decisao)) +
+  geom_col(position = "fill", alpha = .4, color = "gray60") +
+  geom_col(data = . %>%  filter(decisao == "Acesso Concedido"),
+           alpha = .4,
+           color = "gray25",
+           size = 1,
+           show.legend = F) +
+  geom_text(aes(label = scales::percent(qt / qt_ano, accuracy = 0.1)),
+            position = position_stack(vjust = .5),
+            color = 'gray25',
+            size = 3) +
+  scale_y_continuous(labels = scales::percent) +
+  scale_x_continuous(breaks = 2015:2021, labels = 2015:2021) +
+  labs(x = NULL, y = NULL, fill = "Decisão",
+       title = "% de decisão em relação ao total de pedidos") +
+  theme_minimal() +
+  scale_fill_manual(values = cores_decisao) +
+  scale_color_manual(values = cores_decisao)
 ```
 
-[site_lai]: http://www.planalto.gov.br/ccivil_03/_ato2011-2014/2011/lei/l12527.htm
-[site_consultaesic]: http://www.consultaesic.cgu.gov.br/busca/SitePages/Principal.aspx
-[site_lgpd]: http://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm
-[relatorio_tb]: https://www.transparencia.org.br/downloads/publicacoes/Alteracoes_atendimento_pedidos_de_informacao_e_MP_928.pdf
+<br/><br/>
+
+```{r}
+`%notin%` <- function(x, y) !(x %in% y)
+
+pedidos_cgu %>% 
+  filter(decisao %notin% c(
+    "Pergunta Duplicada/Repetida",
+    "Não se trata de solicitação de informação"
+  )) %>% 
+  mutate(data_resposta = floor_date(data_resposta, unit = "year")) %>%
+  group_by(data_resposta = year(data_resposta), decisao) %>%
+  summarise(qt = n() / 1e3, .groups = "drop") %>% 
+  mutate(decisao = fct_reorder(str_wrap(decisao, 40), qt)) %>% 
+  group_by(data_resposta) %>% 
+  mutate(qt_ano = sum(qt)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = data_resposta, y = qt / qt_ano, fill = decisao)) +
+  geom_col(position = "fill", color = "gray60", alpha = .4) +
+  geom_col(data = . %>%  filter(decisao == "Acesso Concedido"),
+           color = "gray25",
+           alpha = .4,
+           size = 1,
+           show.legend = F) +
+  geom_text(aes(label = scales::percent(qt / qt_ano, accuracy = 0.1)),
+            position = position_stack(vjust = .5),
+            color = "gray25",
+            size = 3.2) +
+  scale_y_continuous(labels = scales::percent) +
+  scale_x_continuous(breaks = 2015:2021, labels = 2015:2021) +
+  theme_minimal() +
+  labs(x = NULL, y = NULL, fill = "Decisão",
+       title = "% de decisão em relação ao total de pedidos",
+       subtitle = "Excluindo as decisões: Pergunta duplicada e\nNão é pedido de acesso a informação") +
+  scale_fill_manual(values = cores_decisao[-c(5, 2)])
+```
+
+<br/><br/>
+
+```{r}
+pedidos_cgu %>% 
+  filter(decisao %in% c(
+    "Acesso Concedido",
+    "Acesso Parcialmente Concedido",
+    "Acesso Negado"
+  )) %>% 
+  mutate(data_resposta = floor_date(data_resposta, unit = "year")) %>%
+  group_by(data_resposta = year(data_resposta), decisao) %>%
+  summarise(qt = n() / 1e3, .groups = "drop") %>% 
+  mutate(decisao = fct_reorder(str_wrap(decisao, 40), qt)) %>%
+  group_by(data_resposta) %>% 
+  mutate(qt_ano = sum(qt)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = data_resposta, y = qt / qt_ano, fill = decisao)) +
+  geom_col(position = "fill", color = "gray60", alpha = .4) +
+  geom_col(data = . %>%  filter(decisao == "Acesso Concedido"),
+           color = "gray25",
+           alpha = .4,
+           size = 1,
+           show.legend = F) +
+  geom_text(aes(label = scales::percent(qt / qt_ano, accuracy = 0.1)),
+            position = position_stack(vjust = .5),
+            color = "gray25") +
+  scale_y_continuous(labels = scales::percent) +
+  scale_x_continuous(breaks = 2015:2021, labels = 2015:2021) +
+  labs(x = NULL, y = NULL, fill = "Decisão",
+       title = "% de decisão em relação ao total de pedidos",
+       subtitle = "Somente Acesso Concedido, Parcialmente Concedido e Acesso Negado") +
+  theme_minimal() +
+  scale_fill_manual(values = cores_decisao[c(1, 3, 4)])
+```
+
+</br></br>
+
+## Recursos
+
+</br></br>
+
+```{r fig.height=3}
+recursos_por_instancia_decisao_e_id <- recursos_cgu %>% 
+  filter(instancia != "Pedido de Revisão") %>% 
+  group_by(id_pedido) %>%
+  arrange(id_pedido, instancia) %>% 
+  mutate(ord = 1:n()) %>% 
+  select(id_pedido, instancia, data_registro_recurso = data_registro, ord) %>% 
+  filter(ord == max(ord)) %>% 
+  left_join(select(pedidos_cgu, id_pedido, data_registro_pedido = data_registro, decisao), .) %>% 
+  mutate(
+    instancia = fct_expand(instancia, "Não houve recurso"),
+    instancia = replace_na(instancia, "Não houve recurso")
+  ) 
+
+recursos_por_instancia_decisao_e_ano <- recursos_por_instancia_decisao_e_id %>% 
+  group_by(
+    ano = year(data_registro_pedido),
+    instancia,
+    decisao
+  ) %>% 
+  summarise(n_ano_instancia_decisao = n(), .groups = "drop") %>% 
+  group_by(ano, instancia) %>% 
+  mutate(n_ano_instancia = sum(n_ano_instancia_decisao)) %>% 
+  ungroup() %>% 
+  group_by(ano, decisao) %>% 
+  mutate(n_ano_decisao = sum(n_ano_instancia_decisao)) %>% 
+  ungroup() %>% 
+  group_by(ano) %>% 
+  mutate(n_ano = sum(n_ano_instancia_decisao)) %>% 
+  ungroup()
+
+my_lbl <- function(x) scales::percent(x, accuracy = 0.01, decimal.mark = ",")
+
+recursos_por_instancia_decisao_e_ano %>% 
+  group_by(
+    ano,
+    houve_recurso = if_else(instancia == "Não houve recurso", F, T)
+  ) %>% 
+  summarise(n_ano_houve_recurso = sum(n_ano_instancia_decisao), .groups = "drop") %>% 
+  group_by(ano) %>% 
+  mutate(per = n_ano_houve_recurso / sum(n_ano_houve_recurso)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = ano, y = per, fill = houve_recurso, color = houve_recurso)) +
+  geom_text(data = . %>% filter(houve_recurso), show.legend = F,
+            aes(label = my_lbl(per)), nudge_y = .1, check_overlap = T) +
+  geom_text(data = . %>% filter(!houve_recurso), show.legend = F,
+            aes(label = my_lbl(per)), nudge_y = -.1, check_overlap = T) +
+  geom_line(size = 2) +
+  geom_point(size = 2.5, shape = 21, fill = "white") +
+  scale_color_manual(values = c(tb_colors[["azul"]], aep_colors[["rosa"]]),
+                    labels = c("Não houve recurso", "Houve recurso*"),
+                    name = "% do total de pedidos") +
+  scale_x_continuous(breaks = 2015:2021) +
+  scale_y_continuous(labels = scales::percent) +
+  theme_minimal() +
+  labs(
+    title = "Pedidos que entraram com recurso",
+    subtitle = "% do total de pedidos que entraram com recurso",
+    x = NULL, y = NULL, caption = "*Pelo menos um recurso em 1ª instância")
+```
+
+<br/><br/>
+
+```{r fig.height=8, fig.width=7}
+recursos_por_instancia_decisao_e_ano %>%
+  select(ano, instancia, n_ano_instancia, n_ano) %>%
+  distinct() %>%
+  mutate(per = n_ano_instancia / n_ano) %>%
+  filter(instancia != "Não houve recurso") %>%
+  ggplot(aes(x = fct_reorder(instancia, -per), y = per, fill = per)) +
+  geom_col(position = "dodge") +
+  geom_text(aes(label = my_lbl(per)), size = 3,
+            nudge_y = .01, show.legend = F) +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_continuous(labels = scales::percent, type = "viridis", option = "B") +
+  facet_grid(ano ~ .) +
+  theme_minimal() +
+  theme(strip.text.y = element_text(face = "bold", size = 12)) +
+  labs(
+    title = "Pedidos que entraram com recurso",
+    subtitle = "Relativamente ao total de pedidos, considerando a última instância recursal",
+    x = NULL, y = NULL, fill = "% do total\nde pedidos"
+  )
+```
+
+</br></br>
+
+```{r fig.height=10}
+recursos_por_instancia_decisao_e_ano %>%
+  #filter(instancia != "Não houve recurso") %>% 
+  # mutate(houve_recurso = if_else(instancia == "Não houve recurso", F, T)) %>% 
+  group_by(
+    ano,
+    decisao, 
+    houve_recurso = if_else(instancia == "Não houve recurso", F, T)
+  ) %>% 
+  summarise(per = sum(n_ano_instancia_decisao) / n_ano, .groups = "drop") %>% 
+  ungroup() %>%
+  distinct() %>%
+  filter(houve_recurso) %>% 
+  ggplot(aes(fill = fct_rev(decisao), y = per, x = ano)) +
+  geom_col(show.legend = F, color = "gray30") +
+  geom_text(show.legend = F, aes(label = my_lbl(per)), color = "gray30", size = 3, nudge_y = .001) +
+  facet_wrap(. ~ decisao, ncol = 2, scales = "free_x") +
+  scale_y_continuous(labels = ~ scales::percent(., accuracy = 1), expand = c(0, 0)) +
+  theme_minimal() +
+  theme(strip.text.x = element_text(face = "bold", hjust = 0)) +
+  scale_x_continuous(breaks = 2015:2021) +
+  labs(
+    title = "Recursos impetrados por decisão do órgão",
+    subtitle = "% do total de pedidos",
+    x = NULL, y = NULL) +
+  scale_fill_manual(values = cores_decisao)
+```
+
+</br></br>
+
+```{r fig.height=10, fig.width=8}
+recursos_por_instancia_decisao_e_id %>% 
+  left_join(select(recursos_cgu, id_pedido, instancia, tipo_recurso)) %>% 
+  na.omit %>% 
+  group_by(
+    ano = year(data_registro_pedido),
+    tipo_recurso,
+    decisao
+  ) %>% 
+  summarise(n_tipo_recurso_decisao = n(), .groups = "drop") %>%
+  inner_join(distinct(select(recursos_por_instancia_decisao_e_ano, ano, decisao, n_ano))) %>% 
+  mutate(per = n_tipo_recurso_decisao / n_ano) %>% 
+  filter(tipo_recurso %in% c(
+    "Informação incompleta",
+    "Informação recebida nãp cprresponde à solicitada",
+    "Outros",
+    "Justificativa para o sigilo insatisfatória/não informada"
+  )) %>% 
+  mutate(tipo_recurso = str_wrap(tipo_recurso, 50)) %>% 
+  ggplot(aes(x = ano, y = per, fill = fct_reorder(tipo_recurso, -per))) +
+  geom_col(position = "dodge", color = "gray30") +
+  facet_wrap(decisao ~ ., ncol = 1, scales = "free_x") +
+  geom_text(aes(label = my_lbl(per), color = fct_reorder(tipo_recurso, -per)),
+            show.legend = F,
+            position = position_dodge(width = 1), 
+            size = 3, 
+            angle = 90, 
+            check_overlap = T,
+            vjust = .5,
+            hjust = -.1) +
+  scale_y_percent(limits = c(0, 0.04)) +
+  scale_x_continuous(breaks = 2015:2021) +
+  theme_minimal() +
+  labs(x = NULL, y = NULL,
+       fill = "Tipo de recurso: motivo da abertura do recurso",
+       title = "Tipo de recursos para cada decisão sobre concessão de acesso",
+       subtitle = "Como % do total de pedidos no ano"
+       ) +
+  guides(fill = guide_legend(ncol = 2, title.position = "top", title.hjust = .5)) +
+  theme(strip.text.x = element_text(hjust = 0, face = "bold"),
+        legend.position = "top")
+```
