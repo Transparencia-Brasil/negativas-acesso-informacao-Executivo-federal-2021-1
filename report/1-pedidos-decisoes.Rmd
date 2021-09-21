@@ -1,0 +1,420 @@
+---
+title: 'Negativas de acesso a informação no governo Federal'
+subtitle: 'Órgãos e entidades do poder Executivo - janeiro de 2015 até 2021'
+output:
+  html_document: 
+    code_folding: hide
+    toc: yes
+    toc_depth: 4
+    theme: paper
+    df_print: default
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = T,
+  comment = "#>",
+  message = F,
+  warning = F,
+  echo = T,
+  fig.width = 8,
+  fig.height = 5
+)
+```
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(glue)
+library(here)
+library(ggtext)
+library(patchwork)
+library(kableExtra)
+library(hrbrthemes)
+
+set.seed(1014)
+
+knitr::knit_hooks$set(inline = function(x) prettyNum(x, big.mark = ".", decimal.mark = ","))
+
+options(digits = 1,
+        scipen = 999,
+        OutDec = ",",
+        knitr.kable.NA = '')
+
+Sys.setenv(LANGUAGE = "pt-br")
+Sys.setlocale("LC_TIME", "pt_BR")
+
+# helper
+`%notin%` <- function(x, y) !(x %in% y)
+
+# aplica identidade visual da TB/AeP:
+aep_colors <- c(
+  
+  laranja = "#F9A521",
+  rosa = "#D81755",
+  cinza = "#969696",
+  marrom = "#B27D5C"
+  
+)
+
+tb_colors <- c(
+  
+  laranja = "#F6A323",
+  cinza_escuro = "#1d1d1b",
+  cinza_claro =  "#6f7171",
+  cinza_quase_branco = "#ececec",
+  azul = "#41ACBD"
+  
+  )
+
+cores_decisao <- c(
+  
+  "Acesso Concedido" = tb_colors[["azul"]],
+  "Não se trata de solicitação de informação" = aep_colors[["marrom"]],
+  "Acesso Negado" = aep_colors[["rosa"]],
+  "Acesso Parcialmente Concedido" = aep_colors[["laranja"]],
+  "Pergunta Duplicada/Repetida" = aep_colors[["cinza"]],
+  "Órgão não tem competência para responder sobre o assunto" = tb_colors[["cinza_escuro"]],
+  "Informação Inexistente" = tb_colors[["cinza_quase_branco"]]
+
+  )
+
+cores_decisao2 <- cores_decisao
+cores_decisao2[["Informação Inexistente"]] <- "gray20"
+
+cores_decisao3 <- c("black", "gray90", "gray20", "gray80", "gray20")
+names(cores_decisao3) <- names(cores_decisao)[-c(5, 2)] 
+```
+
+```{r}
+periodo_final <- "2021-08-01"
+instancias_recursais <- c("Primeira Instância",
+                          "Segunda Instância",
+                          "Terceira Instância",
+                          "CGU",
+                          "CMRI",
+                          "Pedido de Revisão",
+                          "Não houve recurso")
+
+pedidos_cgu <- readRDS(here("dados/load/rds/pedidos-clean.rds")) %>%
+  filter(data_resposta <= periodo_final, data_resposta <= periodo_final) %>% 
+  rename(orgao = orgaodestinatario)
+
+recursos_cgu <- readRDS(here("dados/load/rds/recursos-clean.rds")) %>%
+  filter(data_resposta <= periodo_final, data_resposta <= periodo_final) %>% 
+  mutate(instancia = ordered(instancia, levels = instancias_recursais)) %>% 
+  rename(orgao = orgaodestinatario)
+```
+
+```{r}
+glimpse(pedidos_cgu)
+glimpse(recursos_cgu)
+```
+
+### Inspeciona decisões
+
+- Acesso Concedido
+- Acesso Parcialmente Concedido
+- Acesso Negado
+- Órgão não tem competência para responder sobre o assunto
+- Informação Inexistente
+
+```{r}
+my_lbl <- function(x) scales::percent(x, accuracy = .1, decimal.mark = ",")
+
+color_aux <- cores_decisao2 %>% enframe() %>% mutate(name = str_wrap(name, 25)) %>% deframe()
+fill_aux <- cores_decisao %>% enframe() %>% mutate(name = str_wrap(name, 25)) %>% deframe()
+
+decisao <- pedidos_cgu %>%
+  count(decisao, name = "n_decisao") %>% 
+  add_count(wt = n_decisao, name = "n_total") %>% 
+  mutate(prop = n_decisao / n_total)
+
+decisao %>% 
+  mutate(decisao = str_wrap(decisao, 25)) %>% 
+  ggplot(aes(y = reorder(decisao, prop), x = prop, fill = decisao, color = decisao)) +
+  geom_col(alpha = .6, show.legend = F) +
+  geom_text(aes(label = my_lbl(prop)),
+            show.legend = F,
+            fontface = "bold", check_overlap = T, hjust = -.1, size = 4) +
+  scale_fill_manual(values = fill_aux) +
+  scale_color_manual(values = color_aux) +
+  theme_minimal() +
+  scale_x_percent(limits = c(0,.82)) +
+  labs(y = NULL, x = NULL,
+       title = "Proporção das decisões a respeito das solicitações registradas no Fala.Br")
+
+decisao_perc <- decisao %>% select(1,4) %>% deframe() %>% scales::percent(accuracy = .1, decimal.mark = ",")
+```
+
+* Cerca de `r decisao_perc[["Não se trata de solicitação de informação"]]` dos pedidos são classificados como "Não se trata de solicitação de informação".
+* Cerca de `r decisao_perc[["Pergunta Duplicada/Repetida"]]` das manifestações são classificadas como "Pergunta Duplicada/Repetida".
+
+### Filtra pedido de acesso a informação via LAI
+
+```{r}
+cores_lai <- tibble(
+  c1 = c("Não se trata de solicitação de informação",
+         "Pergunta Duplicada/Repetida",
+         "Pedidos de acesso a informação via LAI"
+         ) %>% str_wrap(25),
+  c2 = c("#F9A521", "#969696", "#D81755")
+) %>% deframe()
+
+pedidos_cgu %>% 
+  mutate(is_pedido_de_informacao = case_when(
+    decisao %notin% c(
+      "Pergunta Duplicada/Repetida",
+      "Não se trata de solicitação de informação" 
+    ) ~ "Pedidos de acesso a informação via LAI",
+    TRUE ~ decisao
+  ) %>% str_wrap(25)) %>% 
+  count(data_registro, is_pedido_de_informacao, name = "qt") %>% 
+  ggplot(aes(
+    x = data_registro,
+    y = qt,
+    fill = is_pedido_de_informacao,
+    color = is_pedido_de_informacao
+  )) +
+  geom_vline(xintercept = seq(ymd('2015-01-01'), ymd('2021-01-01'), by = 'year'), lty = 3) +
+  geom_line(size = 1.5) +
+  theme_minimal() +
+  geom_label(
+    aes(label = qt),
+    color = "black",
+    size = 3, 
+    nudge_y = 250,
+    alpha = .6,
+    label.size = NA,
+    data = . %>% 
+      group_by(is_pedido_de_informacao) %>% 
+      filter(qt == max(qt)) %>% 
+      ungroup()
+  ) +
+  geom_point(
+    color = "gray20",
+    data = . %>% 
+      group_by(is_pedido_de_informacao) %>% 
+      filter(qt == max(qt)) %>% 
+      ungroup()
+  ) +
+  # my_label("Pergunta Duplicada/Repetida", ymd('2015-10-01')) +
+  # my_label("Não se trata de solicitação de informação", ymd('2020-04-01')) +
+  # my_label("Pedidos de acesso a informação", ymd('2017-03-01')) +
+  geom_text(
+    data = . %>% filter(month(data_registro) == 2),
+    aes(label = year(data_registro), y = -200),
+    size = 3.5,
+    vjust = 1.3,
+    hjust = .25,
+    color = "gray20",
+    show.legend = F
+  ) +
+  scale_fill_manual(values = cores_lai) +
+  scale_color_manual(values = cores_lai, breaks = names(cores_lai)[c(3,1,2)]) +
+  scale_x_date(
+    #limits = c(ymd('2015-01-01'), ymd('2030-01-01')),
+    breaks = scales::date_breaks("3 months"),
+    date_labels = "%b",
+    expand = c(0, 0)) +
+  labs(
+    y = "Quantidade",
+    x = NULL,
+    fill = NULL,
+    color = NULL,
+    title = "Manifestações para ógãos e entidades do governo executivo Federal",
+    subtitle = "Quantidades por mês"
+  ) +
+  theme(legend.position = "top",
+        legend.justification = "left",
+        legend.text = element_text(margin = margin(2,5,2,5, "pt")))
+```
+
+### Análise de decisão "Não se trata de do solicitação de informação"
+
+```{r fig.height=30, fig.width=12}
+library(tidytext)
+
+t <- pedidos_cgu %>%
+  filter(decisao == "Não se trata de solicitação de informação") %>%
+  select(id_pedido, detalhamento_solicitacao, resposta, orgao, data_registro)
+
+o <- t %>% count(orgao) %>% slice_max(n = 30, order_by = n) %>% 
+  rename(n_manifestacao = n)
+
+
+clean_strings <- function(x) {
+  x %>% 
+    str_replace_all(" \\w ", " ") %>% 
+    str_replace_all("gostaria", " ") %>% 
+    str_replace_all("saber|sobre", " ") %>% 
+    str_squish()
+}
+
+t  %>% 
+  #filter(str_detect(orgaodestinatario, "^CGU")) %>% 
+  filter(orgao %in% o$orgao) %>%
+  add_count(orgao, name = "total_orgao") %>% 
+  mutate(detalhamento_solicitacao = clean_strings(detalhamento_solicitacao),
+         orgao = glue("{orgao}\n{total_orgao} manifestações")) %>% 
+  unnest_tokens(word, detalhamento_solicitacao) %>%
+  count(orgao, word, sort = TRUE) %>% 
+  mutate(word = fct_reorder(word, n, mean)) %>%
+  group_by(orgao) %>% 
+  slice_max(n = 15, order_by = n) %>%
+  ungroup() %>% 
+  ggplot(aes(n, word)) +
+  geom_col() +
+  labs(y = NULL,
+       title = 'Termos frequêntes nas solicitações classificadas como "Não se trata de solicitação de informação"') +
+  facet_wrap(~reorder(orgao, -n), scales = "free", ncol = 3)
+```
+
+### Histórico de pedidos por decisão de acesso
+
+```{r fig.height=11, fig.width=10}
+# tipo respostas mais comuns histórico -----------------------------------------
+decisao <- pedidos_cgu %>%
+  count(data_resposta, decisao, name = "qt") %>%
+  mutate(decisao = fct_reorder(decisao, qt, .desc = T)) %>% 
+  filter(decisao %notin% c(
+    "Pergunta Duplicada/Repetida",
+    "Não se trata de solicitação de informação"
+  )) 
+
+# plot esquerdo ----------------------------------------------------------------
+p1 <- decisao %>%
+  add_count(data_resposta, wt = qt, name = "qt_mes") %>% 
+  mutate(per = qt / qt_mes) %>% 
+  ggplot(aes(x = data_resposta, y = per)) +
+  geom_rect(
+    data = . %>% 
+      filter(data_resposta == min(data_resposta) | data_resposta == max(data_resposta)),
+    aes(
+      xmin = min(data_resposta),
+      xmax = max(data_resposta),
+      ymin = -Inf,
+      ymax = Inf,
+      fill = decisao
+    ),
+    alpha = .2,
+    show.legend = F
+  ) +
+  geom_line(show.legend = F, size = .7) +
+  geom_vline(xintercept = seq(ymd('2015-01-01'), ymd('2021-01-01'), by = 'year'), lty = 3) +
+  geom_text(
+    data = . %>% filter(month(data_resposta) == 2),
+    aes(label = year(data_resposta), y = .01),
+    size = 3,
+    vjust = .1,
+    hjust = .25,
+    color = "gray20"
+  ) +
+  ggforce::geom_mark_circle(
+    aes(filter = data_resposta == ymd("2018-05-01") & decisao == "Acesso Concedido",
+        label = "Máximas anuais"),
+    color = "gray20",
+    fill = NA,
+    radius = unit(1, "mm"),
+    expand = 0,
+    con.cap = 0,
+    label.fill = alpha(cores_decisao[["Acesso Concedido"]], .5),
+    label.fontsize = 9,
+    label.fontface = "plain",
+    label.buffer = unit(5, "mm"),
+    label.margin = margin(1, 0, 1, 0, "mm")
+  ) +
+  ggrepel::geom_label_repel(
+    data = . %>%
+      group_by(decisao, year(data_resposta)) %>%
+      arrange(year(data_resposta), decisao, -per) %>%
+      filter(row_number() == 1) %>%
+      ungroup(),
+    aes(label = my_lbl(per), fill = decisao, color = decisao),
+    min.segment.length = 0.01,
+    size = 3.2,
+    label.padding = unit(0.1, "lines"),
+    label.size = NA,
+    show.legend = F,
+    direction = "y"
+  ) +
+  geom_point(
+    data = . %>%
+      group_by(decisao, year(data_resposta)) %>%
+      arrange(year(data_resposta), decisao, -per) %>%
+      filter(row_number() == 1) %>%
+      ungroup()
+  ) +
+  scale_fill_manual(values = cores_decisao) +
+  scale_color_manual(values = cores_decisao3) +
+  scale_y_percent(expand = c(0.2, 0)) +
+  scale_x_date(
+    breaks = scales::date_breaks("3 months"),
+    date_labels = "%b",
+    expand = c(0, 0)
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    axis.ticks.x = element_line(), 
+    legend.text = element_text(size = 8),
+    axis.text.x = element_text(size = 10, vjust = 2.5, hjust = .5),
+    panel.grid.minor = element_blank(),
+    strip.text = element_text(size = 12, angle = 0, hjust = 0)
+  ) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Pedidos de acesso a informação conforme decisão sobre o acesso",
+    subtitle = "Como % do total de pedidos de acesso a informação via LAI - mês a mês",
+    color = NULL,
+    fill = NULL
+  ) +
+  facet_wrap(~ reorder(decisao, -qt), scales = 'free', ncol = 1)
+
+# plot direito -----------------------------------------------------------------
+p2 <- decisao %>%
+  count(ano = year(data_resposta), decisao, wt = qt, name = "qt") %>%
+  add_count(ano, wt = qt, name = "qt_ano") %>%
+  mutate(perc_ano = qt / qt_ano) %>% 
+  ggplot(aes(x = perc_ano, y = reorder(ano, -ano), fill = decisao, color = decisao)) +
+  facet_wrap(~ reorder(decisao, -perc_ano), ncol = 1, scales = "free_x") +
+  geom_col(aes(x = 1), alpha = .3, fill = "gray70", color = "white") +
+  geom_col(alpha = .6) +
+  geom_text(aes(label = my_lbl(perc_ano)), 
+             size = 3, fontface = "bold", hjust = -.25, check_overlap = T) +
+  theme_minimal() +
+  scale_fill_manual(values = cores_decisao) +
+  scale_color_manual(values = cores_decisao2) +
+  scale_x_percent(breaks = c(0,.3, .6, .9)) +
+  scale_y_discrete(labels = glue("'{21:15}"), expand = c(0, 0)) +
+  #coord_flip() +
+  theme(
+    plot.subtitle = element_text(),
+    panel.grid.major.y = element_line(color = "white"),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.y = element_line(color = "white"),
+    panel.background = element_blank(),
+    strip.text = element_text(color = "transparent"),
+    axis.text.x = element_text(size = 10, vjust = 2),
+    axis.text.y = element_text(size = 10, hjust = 3)
+  ) +
+  labs(
+    x = NULL,
+    y = NULL,
+    fill = NULL,
+    subtitle = "% respostas por ano*"
+  )
+
+comb <- p1 + p2 & theme(legend.position = "none")
+comb + 
+  plot_layout(widths = c(3, 1))
+```
+
+```{r echo = FALSE}
+rm(p1)
+rm(p2)
+rm(comb)
+```
