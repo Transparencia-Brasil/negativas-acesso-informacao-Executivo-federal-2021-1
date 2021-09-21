@@ -191,7 +191,8 @@ pedidos_cgu %>%
     data = . %>% 
       group_by(is_pedido_de_informacao) %>% 
       filter(qt == max(qt)) %>% 
-      ungroup()
+      ungroup(),
+      show.legend = F
   ) +
   geom_point(
     color = "gray20",
