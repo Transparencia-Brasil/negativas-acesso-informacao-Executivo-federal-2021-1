@@ -24,7 +24,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r}
+```{r libs}
 library(tidyverse)
 library(lubridate)
 library(glue)
@@ -33,52 +33,55 @@ library(ggtext)
 library(patchwork)
 library(kableExtra)
 library(hrbrthemes)
+library(tidytext)
+```
 
+```{r set-options}
 set.seed(1014)
 
 knitr::knit_hooks$set(inline = function(x) prettyNum(x, big.mark = ".", decimal.mark = ","))
 
-options(digits = 1,
-        scipen = 999,
-        OutDec = ",",
-        knitr.kable.NA = '')
+options(
+  digits = 1,
+  scipen = 999,
+  OutDec = ",",
+  knitr.kable.NA = "",
+  radian.auto_match = FALSE
+)
 
 Sys.setenv(LANGUAGE = "pt-br")
 Sys.setlocale("LC_TIME", "pt_BR")
 
 # helper
 `%notin%` <- function(x, y) !(x %in% y)
+```
 
+
+```{r color-settings}
 # aplica identidade visual da TB/AeP:
-aep_colors <- c(
-  
+cores_aep <- c(
   laranja = "#F9A521",
   rosa = "#D81755",
   cinza = "#969696",
   marrom = "#B27D5C"
-  
 )
 
-tb_colors <- c(
-  
+cores_tb <- c(
   laranja = "#F6A323",
   cinza_escuro = "#1d1d1b",
-  cinza_claro =  "#6f7171",
+  cinza_claro = "#6f7171",
   cinza_quase_branco = "#ececec",
   azul = "#41ACBD"
-  
-  )
+)
 
 cores_decisao <- c(
-  
-  "Acesso Concedido" = tb_colors[["azul"]],
-  "Não se trata de solicitação de informação" = aep_colors[["marrom"]],
-  "Acesso Negado" = aep_colors[["rosa"]],
-  "Acesso Parcialmente Concedido" = aep_colors[["laranja"]],
-  "Pergunta Duplicada/Repetida" = aep_colors[["cinza"]],
-  "Órgão não tem competência para responder sobre o assunto" = tb_colors[["cinza_escuro"]],
-  "Informação Inexistente" = tb_colors[["cinza_quase_branco"]]
-
+  "Acesso Concedido" = cores_tb[["azul"]],
+  "Não se trata de solicitação de informação" = cores_aep[["marrom"]],
+  "Acesso Negado" = cores_aep[["rosa"]],
+  "Acesso Parcialmente Concedido" = cores_aep[["laranja"]],
+  "Pergunta Duplicada/Repetida" = cores_aep[["cinza"]],
+  "Órgão não tem competência para responder sobre o assunto" = cores_tb[["cinza_escuro"]],
+  "Informação Inexistente" = cores_tb[["cinza_quase_branco"]]
   )
 
 cores_decisao2 <- cores_decisao
@@ -86,75 +89,7 @@ cores_decisao2[["Informação Inexistente"]] <- "gray20"
 
 cores_decisao3 <- c("black", "gray90", "gray20", "gray80", "gray20")
 names(cores_decisao3) <- names(cores_decisao)[-c(5, 2)] 
-```
 
-```{r}
-periodo_final <- "2021-08-01"
-instancias_recursais <- c("Primeira Instância",
-                          "Segunda Instância",
-                          "Terceira Instância",
-                          "CGU",
-                          "CMRI",
-                          "Pedido de Revisão",
-                          "Não houve recurso")
-
-pedidos_cgu <- readRDS(here("dados/load/rds/pedidos-clean.rds")) %>%
-  filter(data_resposta <= periodo_final, data_resposta <= periodo_final) %>% 
-  rename(orgao = orgaodestinatario)
-
-recursos_cgu <- readRDS(here("dados/load/rds/recursos-clean.rds")) %>%
-  filter(data_resposta <= periodo_final, data_resposta <= periodo_final) %>% 
-  mutate(instancia = ordered(instancia, levels = instancias_recursais)) %>% 
-  rename(orgao = orgaodestinatario)
-```
-
-```{r}
-glimpse(pedidos_cgu)
-glimpse(recursos_cgu)
-```
-
-### Inspeciona decisões
-
-- Acesso Concedido
-- Acesso Parcialmente Concedido
-- Acesso Negado
-- Órgão não tem competência para responder sobre o assunto
-- Informação Inexistente
-
-```{r}
-my_lbl <- function(x) scales::percent(x, accuracy = .1, decimal.mark = ",")
-
-color_aux <- cores_decisao2 %>% enframe() %>% mutate(name = str_wrap(name, 25)) %>% deframe()
-fill_aux <- cores_decisao %>% enframe() %>% mutate(name = str_wrap(name, 25)) %>% deframe()
-
-decisao <- pedidos_cgu %>%
-  count(decisao, name = "n_decisao") %>% 
-  add_count(wt = n_decisao, name = "n_total") %>% 
-  mutate(prop = n_decisao / n_total)
-
-decisao %>% 
-  mutate(decisao = str_wrap(decisao, 25)) %>% 
-  ggplot(aes(y = reorder(decisao, prop), x = prop, fill = decisao, color = decisao)) +
-  geom_col(alpha = .6, show.legend = F) +
-  geom_text(aes(label = my_lbl(prop)),
-            show.legend = F,
-            fontface = "bold", check_overlap = T, hjust = -.1, size = 4) +
-  scale_fill_manual(values = fill_aux) +
-  scale_color_manual(values = color_aux) +
-  theme_minimal() +
-  scale_x_percent(limits = c(0,.82)) +
-  labs(y = NULL, x = NULL,
-       title = "Proporção das decisões a respeito das solicitações registradas no Fala.Br")
-
-decisao_perc <- decisao %>% select(1,4) %>% deframe() %>% scales::percent(accuracy = .1, decimal.mark = ",")
-```
-
-* Cerca de `r decisao_perc[["Não se trata de solicitação de informação"]]` dos pedidos são classificados como "Não se trata de solicitação de informação".
-* Cerca de `r decisao_perc[["Pergunta Duplicada/Repetida"]]` das manifestações são classificadas como "Pergunta Duplicada/Repetida".
-
-### Filtra pedido de acesso a informação via LAI
-
-```{r}
 cores_lai <- tibble(
   c1 = c("Não se trata de solicitação de informação",
          "Pergunta Duplicada/Repetida",
@@ -162,7 +97,59 @@ cores_lai <- tibble(
          ) %>% str_wrap(25),
   c2 = c("#F9A521", "#969696", "#D81755")
 ) %>% deframe()
+```
 
+Análises de pedidos de acesso a informação via LAI considerando a decisão de acesso.
+
+```{r}
+periodo_final <- "2021-08-01"
+instancias_recursais <- c(
+  "Primeira Instância",
+  "Segunda Instância",
+  "Terceira Instância",
+  "CGU",
+  "CMRI",
+  "Pedido de Revisão",
+  "Não houve recurso"
+)
+
+pedidos_cgu <- readRDS(here("dados/load/rds/pedidos-clean.rds")) %>%
+  filter(data_resposta <= periodo_final, data_resposta <= periodo_final) %>% 
+  rename(orgao = orgaodestinatario)
+```
+
+## Análise de pedidos por decisão de acesso
+
+```{r}
+pedidos_cef <- pedidos_cgu %>% 
+  add_count(decisao, id_ano_base, name = "n_ano_resposta_decisao") %>%
+  add_count(id_ano_base, name = "n_ano") %>% 
+  filter(orgao == "CEF – Caixa Econômica Federal") %>% 
+  add_count(decisao, id_ano_base, name = "n_ano_resposta_decisao_cef") %>% 
+  add_count(id_ano_base, name = "n_ano_cef") %>% 
+  mutate(id_ano_base = str_remove(id_ano_base, "_"))
+
+pedidos_cgu <- pedidos_cgu %>% filter(orgao != "CEF – Caixa Econômica Federal")
+glimpse(pedidos_cgu)
+```
+
+A Decisão de acesso corresponde ao tipo de resposta dada ao pedido (ver [dicionário](http://www.consultaesic.cgu.gov.br/arquivosRelatorios/PedidosRespostas/Dicionario-Dados-Exportacao.txt)).
+
+São considerados pedidos de acesso a informação, pedidos com a decisão:
+
+- Acesso Concedido
+- Acesso Parcialmente Concedido
+- Acesso Negado
+- Órgão não tem competência para responder sobre o assunto
+
+Não são consideradoe pedidos de acesso a informação:
+
+- Informação Inexistente
+- Pergunta Duplicada/Repetida
+
+> **A análise é feita excluindo os dados da CEF**: Os pedidos para Caixa Econômica federal não constam na base a partir de 2018.
+
+```{r}
 pedidos_cgu %>% 
   mutate(is_pedido_de_informacao = case_when(
     decisao %notin% c(
@@ -191,18 +178,17 @@ pedidos_cgu %>%
     data = . %>% 
       group_by(is_pedido_de_informacao) %>% 
       filter(qt == max(qt)) %>% 
-      ungroup()
+      ungroup(),
+      show.legend = F
   ) +
   geom_point(
     color = "gray20",
     data = . %>% 
       group_by(is_pedido_de_informacao) %>% 
       filter(qt == max(qt)) %>% 
-      ungroup()
+      ungroup(),
+    show.legend = FALSE
   ) +
-  # my_label("Pergunta Duplicada/Repetida", ymd('2015-10-01')) +
-  # my_label("Não se trata de solicitação de informação", ymd('2020-04-01')) +
-  # my_label("Pedidos de acesso a informação", ymd('2017-03-01')) +
   geom_text(
     data = . %>% filter(month(data_registro) == 2),
     aes(label = year(data_registro), y = -200),
@@ -215,7 +201,6 @@ pedidos_cgu %>%
   scale_fill_manual(values = cores_lai) +
   scale_color_manual(values = cores_lai, breaks = names(cores_lai)[c(3,1,2)]) +
   scale_x_date(
-    #limits = c(ymd('2015-01-01'), ymd('2030-01-01')),
     breaks = scales::date_breaks("3 months"),
     date_labels = "%b",
     expand = c(0, 0)) +
@@ -229,50 +214,10 @@ pedidos_cgu %>%
   ) +
   theme(legend.position = "top",
         legend.justification = "left",
-        legend.text = element_text(margin = margin(2,5,2,5, "pt")))
+        legend.text = element_text(margin = margin(2, 5, 2, 5, "pt")))
 ```
 
-### Análise de decisão "Não se trata de do solicitação de informação"
-
-```{r fig.height=30, fig.width=12}
-library(tidytext)
-
-t <- pedidos_cgu %>%
-  filter(decisao == "Não se trata de solicitação de informação") %>%
-  select(id_pedido, detalhamento_solicitacao, resposta, orgao, data_registro)
-
-o <- t %>% count(orgao) %>% slice_max(n = 30, order_by = n) %>% 
-  rename(n_manifestacao = n)
-
-
-clean_strings <- function(x) {
-  x %>% 
-    str_replace_all(" \\w ", " ") %>% 
-    str_replace_all("gostaria", " ") %>% 
-    str_replace_all("saber|sobre", " ") %>% 
-    str_squish()
-}
-
-t  %>% 
-  #filter(str_detect(orgaodestinatario, "^CGU")) %>% 
-  filter(orgao %in% o$orgao) %>%
-  add_count(orgao, name = "total_orgao") %>% 
-  mutate(detalhamento_solicitacao = clean_strings(detalhamento_solicitacao),
-         orgao = glue("{orgao}\n{total_orgao} manifestações")) %>% 
-  unnest_tokens(word, detalhamento_solicitacao) %>%
-  count(orgao, word, sort = TRUE) %>% 
-  mutate(word = fct_reorder(word, n, mean)) %>%
-  group_by(orgao) %>% 
-  slice_max(n = 15, order_by = n) %>%
-  ungroup() %>% 
-  ggplot(aes(n, word)) +
-  geom_col() +
-  labs(y = NULL,
-       title = 'Termos frequêntes nas solicitações classificadas como "Não se trata de solicitação de informação"') +
-  facet_wrap(~reorder(orgao, -n), scales = "free", ncol = 3)
-```
-
-### Histórico de pedidos por decisão de acesso
+## Histórico de pedidos de acesso a informação por decisão de acesso
 
 ```{r fig.height=11, fig.width=10}
 # tipo respostas mais comuns histórico -----------------------------------------
@@ -283,6 +228,8 @@ decisao <- pedidos_cgu %>%
     "Pergunta Duplicada/Repetida",
     "Não se trata de solicitação de informação"
   )) 
+
+my_lbl <- function(x) scales::percent(x, accuracy = .1, decimal.mark = ",")
 
 # plot esquerdo ----------------------------------------------------------------
 p1 <- decisao %>%
@@ -417,4 +364,104 @@ comb +
 rm(p1)
 rm(p2)
 rm(comb)
+```
+
+## Completude dos dados da Caixa Econômica Federal
+
+Pedidos para Caixa Econômica Federal não estõ publicados a partir de meados de 2018.
+
+```{r fig.height=3, fig.width=4.5}
+pedidos_cef %>% 
+  select(id_ano_base, n_ano, n_ano_cef) %>% 
+  distinct() %>% 
+  mutate(taxa = n_ano_cef / n_ano) %>% 
+  ggplot(aes(x = id_ano_base, y = taxa)) +
+  geom_col() +
+  scale_y_percent(limits = c(0, .1)) +
+  labs(
+    title = "Manifestações para a Caixa Econômica Federal",
+    subtitle = "Como % do total de solicitações no FalaBr",
+    y = NULL, x = NULL
+  ) +
+  theme_minimal()
+```
+
+A falta de pedidos da CEF a partir de 2018 causam viés na base de dados, pois este órgão é representativo em relação às decisões de Acesso Negado, Acesso Parcialmente Concedido e Não se Trata de Solicitação de informação.
+
+```{r fig.height=4}
+pedidos_cef %>% 
+  select(decisao, id_ano_base, starts_with("n_ano_resp")) %>% 
+  distinct() %>% 
+  mutate(taxa = n_ano_resposta_decisao_cef / n_ano_resposta_decisao) %>% 
+  ggplot(aes(x = id_ano_base, y = taxa, fill = reorder(decisao, taxa))) +
+  geom_col(position = "dodge", color = "gray20", alpha = .8) +
+  labs(
+    x = NULL,
+    y = NULL,
+    color = "Decisão",
+    title = "Decisões das solicitações enviadas para a CEF",
+    subtitle = "Como % das decisões decisões das manifestações registradas no FalaBr"
+  ) +
+  theme_minimal() +
+  theme(strip.text = element_text(hjust = 0)) +
+  #facet_wrap(~ decisao, ncol = 1) +
+  scale_y_percent() +
+  scale_fill_manual(values = cores_decisao)
+```
+
+```{r fig.height=4}
+pedidos_cef %>% 
+  select(decisao, id_ano_base, contains("cef")) %>% 
+  distinct() %>% 
+  mutate(taxa = n_ano_resposta_decisao_cef / n_ano_cef) %>% 
+  ggplot(aes(x = id_ano_base, y = taxa, fill = reorder(decisao, taxa))) +
+  geom_col(position = "fill", alpha = .7, color = "gray20") +
+  scale_fill_manual(values = cores_decisao) +
+  theme_minimal() +
+  scale_y_percent() +
+  labs(
+    x = NULL,
+    y = NULL,
+    fill = "Decisão",
+    title = "Decisões das solicitações enviadas para a CEF",
+    subtitle = "Como % do total de solicitações para a própria CEF"
+  )
+```
+
+## Análise de decisão "Não se trata de do solicitação de informação"
+
+```{r fig.height=30, fig.width=11}
+t <- pedidos_cgu %>%
+  filter(decisao == "Não se trata de solicitação de informação") %>%
+  select(id_pedido, detalhamento_solicitacao, resposta, orgao, data_registro)
+
+o <- t %>% count(orgao) %>% slice_max(n = 30, order_by = n) %>% 
+  rename(n_manifestacao = n)
+
+clean_strings <- function(x) {
+  x %>% 
+    str_replace_all(" \\w ", " ") %>% 
+    str_replace_all("gostaria", " ") %>% 
+    str_replace_all("saber|sobre", " ") %>% 
+    str_squish()
+}
+
+t %>% 
+  #filter(str_detect(orgaodestinatario, "^CGU")) %>% 
+  filter(orgao %in% o$orgao) %>%
+  add_count(orgao, name = "total_orgao") %>% 
+  mutate(detalhamento_solicitacao = clean_strings(detalhamento_solicitacao),
+         orgao = glue("{orgao}\n{total_orgao} manifestações")) %>% 
+  unnest_tokens(word, detalhamento_solicitacao) %>%
+  count(orgao, word, sort = TRUE) %>% 
+  mutate(word = fct_reorder(word, n, mean)) %>%
+  group_by(orgao) %>% 
+  slice_max(n = 15, order_by = n) %>%
+  ungroup() %>% 
+  ggplot(aes(n, word)) +
+  geom_col() +
+  labs(y = NULL,
+       title = 'Termos frequêntes nas solicitações classificadas como "Não se trata de solicitação de informação"') +
+  facet_wrap(~reorder(orgao, -n), scales = "free", ncol = 3) +
+  theme_minimal()
 ```

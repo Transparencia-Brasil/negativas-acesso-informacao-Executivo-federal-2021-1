@@ -20,7 +20,11 @@ knitr::opts_chunk$set(
 
 ## Relatório
 
-* Relatório com visualizações e código fonte da análise dos dados - **[CLIQUE AQUI](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/negativas-de-acesso-a-informacao.html)**
+* Pedidos por tipo de resposta do órgão (decisão) [CLIQUE AQUI](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/1-pedidos-decisoes.html)
+
+* Pedidos por órgão:
+  * Acesso Negado [CLIQUE AQUI](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/2-pedidos-orgaos-acesso-negado.html)
+
 
 ## Base de dados
 
@@ -93,6 +97,14 @@ glimpse(readRDS(here("dados/load/rds/recursos-cgu.rds")))
 
 ### Código
 
-* [`1-download-funcao-crawler-esic`](src/1-pedidos-cgu-funcao-crawler-esic.R): função para acessar o site do esic e baixar base de dados de pedidos de informação (usa RSelenium)
-* [`2-download-crawler-exec`](src/2-pedidos-cgu-crawler-exec.R): baixa todas as bases de dados de pedidos de informação em um loop
-* [`3-pedidos-cgu-crawler-e-pre-processamento.R`](src/3-pedidos-cgu-crawler-e-pre-processamento.R): código com pré-processamento da base (converte o XML em rds)
+```{r echo = FALSE, eval = FALSE}
+glue::glue("* [`{list.files('src')}`](`src/{list.files('src')}`)")
+```
+
+* [`1-download-funcao-crawler-esic.R`](`src/1-download-funcao-crawler-esic.R`)
+* [`2-download-crawler-exec.R`](`src/2-download-crawler-exec.R`)
+* [`3-pedidos-cgu-pre-processamento.R`](`src/3-pedidos-cgu-pre-processamento.R`)
+* [`4-solicitantes-cgu-pre-processamento.R`](`src/4-solicitantes-cgu-pre-processamento.R`)
+* [`5-pedidos-cgu-nlp.R`](`src/5-pedidos-cgu-nlp.R`)
+* [`6-termos-controversos.R`](`src/6-termos-controversos.R`)
+* [`download_dados_cgu.ipynb`](`src/download_dados_cgu.ipynb`)
