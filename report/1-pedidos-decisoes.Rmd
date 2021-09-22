@@ -121,15 +121,7 @@ pedidos_cgu <- readRDS(here("dados/load/rds/pedidos-clean.rds")) %>%
 ## Análise de pedidos por decisão de acesso
 
 ```{r}
-pedidos_cef <- pedidos_cgu %>% 
-  add_count(decisao, id_ano_base, name = "n_ano_resposta_decisao") %>%
-  add_count(id_ano_base, name = "n_ano") %>% 
-  filter(orgao == "CEF – Caixa Econômica Federal") %>% 
-  add_count(decisao, id_ano_base, name = "n_ano_resposta_decisao_cef") %>% 
-  add_count(id_ano_base, name = "n_ano_cef") %>% 
-  mutate(id_ano_base = str_remove(id_ano_base, "_"))
-
-pedidos_cgu <- pedidos_cgu %>% filter(orgao != "CEF – Caixa Econômica Federal")
+#pedidos_cgu <- pedidos_cgu %>% filter(orgao != "CEF – Caixa Econômica Federal")
 glimpse(pedidos_cgu)
 ```
 
@@ -146,8 +138,6 @@ Não são consideradoe pedidos de acesso a informação:
 
 - Informação Inexistente
 - Pergunta Duplicada/Repetida
-
-> **A análise é feita excluindo os dados da CEF**: Os pedidos para Caixa Econômica federal não constam na base a partir de 2018.
 
 ```{r}
 pedidos_cgu %>% 
@@ -364,68 +354,6 @@ comb +
 rm(p1)
 rm(p2)
 rm(comb)
-```
-
-## Completude dos dados da Caixa Econômica Federal
-
-Pedidos para Caixa Econômica Federal não estõ publicados a partir de meados de 2018.
-
-```{r fig.height=3, fig.width=4.5}
-pedidos_cef %>% 
-  select(id_ano_base, n_ano, n_ano_cef) %>% 
-  distinct() %>% 
-  mutate(taxa = n_ano_cef / n_ano) %>% 
-  ggplot(aes(x = id_ano_base, y = taxa)) +
-  geom_col() +
-  scale_y_percent(limits = c(0, .1)) +
-  labs(
-    title = "Manifestações para a Caixa Econômica Federal",
-    subtitle = "Como % do total de solicitações no FalaBr",
-    y = NULL, x = NULL
-  ) +
-  theme_minimal()
-```
-
-A falta de pedidos da CEF a partir de 2018 causam viés na base de dados, pois este órgão é representativo em relação às decisões de Acesso Negado, Acesso Parcialmente Concedido e Não se Trata de Solicitação de informação.
-
-```{r fig.height=4}
-pedidos_cef %>% 
-  select(decisao, id_ano_base, starts_with("n_ano_resp")) %>% 
-  distinct() %>% 
-  mutate(taxa = n_ano_resposta_decisao_cef / n_ano_resposta_decisao) %>% 
-  ggplot(aes(x = id_ano_base, y = taxa, fill = reorder(decisao, taxa))) +
-  geom_col(position = "dodge", color = "gray20", alpha = .8) +
-  labs(
-    x = NULL,
-    y = NULL,
-    color = "Decisão",
-    title = "Decisões das solicitações enviadas para a CEF",
-    subtitle = "Como % das decisões decisões das manifestações registradas no FalaBr"
-  ) +
-  theme_minimal() +
-  theme(strip.text = element_text(hjust = 0)) +
-  #facet_wrap(~ decisao, ncol = 1) +
-  scale_y_percent() +
-  scale_fill_manual(values = cores_decisao)
-```
-
-```{r fig.height=4}
-pedidos_cef %>% 
-  select(decisao, id_ano_base, contains("cef")) %>% 
-  distinct() %>% 
-  mutate(taxa = n_ano_resposta_decisao_cef / n_ano_cef) %>% 
-  ggplot(aes(x = id_ano_base, y = taxa, fill = reorder(decisao, taxa))) +
-  geom_col(position = "fill", alpha = .7, color = "gray20") +
-  scale_fill_manual(values = cores_decisao) +
-  theme_minimal() +
-  scale_y_percent() +
-  labs(
-    x = NULL,
-    y = NULL,
-    fill = "Decisão",
-    title = "Decisões das solicitações enviadas para a CEF",
-    subtitle = "Como % do total de solicitações para a própria CEF"
-  )
 ```
 
 ## Análise de decisão "Não se trata de do solicitação de informação"
