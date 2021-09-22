@@ -29,3 +29,6 @@ recursos_cgu <- readRDS(here("dados/load/rds/recursos-cgu.rds")) %>%
 
 saveRDS(pedidos_cgu, here("dados/load/rds/pedidos_clean.rds"))
 saveRDS(recursos_cgu, here("dados/load/rds/recursos_clean.rds"))
+
+readRDS(here("dados/load/rds/pedidos_clean.rds"))
+readRDS(here("dados/load/rds/recursos_clean.rds"))

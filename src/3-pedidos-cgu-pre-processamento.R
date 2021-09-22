@@ -6,10 +6,10 @@ library(lubridate)
 anos <- 2015:2021
 path_files_zip <- here(glue("dados/raw/Arquivos_xml_{anos}.zip"))
 
-dir.create(here("dados/load"))
-dir.create(here("dados/load/xml"))
-dir.create(here("dados/load/rds"))
-dir.create(here("dados/load/csv"))
+# dir.create(here("dados/load"))
+# dir.create(here("dados/load/xml"))
+# dir.create(here("dados/load/rds"))
+# dir.create(here("dados/load/csv"))
 
 # extract zip files
 walk(path_files_zip,  unzip, exdir = here("dados/load/xml"))
@@ -104,5 +104,6 @@ saveRDS(recursos_cgu, here("dados/load/rds/recursos-cgu.rds"))
 write_csv(pedidos_cgu, file = here("dados/load/csv/pedidos-cgu.csv"))
 write_csv(recursos_cgu, file = here("dados/load/csv/recursos-cgu.csv"))
 
-test <- read_delim(here("dados/load/csv/pedidos-cgu.csv"), ";", col_types = cols())
+test <- read_csv(here("dados/load/csv/pedidos-cgu.csv"))
 glimpse(test)
+
