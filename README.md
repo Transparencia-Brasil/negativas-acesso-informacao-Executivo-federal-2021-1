@@ -1,9 +1,9 @@
 Negativas de acesso a informação no governo Federal
 ================
 
--   [Relatório](#relatório)
--   [Base de dados](#base-de-dados)
-    -   [Código](#código)
+  - [Relatório](#relatório)
+  - [Base de dados](#base-de-dados)
+      - [Código](#código)
 
 ## Relatório
 
@@ -15,17 +15,18 @@ Negativas de acesso a informação no governo Federal
     caso](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/3-acesso-negado-para-cada-orgao.html)
 4.  [Uso da LGPD nas respostas aos pedidos de acesso a informação via
     LAI](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/4-controversos-lgpd.html)
+5.  [Recursos](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/5-recursos.html)
 
 ## Base de dados
 
--   Site do e-SIC/CGU - [clique
+  - Site do e-SIC/CGU - [clique
     aqui](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx)
--   Dicionário de variáveis - [clique
+  - Dicionário de variáveis - [clique
     aqui](http://www.consultaesic.cgu.gov.br/arquivosRelatorios/PedidosRespostas/Dicionario-Dados-Exportacao.txt)
 
 #### Download da base bruta
 
--   Os dados brutos estão disponíveis ano a ano no site do e-sic da
+  - Os dados brutos estão disponíveis ano a ano no site do e-sic da
     Controladoria Geral da União. Para baixar manualmente [acesse o site
     do
     esic](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx),
@@ -34,7 +35,7 @@ Negativas de acesso a informação no governo Federal
 ##### Arquivos:
 
 | Arquivo                     | Tamanho (mb) | Data do download    |
-|:----------------------------|:------------:|:--------------------|
+| :-------------------------- | :----------: | :------------------ |
 | Arquivos\_xml\_2015.zip     |    111,2     | 2021-09-01 12:18:12 |
 | Arquivos\_xml\_2016.zip     |    117,4     | 2021-09-01 12:15:34 |
 | Arquivos\_xml\_2017.zip     |    122,3     | 2021-09-01 12:15:50 |
@@ -54,16 +55,16 @@ Negativas de acesso a informação no governo Federal
 
 ##### RDS
 
--   **PEDIDOS** - formato RDS ([link para
+  - **PEDIDOS** - formato RDS ([link para
     download](https://drive.google.com/file/d/18O1QHpbAEuQjmYzFe_x9Izore3t9mf2A/view?usp=sharing))
--   **RECURSOS** - formato RDS ([link para
+  - **RECURSOS** - formato RDS ([link para
     download](https://drive.google.com/file/d/1lt8cifXvJo4yTd6VNhlWLp4WDKcIlgAQ/view?usp=sharing))
 
 ##### CSV
 
--   **PEDIDOS** - formato CSV ([link para
+  - **PEDIDOS** - formato CSV ([link para
     download](https://drive.google.com/file/d/1Vrq4UQcO325V3dWXjG36LTvwCNsGFI66/view?usp=sharing))
--   **RECURSOS** - formato CSV ([link para
+  - **RECURSOS** - formato CSV ([link para
     download](https://drive.google.com/file/d/1TZZgXnh12FiYlimxhdFzUWE7dQ-CtpPi/view?usp=sharing))
 
 ##### Preview: pedidos
@@ -124,10 +125,10 @@ Negativas de acesso a informação no governo Federal
 
 ### Código
 
--   [`1-download-funcao-crawler-esic`](src/1-pedidos-cgu-funcao-crawler-esic.R):
+  - [`1-download-funcao-crawler-esic`](src/1-pedidos-cgu-funcao-crawler-esic.R):
     função para acessar o site do esic e baixar base de dados de pedidos
     de informação (usa RSelenium)
--   [`2-download-crawler-exec`](src/2-pedidos-cgu-crawler-exec.R): baixa
+  - [`2-download-crawler-exec`](src/2-pedidos-cgu-crawler-exec.R): baixa
     todas as bases de dados de pedidos de informação em um loop
--   [`3-pedidos-cgu-crawler-e-pre-processamento.R`](src/3-pedidos-cgu-crawler-e-pre-processamento.R):
+  - [`3-pedidos-cgu-crawler-e-pre-processamento.R`](src/3-pedidos-cgu-crawler-e-pre-processamento.R):
     código com pré-processamento da base (converte o XML em rds)
