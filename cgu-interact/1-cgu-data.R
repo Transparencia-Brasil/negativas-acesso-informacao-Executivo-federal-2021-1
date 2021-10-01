@@ -1,6 +1,9 @@
 library(tidyverse)
 library(here)
 library(glue)
+library(lubridate)
+
+setwd(here())
 
 pedidos_cgu <- readRDS(here("dados/load/rds/pedidos-cgu.rds"))
 select_orgao <- unique(pedidos_cgu$orgaodestinatario)
@@ -15,5 +18,18 @@ count_pedidos <- pedidos_cgu %>%
   add_count(data_resposta, wt = count_pedidos, name = "count_pedidos_total") %>% 
   mutate(per = count_pedidos / count_pedidos_total)
 
-saveRDS(select_orgao, here("cgu-interact/select_orgao.rds"))
-saveRDS(count_pedidos, here("cgu-interact/count_pedidos.rds"))
+pedidos_por_data <- pedidos_cgu %>% 
+  transmute(id_ano_base,
+            orgao = orgaodestinatario,
+            decisao,
+            ts_registro = dmy(ts_registro),
+            ts_resposta = dmy(ts_resposta))
+
+saveRDS(select_orgao, here("data/select_orgao.rds"))
+saveRDS(count_pedidos, here("data/count_pedidos.rds"))
+saveRDS(pedidos_por_data, here("cgu-interact/data/pedidos_por_data.rds"))
+
+
+pedidos_por_data <- readRDS(here("cgu-interact/data/pedidos_por_data.rds"))
+
+

@@ -1,7 +1,7 @@
-
+setwd(here("cgu-interact"))
 plot_count_pedidos <- function(orgao) {
   
-  count_pedidos <- readRDS(here("cgu-interact/data/count_pedidos.rds")) %>% 
+  count_pedidos <- readRDS(here("data/count_pedidos.rds")) %>% 
     filter(orgao == orgao)
   
   nm_orgao <- unique(count_pedidos$orgao)
