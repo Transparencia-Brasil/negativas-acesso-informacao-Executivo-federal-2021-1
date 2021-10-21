@@ -8,6 +8,7 @@ output:
     toc_depth: 4
     theme: paper
     df_print: default
+    highlight: tango
 editor_options: 
   chunk_output_type: console
 ---
@@ -121,29 +122,57 @@ pedidos_cgu <- pedidos_cgu %>%
     "Não se trata de solicitação de informação"
   ))
 
-controversos_lgpd <- "dados/load/rds/controversos_lgpd.rds" %>% here() %>% readRDS()
+controversos_lgpd <- "dados/load/rds/controversos_lgpd.rds" %>% 
+  here() %>%
+  readRDS() %>% 
+  mutate(tipo = case_when(
+    controversos_lgpd_pedido & controversos_lgpd_resposta ~ "Pedido e reposta mencionam LGPD",
+    controversos_lgpd_pedido & !controversos_lgpd_resposta ~ "Pedido menciona LGPD, resposta não",
+    !controversos_lgpd_pedido & controversos_lgpd_resposta ~ "Pedido não menciona LGPD, resposta menciona",
+    TRUE ~ "Não menciona LGPD"
+  ))
 ```
+
+```{r}
+result <- controversos_lgpd %>% count(controversos_lgpd_pedido, controversos_lgpd_resposta)
+result
+
+controversos_lgpd <- controversos_lgpd %>% filter(tipo != "Não menciona LGPD")
+```
+
+## Metodologia
+
+* Foi feita uma busca por palavras-chave nos conteúdos do **pedido** e da **resposta**
+* A busca foi feita com a seguinte regex:
+  * `'lei geral de proteção de dados|lei de protecao de dados pessoais|13\\.?709|lgpd'`
+* Descartamos os pedidos que não tiveram a regex detectada (consideramos que eles não abordam LGPD). 
+  * Resultado:
+    * Regex não detectada - não menciona LGPD: `r result[1,3, drop=T]`
+    * Regex detectada - menciona LGPD: `r sum(result[2:4,3, drop=T])`
+      * regex detectada somente no conteúdo da resposta: `r result[2,3, drop=T]`
+      * regex detectada somente no conteúdo do pedido: `r result[3,3, drop=T]`
+      * regex detectada nos conteúdos do pedido e da resposta: `r result[4,3, drop=T]`
 
 ## Presença do termo LGPD nas respostas e cumprimento da LAI
 
-```{r fig.height=2.5, fig.width = 5}
-controversos_lgpd %>%
-  count(ano = year(data_resposta), sort = T) %>% 
-  ggplot(aes(x = ano, y = n)) +
-  geom_col() +
-  geom_text(aes(label = n), vjust = -.3) +
+
+```{r}
+controversos_lgpd  %>% 
+  count(tipo, ano = year(data_resposta), sort = T) %>% 
+  ggplot(aes(x = ano, y = n, color = tipo)) +
+  geom_line(size = 2, alpha = .6)  +
+  geom_point() +
+  #geom_text(aes(label = n), vjust = -.3) +
   labs(
     title = "Pedidos com menções à LGPD na resposta",
-    subtitle = "Total anual",
     x = NULL,
-    y = "Quantidade"
+    color = "Onde a LGPD foi mencionada:",
+    y = "Quantidade de pedidos"
   ) +
-  ylim(c(0,1700)) +
   theme_minimal()
 ```
 
-
-```{r}
+```{r fig.width=8}
 controv <- pedidos_cgu %>% 
   filter(decisao %notin% c(
       "Pergunta Duplicada/Repetida",
@@ -163,34 +192,23 @@ aux2 <- cores_decisao3 %>%
   deframe()
 
 controv %>%  
-  count(ano = year(data_resposta), decisao, name = "n_ano") %>% 
+  count(ano = year(data_resposta), tipo, decisao, name = "n_ano") %>% 
   mutate(decisao = str_wrap(decisao, 25)) %>% 
   complete(ano, decisao, fill = list(n_ano = 0)) %>% 
+  filter(!is.na(tipo)) %>%
+  filter(tipo == "Pedido não menciona LGPD, resposta menciona") %>% 
+  
   ggplot(aes(x = ano, y = n_ano, fill = reorder(decisao, n_ano),
              color = reorder(decisao, n_ano))) +
-  geom_col(color = "gray20", position = "dodge") +
-  geom_label(
-    aes(label = if_else(n_ano > 0, n_ano, NA_real_)),
-    show.legend = F,
-    position = position_dodge(width = .9), 
-    label.padding = unit(0.15, "lines"),
-    hjust = .5,
-    size = 3) +
-  scale_fill_manual(values = aux) +
-  scale_color_manual(values = aux2) +
-  theme_minimal() +
+  geom_line(size = 1, alpha = .8)  +
+  geom_point() +
   labs(
-    title = "Pedidos com menções à LGPD na resposta",
-    subtitle = "Por decisão de acesso",
-    fill = "Decisão",
-    color = "Decisão",
-    y = "Quantidade",
-    x = NULL
-  ) +
-  theme(legend.text = element_text(size = 8, margin = margin(5, 0, 5, 0, "pt")))
+    x = "Pedidos com"
+  )
+  facet_wrap(~reorder(tipo, -n_ano))
 ```
 
-## Uso dos termos relacionados à LGPD
+## Uso da LGPD por órgão e decisão
 
 ```{r}
 controv %>% 
@@ -217,6 +235,24 @@ controv %>%
     legend.text = element_text(size = 8, margin = margin(5, 0, 5, 0, "pt"))
   )
 ```
+
+## Assunto dos pedidos que mencionam LGPD:
+
+```{r}
+controv %>% 
+  left_join(select(pedidos_cgu, id_pedido, sub_assunto_pedido, assunto_pedido)) %>% 
+  count(assunto_pedido, sort = TRUE, name = "Quantidade de pedidos") %>% 
+  mutate(assunto_pedido_desc = "Assunto do pedido (informado pelo órgão)") %>% 
+  pivot_wider(values_from = assunto_pedido, names_from = assunto_pedido_desc, values_fn = list) %>%
+  select(`Assunto do pedido (informado pelo órgão)`, `Quantidade de pedidos`) %>% 
+  # mutate(termo_concat = map_chr(termo, paste0, collapse = ", "),
+  #        termo_concat = str_wrap(termo_concat, 100)) %>% 
+  kbl() %>% 
+  kable_paper()
+```
+
+
+## Uso dos termos relacionados à LGPD
 
 ```{r eval = FALSE}
 controv2 <- pedidos_cgu %>% 
@@ -346,3 +382,4 @@ p1 + p2 + plot_annotation(
   title = "Termos frequêntes nas solicitações ocasionaram em menções\na LGPD na resposta"
 )
 ```
+
