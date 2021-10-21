@@ -203,9 +203,13 @@ controv %>%
   geom_line(size = 1, alpha = .8)  +
   geom_point() +
   labs(
-    x = "Pedidos com"
-  )
-  facet_wrap(~reorder(tipo, -n_ano))
+    x = "Ano",
+    y = "Quantidade",
+    title = "Pedido não menciona LGPD, resposta menciona",
+    color = "Decisão",
+    fill = "Decisão"
+  ) + 
+  theme_minimal()
 ```
 
 ## Uso da LGPD por órgão e decisão
