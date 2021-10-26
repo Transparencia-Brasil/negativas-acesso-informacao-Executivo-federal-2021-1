@@ -8,7 +8,7 @@ source(here("src/1-download-funcao-crawler-esic.R"))
 
 # define parametros para passar no crawler
 destino_dwld <- "C:\\Users\\rauld\\Documents\\negativas-acesso-informacao-Executivo-federal-2021-1\\dados\\raw"
-a_minha_versao_do_chrome <- binman::list_versions("chromedriver")$win32[12]
+a_minha_versao_do_chrome <- binman::list_versions("chromedriver")$win32[15]
 
 # crawler
 anos <- as.character(2015:2021)

@@ -15,7 +15,7 @@ path_files_zip <- here(glue("dados/raw/Arquivos_xml_{anos}.zip"))
 walk(path_files_zip,  unzip, exdir = here("dados/load/xml"))
 
 # exclui bases que não serão trabalhadas
-list.files(here("dados/load/xml"), pattern = "Solicitantes", full.names = T) %>% 
+list.files(here("dados/load/xml"), pattern = "Solicitantes|^202109", full.names = T) %>% 
   walk(unlink)
 
 # função que abre e faxina nos arquivos XML baixados

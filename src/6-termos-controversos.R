@@ -3,8 +3,8 @@ library(lubridate)
 library(glue)
 library(here)
 
-pedidos <- readRDS(here("dados/load/rds/pedidos_clean.rds"))
-recursos <- readRDS(here("dados/load/rds/recursos_clean.rds"))
+pedidos <- readRDS(here("dados/load/rds/pedidos-clean.rds"))
+recursos <- readRDS(here("dados/load/rds/recursos-clean.rds"))
 
 # termos controversos ----------------------------------------------------------
 
@@ -12,11 +12,11 @@ regex_lgpd <- 'lei geral de proteção de dados|lei de protecao de dados pessoai
 
 controversos <- pedidos %>% 
   rename(resposta_pedido = resposta) %>% 
-  mutate(controversos_lgpd = str_detect(resposta_pedido, regex_lgpd))
+  mutate(controversos_lgpd_resposta = str_detect(resposta_pedido, regex_lgpd),
+         controversos_lgpd_pedido = str_detect(detalhamento_solicitacao, regex_lgpd))
 
 controversos_lgpd <- controversos %>% 
-  select(id_pedido, data_resposta, orgao = orgaodestinatario, controversos_lgpd) %>% 
-  filter(controversos_lgpd) %>% 
+  select(id_pedido, data_resposta, orgao = orgaodestinatario, contains("controversos_lgpd")) %>% 
   mutate(controverso_id = "LGPD")
 
 saveRDS(controversos_lgpd, here("dados/load/rds/controversos_lgpd.rds"))
