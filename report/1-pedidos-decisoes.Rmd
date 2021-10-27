@@ -56,7 +56,6 @@ Sys.setlocale("LC_TIME", "pt_BR")
 `%notin%` <- function(x, y) !(x %in% y)
 ```
 
-
 ```{r color-settings}
 # aplica identidade visual da TB/AeP:
 cores_aep <- c(
@@ -102,7 +101,7 @@ cores_lai <- tibble(
 Análises de pedidos de acesso a informação via LAI considerando a decisão de acesso.
 
 ```{r}
-periodo_final <- "2021-08-01"
+#periodo_final <- "2021-08-01"
 instancias_recursais <- c(
   "Primeira Instância",
   "Segunda Instância",
@@ -114,14 +113,14 @@ instancias_recursais <- c(
 )
 
 pedidos_cgu <- readRDS(here("dados/load/rds/pedidos-clean.rds")) %>%
-  filter(data_resposta <= periodo_final, data_resposta <= periodo_final) %>% 
+  #filter(data_resposta <= periodo_final, data_resposta <= periodo_final) %>% 
   rename(orgao = orgaodestinatario)
 ```
 
 ## Análise de pedidos por decisão de acesso
 
 ```{r}
-#pedidos_cgu <- pedidos_cgu %>% filter(orgao != "CEF – Caixa Econômica Federal")
+# pedidos_cgu <- pedidos_cgu %>% filter(orgao != "CEF – Caixa Econômica Federal")
 glimpse(pedidos_cgu)
 ```
 
@@ -155,7 +154,7 @@ pedidos_cgu %>%
     fill = is_pedido_de_informacao,
     color = is_pedido_de_informacao
   )) +
-  geom_vline(xintercept = seq(ymd('2015-01-01'), ymd('2021-01-01'), by = 'year'), lty = 3) +
+  geom_vline(xintercept = seq(ymd('2015-01-01'), ymd('2022-01-01'), by = 'year'), lty = 3) +
   geom_line(size = 1.5) +
   theme_minimal() +
   geom_label(
@@ -358,7 +357,7 @@ rm(comb)
 
 ## Análise de decisão "Não se trata de do solicitação de informação"
 
-```{r fig.height=30, fig.width=11}
+```{r eval = FALSE,fig.height=30, fig.width=11}
 t <- pedidos_cgu %>%
   filter(decisao == "Não se trata de solicitação de informação") %>%
   select(id_pedido, detalhamento_solicitacao, resposta, orgao, data_registro)

@@ -57,7 +57,6 @@ Sys.setlocale("LC_TIME", "pt_BR")
 `%notin%` <- function(x, y) !(x %in% y)
 ```
 
-
 ```{r color-settings}
 # aplica identidade visual da TB/AeP:
 cores_aep <- c(
@@ -101,7 +100,6 @@ cores_lai <- tibble(
 ```
 
 ```{r}
-periodo_final <- "2021-08-01"
 instancias_recursais <- c(
   "Primeira Instância",
   "Segunda Instância",
@@ -113,7 +111,6 @@ instancias_recursais <- c(
 )
 
 pedidos_cgu <- readRDS(here("dados/load/rds/pedidos-clean.rds")) %>%
-  filter(data_resposta <= periodo_final, data_resposta <= periodo_final) %>% 
   rename(orgao = orgaodestinatario)
 
 pedidos_cgu <- pedidos_cgu %>% 
@@ -122,22 +119,31 @@ pedidos_cgu <- pedidos_cgu %>%
     "Não se trata de solicitação de informação"
   ))
 
-controversos_lgpd <- "dados/load/rds/controversos_lgpd.rds" %>% 
+ped_controversos_lgpd <- "dados/load/rds/pedidos-controversos-lgpd.rds" %>%
   here() %>%
-  readRDS() %>% 
-  mutate(tipo = case_when(
-    controversos_lgpd_pedido & controversos_lgpd_resposta ~ "Pedido e reposta mencionam LGPD",
-    controversos_lgpd_pedido & !controversos_lgpd_resposta ~ "Pedido menciona LGPD, resposta não",
-    !controversos_lgpd_pedido & controversos_lgpd_resposta ~ "Pedido não menciona LGPD, resposta menciona",
-    TRUE ~ "Não menciona LGPD"
-  ))
+  readRDS()
+
+rec_controversos_lgpd <- "dados/load/rds/recursos-controversos-lgpd.rds" %>%
+  here() %>%
+  readRDS()
 ```
 
 ```{r}
-result <- controversos_lgpd %>% count(controversos_lgpd_pedido, controversos_lgpd_resposta)
+result <- ped_controversos_lgpd %>% count(controversos_lgpd_pedido, controversos_lgpd_resposta)
 result
+```
 
-controversos_lgpd <- controversos_lgpd %>% filter(tipo != "Não menciona LGPD")
+```{r}
+ped_controversos_lgpd %>%
+  mutate(usa_lgpd = controversos_lgpd_pedido & controversos_lgpd_resposta) %>%
+  count(data_resposta, usa_lgpd) %>%
+  filter(year(data_resposta) >= 2020) %>% 
+  ggplot(aes(x = data_resposta, y = n, fill = usa_lgpd)) +
+  geom_col()
+```
+
+```{r}
+ped_controversos_lgpd <- ped_controversos_lgpd %>% filter(tipo != "Não menciona LGPD")
 ```
 
 ## Metodologia
@@ -147,17 +153,91 @@ controversos_lgpd <- controversos_lgpd %>% filter(tipo != "Não menciona LGPD")
   * `'lei geral de proteção de dados|lei de protecao de dados pessoais|13\\.?709|lgpd'`
 * Descartamos os pedidos que não tiveram a regex detectada (consideramos que eles não abordam LGPD). 
   * Resultado:
-    * Regex não detectada - não menciona LGPD: `r result[1,3, drop=T]`
-    * Regex detectada - menciona LGPD: `r sum(result[2:4,3, drop=T])`
-      * regex detectada somente no conteúdo da resposta: `r result[2,3, drop=T]`
-      * regex detectada somente no conteúdo do pedido: `r result[3,3, drop=T]`
-      * regex detectada nos conteúdos do pedido e da resposta: `r result[4,3, drop=T]`
+    * Regex não detectada - não menciona LGPD: `r result[1, 3, drop = T]`
+    * Regex detectada - menciona LGPD: `r sum(result[2:4, 3, drop = T])`
+      * regex detectada somente no conteúdo da resposta: `r result[2, 3, drop = T]`
+      * regex detectada somente no conteúdo do pedido: `r result[3, 3, drop = T]`
+      * regex detectada nos conteúdos do pedido e da resposta: `r result[4, 3, drop = T]`
+
+```{r}
+cores_interacao  <- c(
+  "Pedido" = cores_aep[["laranja"]],
+  "Resposta" = cores_aep[["rosa"]]
+)
+
+cores_interacao1  <- c(
+  "Recurso" = cores_aep[["laranja"]],
+  "Resposta recurso" = cores_aep[["rosa"]]
+)
+
+instancias_lvs_new <- c(
+  "Pedido de acesso a informação via",
+  "Recurso: primeira Instância",
+  "Recurso: segunda Instância",
+  "Recurso: CGU",
+  "Recurso: CMRI",
+  "Pedido de Revisão"
+) %>% fct_reorder(1:6)
+
+instancias_lvs_tx <- c(
+  "Pedido de acesso a informação via",
+  "Primeira Instância",
+  "Segunda Instância",
+  "CGU",
+  "CMRI",
+  "Pedido de Revisão"
+)
+
+ped_controversos_lgpd %>%
+  filter(year(data_resposta) >= 2019) %>% 
+  transmute(ano = year(data_resposta),
+            controversos_lgpd_resposta, 
+            controversos_lgpd_pedido
+            ) %>%
+  pivot_longer(-ano, names_to = "interacao", values_to = "citou_lgpd") %>%
+  mutate(
+    interacao = interacao %>%
+      str_remove_all("^controversos_lgpd_") %>%
+      str_replace("_", " ") %>% 
+      str_to_sentence()
+  ) %>%
+  count(ano, interacao, citou_lgpd) %>%
+  filter(citou_lgpd) %>%
+  ggplot(aes(x = ano, y = n, fill = interacao)) +
+  geom_col(position = "dodge", alpha = .7) +
+  geom_text(aes(label = n), position = position_dodge(width = .9)) +
+  scale_fill_manual(values = cores_interacao) +
+  theme_minimal() +
+  labs(
+    fill = "Onde foi detectada\na menção a LGPD",
+    x = NULL,
+    y = "Quantidade de pedidos de acesso a informação",
+    title = "Menções à LGPD detectada nos conteúdos dos\npedidos de acesso a informação"
+  ) +
+  theme(panel.grid.major.x = element_blank())
+
+rec_controversos_lgpd %>%
+  count(ano = year(data_resposta), controversos_lgpd_recurso, instancia, controversos_lgpd_resposta_recurso) %>%
+  filter(controversos_lgpd_recurso & controversos_lgpd_resposta_recurso) %>%
+  pivot_longer(-c(ano, instancia, n), names_to = "interacao", values_to = "citou_lgpd") %>%
+  mutate(
+    interacao = interacao %>%
+      str_remove("^controversos_lgpd_") %>%
+      str_replace("_", " ") %>% 
+      str_to_sentence()
+  ) %>%
+  ggplot(aes(x = ano, y = n, fill = interacao)) +
+  geom_col(position = "dodge", alpha = .7) +
+  geom_text(aes(label = n), position = position_dodge(width = .9)) +
+  scale_fill_manual(values = cores_interacao1) +
+  theme_minimal() +
+  facet_wrap(~instancia, ncol = 1)
+```
 
 ## Presença do termo LGPD nas respostas e cumprimento da LAI
 
-
 ```{r}
-controversos_lgpd  %>% 
+ped_controversos_lgpd  %>% 
   count(tipo, ano = year(data_resposta), sort = T) %>% 
   ggplot(aes(x = ano, y = n, color = tipo)) +
   geom_line(size = 2, alpha = .6)  +
@@ -178,8 +258,8 @@ controv <- pedidos_cgu %>%
       "Pergunta Duplicada/Repetida",
       "Não se trata de solicitação de informação"
     )) %>%
-  select(id_pedido, data_resposta, orgao, decisao) %>% 
-  inner_join(controversos_lgpd) 
+  select(id_pedido, data_resposta, orgao, decisao, assunto_pedido, id_solicitante) %>% 
+  inner_join(ped_controversos_lgpd) 
 
 aux <- cores_decisao %>% 
   enframe() %>% 
@@ -233,7 +313,7 @@ controv %>%
     fill = "Decisão",
     x = NULL, y = "Quantidade"
   ) +
-  ylim(c(0, 1000)) +
+  ylim(c(0, 1300)) +
   theme_minimal() +
   theme(
     legend.text = element_text(size = 8, margin = margin(5, 0, 5, 0, "pt"))
@@ -310,7 +390,7 @@ controv2 %>%
 
 t <- pedidos_cgu %>%
   select(id_pedido, data_registro, detalhamento_solicitacao, resposta, orgao, decisao) %>% 
-  inner_join(controversos_lgpd) %>%
+  inner_join(ped_controversos_lgpd) %>%
   mutate(sigla = str_extract(orgao, "^[:upper:]*-?\\/?[:upper:]+([:lower:]{2})?(?= )|^CEITEC\\/S\\.A|UFCAT$"))
 
 o <- t %>%
@@ -339,7 +419,7 @@ p1 <- t %>%
   filter(orgao %in% o$orgao) %>%
   add_count(orgao, name = "total_orgao") %>% 
   mutate(detalhamento_solicitacao = clean_strings(detalhamento_solicitacao),
-         orgao = glue("{sigla}\n{total_orgao} de manifestações")) %>% 
+         orgao = glue("{sigla}\n{total_orgao} manifestações")) %>% 
   unnest_tokens(word, detalhamento_solicitacao) %>%
   count(orgao, word, sort = TRUE) %>% 
   mutate(word = fct_reorder(word, word)) %>%
@@ -363,7 +443,7 @@ p2 <- t %>%
   filter(orgao %in% o$orgao) %>%
   add_count(orgao, name = "total_orgao") %>% 
   mutate(resposta = clean_strings(resposta),
-         orgao = glue("{sigla}\n de respostas")) %>% 
+         orgao = glue("{sigla}\n respostas")) %>% 
   unnest_tokens(word, resposta) %>%
   count(orgao, word, sort = TRUE) %>% 
   mutate(word = fct_reorder(word, word)) %>%

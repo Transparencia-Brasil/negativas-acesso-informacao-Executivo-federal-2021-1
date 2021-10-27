@@ -24,7 +24,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r libs}
+```{r}
 library(tidyverse)
 library(lubridate)
 library(glue)
@@ -114,7 +114,7 @@ instancias_recursais <- c(
 )
 
 pedidos_cgu <- readRDS(here("dados/load/rds/pedidos-clean.rds")) %>%
-  filter(data_resposta <= periodo_final, data_resposta <= periodo_final) %>% 
+  #filter(data_resposta <= periodo_final, data_resposta <= periodo_final) %>% 
   rename(orgao = orgaodestinatario)
 ```
 
@@ -145,7 +145,7 @@ orgaos <- orgaos_count_decisao %>%
 top_20 <- orgaos %>% filter(ord < 21)
 ```
 
-```{r fig.height=400, fig.width=10 eval = FALSE}
+```{r fig.height=400, fig.width=10, eval = FALSE}
 my_lbl <- function(x) scales::percent(x, accuracy = .1, decimal.mark = ",")
 
 decisao_rect <- tibble(
