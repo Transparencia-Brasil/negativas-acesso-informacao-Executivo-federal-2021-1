@@ -3,7 +3,6 @@ Negativas de acesso a informação no governo Federal
 
   - [Relatório](#relatório)
   - [Base de dados](#base-de-dados)
-      - [Código](#código)
 
 ## Relatório
 
@@ -34,42 +33,17 @@ Negativas de acesso a informação no governo Federal
 
 ##### Arquivos:
 
-| Arquivo                     | Tamanho (mb) | Data do download    |
-| :-------------------------- | :----------: | :------------------ |
-| Arquivos\_xml\_2015.zip     |    111,2     | 2021-09-01 12:18:12 |
-| Arquivos\_xml\_2016.zip     |    117,4     | 2021-09-01 12:15:34 |
-| Arquivos\_xml\_2017.zip     |    122,3     | 2021-09-01 12:15:50 |
-| Arquivos\_xml\_2018.zip     |    125,0     | 2021-09-01 12:16:08 |
-| Arquivos\_xml\_2019.zip     |    130,6     | 2021-09-01 12:17:50 |
-| Arquivos\_xml\_2020.zip     |    147,2     | 2021-09-01 12:16:44 |
-| Arquivos\_xml\_2021.zip     |    109,2     | 2021-09-01 12:17:02 |
-| old/Arquivos\_xml\_2015.zip |    109,6     | 2021-07-27 21:25:45 |
-| old/Arquivos\_xml\_2016.zip |    115,9     | 2021-07-27 21:26:03 |
-| old/Arquivos\_xml\_2017.zip |    120,8     | 2021-07-27 21:26:23 |
-| old/Arquivos\_xml\_2018.zip |    123,5     | 2021-07-27 21:26:41 |
-| old/Arquivos\_xml\_2019.zip |    129,1     | 2021-07-27 21:27:00 |
-| old/Arquivos\_xml\_2020.zip |    145,7     | 2021-07-27 21:29:33 |
-| old/Arquivos\_xml\_2021.zip |    101,6     | 2021-07-27 21:27:39 |
+| Arquivo | Tamanho (mb) | Data do download |
+| :------ | :----------: | :--------------- |
 
 #### Download da base pré-processada
 
-##### RDS
-
-  - **PEDIDOS** - formato RDS ([link para
-    download](https://drive.google.com/file/d/18O1QHpbAEuQjmYzFe_x9Izore3t9mf2A/view?usp=sharing))
-  - **RECURSOS** - formato RDS ([link para
-    download](https://drive.google.com/file/d/1lt8cifXvJo4yTd6VNhlWLp4WDKcIlgAQ/view?usp=sharing))
-
-##### CSV
-
-  - **PEDIDOS** - formato CSV ([link para
-    download](https://drive.google.com/file/d/1Vrq4UQcO325V3dWXjG36LTvwCNsGFI66/view?usp=sharing))
-  - **RECURSOS** - formato CSV ([link para
-    download](https://drive.google.com/file/d/1TZZgXnh12FiYlimxhdFzUWE7dQ-CtpPi/view?usp=sharing))
+Disponibilzamos a base de dados em formatos `csv` e `rds`: [CLIQUE
+AQUI](https://drive.google.com/drive/folders/12a0qO8Spxc8IE_Wdlb0fjm88kD6JjVgk)
 
 ##### Preview: pedidos
 
-    #> Rows: 598,461
+    #> Rows: 608,836
     #> Columns: 25
     #> $ id_ano_base              <chr> "_2015", "_2015", "_2015", "_2015", "_2015", ~
     #> $ id_pedido                <chr> "1887837", "1887842", "1887846", "1887851", "~
@@ -99,7 +73,7 @@ Negativas de acesso a informação no governo Federal
 
 ##### Preview: recursos
 
-    #> Rows: 75,453
+    #> Rows: 76,750
     #> Columns: 21
     #> $ id_ano_base           <chr> "_2015", "_2015", "_2015", "_2015", "_2015", "_2~
     #> $ id_recurso            <chr> "1650", "1655", "1662", "1666", "1669", "1673", ~
@@ -122,13 +96,3 @@ Negativas de acesso a informação no governo Federal
     #> $ ts_resposta           <chr> "28/12/2015", "10/02/2016", "23/12/2015", "28/12~
     #> $ governo_que_respondeu <fct> Dilma II, Dilma II, Dilma II, Dilma II, Dilma II~
     #> $ governo_que_registrou <fct> Dilma II, Dilma II, Dilma II, Dilma II, Dilma II~
-
-### Código
-
-  - [`1-download-funcao-crawler-esic`](src/1-pedidos-cgu-funcao-crawler-esic.R):
-    função para acessar o site do esic e baixar base de dados de pedidos
-    de informação (usa RSelenium)
-  - [`2-download-crawler-exec`](src/2-pedidos-cgu-crawler-exec.R): baixa
-    todas as bases de dados de pedidos de informação em um loop
-  - [`3-pedidos-cgu-crawler-e-pre-processamento.R`](src/3-pedidos-cgu-crawler-e-pre-processamento.R):
-    código com pré-processamento da base (converte o XML em rds)
