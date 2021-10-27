@@ -10,7 +10,7 @@ limpando_texto <- function(x) {
     tolower() %>%
     tm::removeWords(tm::stopwords("pt")) %>%
     stringi::stri_trans_general("Latin-ASCII") %>% 
-    str_replace_all(url_pattern, "URL SITE") %>%
+    str_replace_all(url_pattern, "urlurlurl") %>%
     str_replace_all("\\r\\n", " ") %>%
     str_replace_all("\\n", " ") %>%
     str_replace_all("\\quot;", " ") %>% 
@@ -30,5 +30,5 @@ recursos_cgu <- readRDS(here("dados/load/rds/recursos-cgu.rds")) %>%
 saveRDS(pedidos_cgu, here("dados/load/rds/pedidos_clean.rds"))
 saveRDS(recursos_cgu, here("dados/load/rds/recursos_clean.rds"))
 
-readRDS(here("dados/load/rds/pedidos_clean.rds"))
-readRDS(here("dados/load/rds/recursos_clean.rds"))
+readRDS(here("dados/load/rds/pedidos-clean.rds"))
+readRDS(here("dados/load/rds/recursos-clean.rds"))

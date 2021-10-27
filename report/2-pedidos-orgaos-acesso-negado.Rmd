@@ -97,10 +97,10 @@ cores_lai <- tibble(
 ```
 
 ```{r}
-periodo_final <- "2021-08-01"
+#periodo_final <- "2021-08-01"
 
 pedidos_cgu <- readRDS(here("dados/load/rds/pedidos-clean.rds")) %>%
-  filter(data_resposta <= periodo_final, data_resposta <= periodo_final) %>%
+  #filter(data_resposta <= periodo_final, data_resposta <= periodo_final) %>%
   rename(orgao = orgaodestinatario)
 
 #pedidos_cgu <- pedidos_cgu %>% filter(orgao != "CEF – Caixa Econômica Federal")
