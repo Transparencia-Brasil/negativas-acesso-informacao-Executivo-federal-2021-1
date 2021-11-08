@@ -18,6 +18,11 @@ Negativas de acesso a informação no governo Federal
 6.  [Comparativo entre as bases disponíveis no
     FalaBr](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/6-comparativo-entre-bases-do-falabr.html)
 
+#### outros
+
+1.  [PAINEL-CGU: Pedidos de acesso a informação via LAI no
+    FalaBr](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/1-b-pedidos-decisoes-painel.html)
+
 ## Base de dados
 
 -   Site do e-SIC/CGU - [clique

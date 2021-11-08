@@ -29,5 +29,5 @@ vignettes/*.pdf
 dados/*
 local-files/*
 shiny-app/*
-cgu-interact/*
+cgu-interact/
 modulo_negativas_de_acesso.R

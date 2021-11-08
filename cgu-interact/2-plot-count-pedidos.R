@@ -1,4 +1,4 @@
-setwd(here("cgu-interact"))
+#setwd(here("cgu-interact"))
 plot_count_pedidos <- function(orgao) {
   
   count_pedidos <- readRDS(here("data/count_pedidos.rds")) %>% 

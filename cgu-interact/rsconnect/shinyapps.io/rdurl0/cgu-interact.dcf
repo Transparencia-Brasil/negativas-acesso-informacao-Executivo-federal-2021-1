@@ -5,7 +5,9 @@ account: rdurl0
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 4768253
-bundleId: 5094682
+bundleId: 5215053
 url: https://rdurl0.shinyapps.io/cgu-interact/
-when: 1633109895.28742
-lastSyncTime: 1633109895.28742
+when: 1636069414.89383
+lastSyncTime: 1636069414.89383
+asMultiple: FALSE
+asStatic: FALSE
