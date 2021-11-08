@@ -74,7 +74,6 @@ cores_lai <- tibble(
 ) %>% deframe()
 ```
 
-
 ## Quais são as bases de dados disponilizadas no Portal FalaBR?
 
 * Base de dados da CGU com pedidos e respostas [clique aqui](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx)
@@ -90,17 +89,18 @@ Existe uma defasagem entre a base do [painel CGU](https://falabr.cgu.gov.br/publ
 > Qual o motivo dessa diferença entre as duas bases?
 
 ```{r}
-pedidos_painel <- readRDS(here("dados/load/rds/base_cgu.rds")) %>% 
-  pluck("pedidos") %>% 
+pedidos_painel <- "dados/load/rds/base_cgu.rds" %>%
+  here() %>%
+  readRDS() %>%
+  pluck("pedidos") %>%
   janitor::clean_names() %>% 
   mutate(
     ts_registro = data_registro,
     ts_resposta = data_resposta,
     data_registro = dmy(data_registro) %>% floor_date(unit = "month"),
     data_resposta = dmy(data_resposta) %>% floor_date(unit = "month")) %>% 
-  rename(orgao = orgao_destinatario)
-
-  
+  rename(orgao = orgao_destinatario) %>% 
+  filter(!is.na(decisao), !is.na(data_resposta))
 ```
 
 ```{r}
