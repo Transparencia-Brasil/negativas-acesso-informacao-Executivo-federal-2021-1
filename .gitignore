@@ -41,3 +41,4 @@ vignettes/*.pdf
 dados/*
 local-files/*
 shiny-app/*
+cgu-interact/*

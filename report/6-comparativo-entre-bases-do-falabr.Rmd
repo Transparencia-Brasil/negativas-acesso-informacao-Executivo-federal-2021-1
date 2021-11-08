@@ -1,0 +1,192 @@
+---
+title: 'Comparativo entre bases de dados disponibilizadas na CGU'
+subtitle: 'Órgãos e entidades do poder Executivo'
+output:
+  html_document: 
+    code_folding: hide
+    toc: yes
+    toc_depth: 4
+    theme: paper
+    df_print: default
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = T,
+  comment = "#>",
+  message = F,
+  warning = F,
+  echo = T,
+  fig.width = 8,
+  fig.height = 5
+)
+```
+
+```{r}
+library(tidyverse)
+library(here)
+library(glue)
+library(lubridate)
+`%notin%` <- function(x, y) !(x %in% y)
+```
+
+```{r}
+# aplica identidade visual da TB/AeP:
+cores_aep <- c(
+  laranja = "#F9A521",
+  rosa = "#D81755",
+  cinza = "#969696",
+  marrom = "#B27D5C"
+)
+
+cores_tb <- c(
+  laranja = "#F6A323",
+  cinza_escuro = "#1d1d1b",
+  cinza_claro = "#6f7171",
+  cinza_quase_branco = "#ececec",
+  azul = "#41ACBD"
+)
+
+cores_decisao <- c(
+  "Acesso Concedido" = cores_tb[["azul"]],
+  "Não se trata de solicitação de informação" = cores_aep[["marrom"]],
+  "Acesso Negado" = cores_aep[["rosa"]],
+  "Acesso Parcialmente Concedido" = cores_aep[["laranja"]],
+  "Pergunta Duplicada/Repetida" = cores_aep[["cinza"]],
+  "Órgão não tem competência para responder sobre o assunto" = cores_tb[["cinza_escuro"]],
+  "Informação Inexistente" = cores_tb[["cinza_quase_branco"]]
+  )
+
+cores_decisao2 <- cores_decisao
+cores_decisao2[["Informação Inexistente"]] <- "gray20"
+
+cores_decisao3 <- c("black", "gray90", "gray20", "gray80", "gray20")
+names(cores_decisao3) <- names(cores_decisao)[-c(5, 2)] 
+
+cores_lai <- tibble(
+  c1 = c("Não se trata de solicitação de informação",
+         "Pergunta Duplicada/Repetida",
+         "Pedidos de acesso a informação via LAI"
+         ) %>% str_wrap(25),
+  c2 = c("#F9A521", "#969696", "#D81755")
+) %>% deframe()
+```
+
+
+## Quais são as bases de dados disponilizadas no Portal FalaBR?
+
+* Base de dados da CGU com pedidos e respostas [clique aqui](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx)
+    * Esses dados vão de 2015 até 2021 e possuem os campos de texto dos pedidos, das resposta e dos recursos completos.
+
+* Dase de dados do [painel da cgu](http://paineis.cgu.gov.br/lai/index.htm), disponível para download [neste link](https://falabr.cgu.gov.br/publico/DownloadDados/DownloadDadosLai.aspx)
+    * Esses dados vão de 2012 até 2021 mas não possuem os campos de texto dos pedidos, das respostas e dos recursos.
+    
+## Comparativos
+
+Existe uma defasagem entre a base do [painel CGU](https://falabr.cgu.gov.br/publico/DownloadDados/DownloadDadosLai.aspx) e a [base com pedidos e respostas completas](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx).
+
+> Qual o motivo dessa diferença entre as duas bases?
+
+```{r}
+pedidos_painel <- readRDS(here("dados/load/rds/base_cgu.rds")) %>% 
+  pluck("pedidos") %>% 
+  janitor::clean_names() %>% 
+  mutate(
+    ts_registro = data_registro,
+    ts_resposta = data_resposta,
+    data_registro = dmy(data_registro) %>% floor_date(unit = "month"),
+    data_resposta = dmy(data_resposta) %>% floor_date(unit = "month")) %>% 
+  rename(orgao = orgao_destinatario)
+
+  
+```
+
+```{r}
+painel <- pedidos_painel %>% 
+  mutate(is_pedido_de_informacao = case_when(
+    decisao %notin% c(
+      "Pergunta Duplicada/Repetida",
+      "Não se trata de solicitação de informação" 
+    ) ~ "Pedidos de acesso a informação via LAI",
+    TRUE ~ decisao
+  ) %>% str_wrap(25)) %>% 
+  count(data_registro, is_pedido_de_informacao, name = "qt", base = "Base de dados do painel da CGU")
+
+cgu <- "dados/load/rds/pedidos-cgu.rds" %>% 
+  here() %>% 
+  readRDS() %>% 
+  mutate(is_pedido_de_informacao = case_when(
+    decisao %notin% c(
+      "Pergunta Duplicada/Repetida",
+      "Não se trata de solicitação de informação" 
+    ) ~ "Pedidos de acesso a informação via LAI",
+    TRUE ~ decisao
+  ) %>% str_wrap(25)) %>% 
+  count(data_registro, is_pedido_de_informacao, name = "qt", base = "Base de dados com\ntextos de pedidos e respostas")
+
+bind_rows(painel, cgu) %>% 
+  filter(is_pedido_de_informacao == "Pedidos de acesso a\ninformação via LAI") %>% 
+  ggplot(aes(x = data_registro, y = qt, color = base)) +
+  geom_line(size = 1)  +
+  geom_vline(xintercept = seq(ymd('2012-01-01'), ymd('2022-01-01'), by = 'year'), lty = 3) +
+  theme_minimal() +
+  labs(
+    title = "Comparação entre as duas bases de dados disponíveis no FalaBR",
+    caption = "Painel CGU: https://falabr.cgu.gov.br/publico/DownloadDados/DownloadDadosLai.aspx\nBase com tetos de pedidos: http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx",
+    x = "Mês do registro",
+    y = "Quantidade de manifestações",
+    color = NULL
+  ) +
+  theme(legend.position = "top")
+```
+
+Os dados da Caixa Econômica Federal também não estão disponibilizados por completo na base [com pedidos e respostas completas](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx)
+
+```{r}
+painel <- pedidos_painel %>% 
+  filter(str_detect(orgao, "^CEF ")) %>% 
+  mutate(is_pedido_de_informacao = case_when(
+    decisao %notin% c(
+      "Pergunta Duplicada/Repetida",
+      "Não se trata de solicitação de informação" 
+    ) ~ "Pedidos de acesso a informação via LAI",
+    TRUE ~ decisao
+  ) %>% str_wrap(25)) %>% 
+  count(data_registro, is_pedido_de_informacao, name = "qt", base = "Base de dados do painel da CGU")
+
+cgu <- "dados/load/rds/pedidos-cgu.rds" %>% 
+  here() %>% 
+  readRDS() %>% 
+  rename(orgao = orgaodestinatario) %>% 
+  filter(str_detect(orgao, "^CEF ")) %>% 
+  mutate(is_pedido_de_informacao = case_when(
+    decisao %notin% c(
+      "Pergunta Duplicada/Repetida",
+      "Não se trata de solicitação de informação" 
+    ) ~ "Pedidos de acesso a informação via LAI",
+    TRUE ~ decisao
+  ) %>% str_wrap(25)) %>% 
+  count(data_registro, is_pedido_de_informacao, name = "qt", base = "Base de dados com\ntextos de pedidos e respostas")
+
+bind_rows(painel, cgu) %>% 
+  filter(is_pedido_de_informacao == "Pedidos de acesso a\ninformação via LAI") %>% 
+  ggplot(aes(x = data_registro, y = qt, color = base)) +
+  geom_line(size = 1)  +
+  geom_vline(xintercept = seq(ymd('2012-01-01'), ymd('2022-01-01'), by = 'year'), lty = 3) +
+  theme_minimal() +
+  labs(
+    title = "CEF - Caixa Econômica Federal",
+    subtitle = "Comparação entre as duas bases de dados disponíveis no FalaBR",
+    caption = "Painel CGU: https://falabr.cgu.gov.br/publico/DownloadDados/DownloadDadosLai.aspx\nBase com tetos de pedidos: http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx",
+    x = "Mês do registro",
+    y = "Quantidade de manifestações",
+    color = NULL
+  ) +
+  theme(legend.position = "top")
+```
+
+
+
+

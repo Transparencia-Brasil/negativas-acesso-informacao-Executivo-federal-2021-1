@@ -1,8 +1,8 @@
 Negativas de acesso a informação no governo Federal
 ================
 
-  - [Relatório](#relatório)
-  - [Base de dados](#base-de-dados)
+-   [Relatório](#relatório)
+-   [Base de dados](#base-de-dados)
 
 ## Relatório
 
@@ -15,17 +15,19 @@ Negativas de acesso a informação no governo Federal
 4.  [Uso da LGPD nas respostas aos pedidos de acesso a informação via
     LAI](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/4-controversos-lgpd.html)
 5.  [Recursos](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/5-recursos.html)
+6.  [Comparativo entre as bases disponíveis no
+    FalaBr](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/6-comparativo-entre-bases-do-falabr.html)
 
 ## Base de dados
 
-  - Site do e-SIC/CGU - [clique
+-   Site do e-SIC/CGU - [clique
     aqui](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx)
-  - Dicionário de variáveis - [clique
+-   Dicionário de variáveis - [clique
     aqui](http://www.consultaesic.cgu.gov.br/arquivosRelatorios/PedidosRespostas/Dicionario-Dados-Exportacao.txt)
 
 #### Download da base bruta
 
-  - Os dados brutos estão disponíveis ano a ano no site do e-sic da
+-   Os dados brutos estão disponíveis ano a ano no site do e-sic da
     Controladoria Geral da União. Para baixar manualmente [acesse o site
     do
     esic](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx),
@@ -33,8 +35,22 @@ Negativas de acesso a informação no governo Federal
 
 ##### Arquivos:
 
-| Arquivo | Tamanho (mb) | Data do download |
-| :------ | :----------: | :--------------- |
+|   Tipo   | Ano  |              Arquivo              | Tamanho (mb) |
+|:--------:|:----:|:---------------------------------:|-------------:|
+| Pedidos  | 2015 | 20211025\_Pedidos\_xml\_2015.xml  |        277,0 |
+| Pedidos  | 2016 | 20211025\_Pedidos\_xml\_2016.xml  |        324,2 |
+| Pedidos  | 2017 | 20211025\_Pedidos\_xml\_2017.xml  |        346,3 |
+| Pedidos  | 2018 | 20211025\_Pedidos\_xml\_2018.xml  |        370,9 |
+| Pedidos  | 2019 | 20211025\_Pedidos\_xml\_2019.xml  |        402,7 |
+| Pedidos  | 2020 | 20211025\_Pedidos\_xml\_2020.xml  |        532,2 |
+| Pedidos  | 2021 | 20211025\_Pedidos\_xml\_2021.xml  |        333,7 |
+| Recursos | 2015 | 20211025\_Recursos\_xml\_2015.xml |         38,8 |
+| Recursos | 2016 | 20211025\_Recursos\_xml\_2016.xml |         46,5 |
+| Recursos | 2017 | 20211025\_Recursos\_xml\_2017.xml |         54,8 |
+| Recursos | 2018 | 20211025\_Recursos\_xml\_2018.xml |         54,1 |
+| Recursos | 2019 | 20211025\_Recursos\_xml\_2019.xml |         64,6 |
+| Recursos | 2020 | 20211025\_Recursos\_xml\_2020.xml |         68,9 |
+| Recursos | 2021 | 20211025\_Recursos\_xml\_2021.xml |         42,8 |
 
 #### Download da base pré-processada
 

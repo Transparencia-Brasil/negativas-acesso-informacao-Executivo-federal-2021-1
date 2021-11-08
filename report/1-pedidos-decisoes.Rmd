@@ -81,7 +81,7 @@ cores_decisao <- c(
   "Pergunta Duplicada/Repetida" = cores_aep[["cinza"]],
   "Órgão não tem competência para responder sobre o assunto" = cores_tb[["cinza_escuro"]],
   "Informação Inexistente" = cores_tb[["cinza_quase_branco"]]
-  )
+)
 
 cores_decisao2 <- cores_decisao
 cores_decisao2[["Informação Inexistente"]] <- "gray20"
@@ -216,7 +216,7 @@ decisao <- pedidos_cgu %>%
   filter(decisao %notin% c(
     "Pergunta Duplicada/Repetida",
     "Não se trata de solicitação de informação"
-  )) 
+  ))
 
 my_lbl <- function(x) scales::percent(x, accuracy = .1, decimal.mark = ",")
 
@@ -353,6 +353,75 @@ comb +
 rm(p1)
 rm(p2)
 rm(comb)
+```
+
+## Negativas de acesso a informação
+
+```{r}
+decisao %>%
+  mutate(mesmo_periodo = month(data_resposta) <= 8) %>%
+  add_count(data_resposta, mesmo_periodo, wt = qt, name = "qt_mes") %>%
+  mutate(perc = qt / qt_mes) %>%
+  filter(decisao == "Acesso Negado") %>%
+  group_by(ano = year(data_resposta), mesmo_periodo) %>%
+  mutate(media_perc = if_else(mesmo_periodo, mean(perc), NA_real_)) %>%
+  ungroup() %>%
+  ggplot(aes(x = data_resposta, y = perc, fill = mesmo_periodo)) +
+  geom_vline(
+    xintercept = seq(ymd("2015-01-01"), ymd("2022-01-01"), by = "year"),
+    lty = 3
+  ) +
+  geom_text(
+    data = . %>% filter(month(data_resposta) == 2),
+    aes(label = year(data_resposta), y = .002),
+    size = 3.5,
+    fontface = "bold",
+    hjust = 0.1
+  ) +
+  geom_col(alpha = .5) +
+  geom_point(aes(y = media_perc), shape = 95, size = 4) +
+  geom_text(
+    data = . %>% filter(month(data_resposta) == 6),
+    check_overlap = TRUE,
+    fontface = "bold",
+    aes(
+      y = media_perc,
+      label = my_lbl(media_perc)
+      ),
+    nudge_y = .002
+  ) +
+  geom_curve(
+    aes(x = ymd("2015-05-01"),
+        y = 0.115, 
+        xend = ymd("2015-05-01"),
+        yend = 0.075),
+    colour = "black",
+    size = 0.6,
+    curvature = .35,
+    arrow = arrow(length = unit(0.2, "cm"))
+  ) +
+  geom_label(
+    data = . %>% filter(data_resposta == ymd("2015-06-01")),
+    aes(label = "Média anual\n(mesmo período)", y = .115),
+    fill = "white",
+    size = 3,
+    label.size = NA
+  ) +
+  scale_fill_manual(values = c("gray70", cores_decisao[["Acesso Negado"]])) +
+  hrbrthemes::scale_y_percent() +
+  scale_x_date(
+    breaks = ymd(c(glue("{2015:2021}-01-01"), glue("{2015:2021}-08-01"))),
+    date_labels = "%b",
+    expand = c(0, 0)
+    ) +
+  theme_minimal() +
+  theme(legend.position = "none", panel.grid.minor = element_blank()) +
+  labs(
+    x = NULL,
+    y = "%",
+    title = "Acessos negados por mês - comparação entre períodos iguais",
+    subtitle = "Como % do total de acessos negados"
+  )
 ```
 
 ## Análise de decisão "Não se trata de do solicitação de informação"
