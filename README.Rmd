@@ -49,6 +49,9 @@ glue::glue(
 5. [Recursos](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/5-recursos.html)
 6. [Comparativo entre as bases disponíveis no FalaBr](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/6-comparativo-entre-bases-do-falabr.html)
 
+#### outros
+1. [PAINEL-CGU: Pedidos de acesso a informação via LAI no FalaBr](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/1-b-pedidos-decisoes-painel.html)
+
 ## Base de dados
 
 * Site do e-SIC/CGU - [clique aqui](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx)
