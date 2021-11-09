@@ -101,6 +101,11 @@ pedidos_painel <- "dados/load/rds/base_cgu.rds" %>%
     data_resposta = dmy(data_resposta) %>% floor_date(unit = "month")) %>% 
   rename(orgao = orgao_destinatario) %>% 
   filter(!is.na(decisao), !is.na(data_resposta))
+
+pedidos_cgu <- "dados/load/rds/pedidos-cgu.rds" %>% 
+  here() %>% 
+  readRDS() %>% 
+  rename(orgao = orgaodestinatario)
 ```
 
 ```{r}
@@ -114,9 +119,7 @@ painel <- pedidos_painel %>%
   ) %>% str_wrap(25)) %>% 
   count(data_registro, is_pedido_de_informacao, name = "qt", base = "Base de dados do painel da CGU")
 
-cgu <- "dados/load/rds/pedidos-cgu.rds" %>% 
-  here() %>% 
-  readRDS() %>% 
+cgu <- pedidos_cgu %>% 
   mutate(is_pedido_de_informacao = case_when(
     decisao %notin% c(
       "Pergunta Duplicada/Repetida",
@@ -187,6 +190,125 @@ bind_rows(painel, cgu) %>%
   theme(legend.position = "top")
 ```
 
+### Comparação entre percentual de pedidos
 
+```{r fig.height=11, fig.width=10}
+painel <- pedidos_painel %>% 
+  mutate(is_pedido_de_informacao = case_when(
+    decisao %notin% c(
+      "Pergunta Duplicada/Repetida",
+      "Não se trata de solicitação de informação" 
+    ) ~ "Pedidos de acesso a informação via LAI",
+    TRUE ~ decisao
+  ) %>% str_wrap(25)) %>%
+  filter(is_pedido_de_informacao ==  str_wrap("Pedidos de acesso a informação via LAI", 25)) %>% 
+  count(data_registro, decisao, name = "qt", base = "Painel")
 
+cgu <- pedidos_cgu %>% 
+  mutate(is_pedido_de_informacao = case_when(
+    decisao %notin% c(
+      "Pergunta Duplicada/Repetida",
+      "Não se trata de solicitação de informação" 
+    ) ~ "Pedidos de acesso a informação via LAI",
+    TRUE ~ decisao
+  ) %>% str_wrap(25)) %>%
+  filter(is_pedido_de_informacao ==  str_wrap("Pedidos de acesso a informação via LAI", 25)) %>% 
+  count(data_registro, decisao, name = "qt", base = "CGU")
+  
+#painel <- painel %>% filter(data_registro >= unique(min(cgu$data_registro)))
+
+p <- bind_rows(cgu, painel) %>% 
+  add_count(data_registro, base, wt = qt, name = "qt_mes") %>% 
+  mutate(per = qt / qt_mes)
+
+p %>% 
+  ggplot(aes(x = data_registro, y = per, size = base, color = base)) +
+  geom_rect(
+    data = . %>% 
+      filter(data_registro == min(data_registro) | data_registro == max(data_registro)),
+    aes(
+      xmin = min(data_registro),
+      xmax = max(data_registro),
+      ymin = -Inf,
+      ymax = Inf,
+      fill = decisao
+    ),
+    alpha = .2,
+    color = "transparent",
+    show.legend = F
+  ) +
+  geom_line() +
+  scale_fill_manual(values = cores_decisao) +
+  scale_color_manual(values = c("CGU" = "black", "Painel" = "red")) +
+  scale_size_manual(values = c("Painel" = .6, "CGU" = .75)) +
+  hrbrthemes::scale_y_percent(expand = c(0.2, 0)) +
+  scale_x_date(
+    breaks = scales::date_breaks("6 months"),
+    date_labels = "%b",
+    expand = c(0, 0)
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    axis.ticks.x = element_line(), 
+    legend.text = element_text(size = 8),
+    axis.text.x = element_text(size = 10, vjust = 2.5, hjust = .5),
+    panel.grid.minor = element_blank(),
+    strip.text = element_text(size = 12, angle = 0, hjust = 0)
+  ) +
+  geom_vline(xintercept = seq(ymd('2013-01-01'), ymd('2021-01-01'), by = 'year'), lty = 3) +
+  geom_text(
+    data = . %>% filter(month(data_registro) == 2),
+    aes(label = year(data_registro), y = .01),
+    size = 3,
+    vjust = .1,
+    hjust = .25,
+    color = "gray20"
+  ) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Comparação entre as duas bases disponíveis no FalaBr",
+    subtitle = "Pedidos de acesso a informação conforme decisão sobre o acesso\nComo % do total de pedidos - mês a mês",
+    color = NULL,
+    fill = NULL,
+    lty = NULL
+  ) +
+  facet_wrap(~ reorder(decisao, -qt), scales = 'free', ncol = 1)
+```
+
+### Comparação do total de pedidos
+
+```{r fig.height=11, fig.width=10}
+p %>% 
+  pivot_wider(c(1, 2), names_from = base, values_from = qt) %>% 
+  # filter(is.na(CGU))
+  transmute(
+    data_registro,
+    decisao,
+    CGU = replace_na(CGU, 0),
+    painel = Painel - CGU) %>% 
+  pivot_longer(-c(data_registro, decisao), names_to = "base", values_to = "qt") %>% 
+  ggplot(aes(x = data_registro, y = qt, fill = reorder(base, qt))) +
+  geom_col() +
+  facet_wrap(~ reorder(decisao, -qt), scales = 'free', ncol = 1) +
+  theme_minimal() +
+  theme(
+    legend.position = "top",
+    axis.ticks.x = element_line(), 
+    legend.text = element_text(size = 8),
+    axis.text.x = element_text(size = 10, vjust = 2.5, hjust = .5),
+    panel.grid.minor = element_blank(),
+    strip.text = element_text(size = 12, angle = 0, hjust = 0)
+  ) +
+  labs(
+    x = NULL,
+    y = NULL,
+    title = "Comparação entre as duas bases disponíveis no FalaBr",
+    subtitle = "Pedidos de acesso a informação conforme decisão sobre o acesso\nTotal, mês a mês",
+    color = NULL,
+    fill = NULL,
+    lty = NULL
+  )
+```
 
