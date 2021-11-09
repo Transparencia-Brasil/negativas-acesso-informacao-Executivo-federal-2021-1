@@ -112,7 +112,7 @@ instancias_recursais <- c(
   "Não houve recurso"
 )
 
-pedidos_cgu <- "dados/load/rds/base_cgu.rds" %>%
+pedidos_painel <- "dados/load/rds/base_cgu.rds" %>%
   here() %>%
   readRDS() %>%
   pluck("pedidos") %>%
@@ -122,15 +122,14 @@ pedidos_cgu <- "dados/load/rds/base_cgu.rds" %>%
     ts_resposta = data_resposta,
     data_registro = dmy(data_registro) %>% floor_date(unit = "month"),
     data_resposta = dmy(data_resposta) %>% floor_date(unit = "month")) %>% 
-  rename(orgao = orgao_destinatario) %>% 
-  filter(!is.na(decisao), !is.na(data_resposta))
+  rename(orgao = orgao_destinatario) %>%
+  filter(!is.na(decisao), !is.na(data_resposta), data_registro < ymd("2021-10-01"))
 ```
 
 ## Análise de pedidos por decisão de acesso
 
 ```{r}
-# pedidos_cgu <- pedidos_cgu %>% filter(orgao != "CEF – Caixa Econômica Federal")
-glimpse(pedidos_cgu)
+glimpse(pedidos_painel)
 ```
 
 A Decisão de acesso corresponde ao tipo de resposta dada ao pedido (ver [dicionário](http://www.consultaesic.cgu.gov.br/arquivosRelatorios/PedidosRespostas/Dicionario-Dados-Exportacao.txt)).
@@ -148,98 +147,129 @@ Não são consideradoe pedidos de acesso a informação:
 - Pergunta Duplicada/Repetida
 
 ```{r}
-pedidos_cgu %>% 
-  mutate(is_pedido_de_informacao = case_when(
-    decisao %notin% c(
-      "Pergunta Duplicada/Repetida",
-      "Não se trata de solicitação de informação" 
-    ) ~ "Pedidos de acesso a informação via LAI",
-    TRUE ~ decisao
-  ) %>% str_wrap(25)) %>% 
-  count(data_registro, is_pedido_de_informacao, name = "qt") %>% 
-  ggplot(aes(
-    x = data_registro,
-    y = qt,
-    fill = is_pedido_de_informacao,
-    color = is_pedido_de_informacao
-  )) +
-  geom_vline(xintercept = seq(ymd('2013-01-01'), ymd('2022-01-01'), by = 'year'), lty = 3) +
-  geom_line(size = 1.5) +
-  theme_minimal() +
-  geom_label(
-    aes(label = qt),
-    color = "black",
-    size = 3, 
-    nudge_y = 250,
-    alpha = .6,
-    label.size = NA,
-    data = . %>% 
-      group_by(is_pedido_de_informacao) %>% 
-      filter(qt == max(qt)) %>% 
-      ungroup(),
+plot_lai_a_partir_de <- function(ano_inicio) {
+
+  ano_inicio <- ano_inicio
+  data_de <- ymd(glue("{ano_inicio}-01-01"))
+  data_ate <- ymd("2022-01-01")
+  data_sequencia <- seq(data_de, data_ate, by = 'year')
+
+  pedidos_painel %>%
+    filter(data_registro >= data_de) %>% 
+    mutate(is_pedido_de_informacao = case_when(
+      decisao %notin% c(
+        "Pergunta Duplicada/Repetida",
+        "Não se trata de solicitação de informação" 
+      ) ~ "Pedidos de acesso a informação via LAI",
+      TRUE ~ decisao
+      ) %>% str_wrap(25)) %>% 
+    count(data_registro, is_pedido_de_informacao, name = "qt") %>% 
+    ggplot(aes(
+      x = data_registro,
+      y = qt,
+      fill = is_pedido_de_informacao,
+      color = is_pedido_de_informacao
+    )) +
+    geom_vline(xintercept = data_sequencia, lty = 3) +
+    geom_line(size = 1.5) +
+    theme_minimal() +
+    geom_label(
+      aes(label = qt),
+      color = "black",
+      size = 3, 
+      nudge_y = 250,
+      alpha = .6,
+      label.size = NA,
+      data = . %>% 
+        group_by(is_pedido_de_informacao) %>% 
+        filter(qt == max(qt)) %>% 
+        ungroup(),
+        show.legend = F
+    ) +
+    geom_point(
+      color = "gray20",
+      data = . %>% 
+        group_by(is_pedido_de_informacao) %>% 
+        filter(qt == max(qt)) %>% 
+        ungroup(),
+      show.legend = FALSE
+    ) +
+    geom_text(
+      data = . %>% filter(month(data_registro) == 2),
+      aes(label = year(data_registro), y = -200),
+      size = 3.5,
+      vjust = 1.3,
+      hjust = .25,
+      color = "gray20",
       show.legend = F
-  ) +
-  geom_point(
-    color = "gray20",
-    data = . %>% 
-      group_by(is_pedido_de_informacao) %>% 
-      filter(qt == max(qt)) %>% 
-      ungroup(),
-    show.legend = FALSE
-  ) +
-  geom_text(
-    data = . %>% filter(month(data_registro) == 2),
-    aes(label = year(data_registro), y = -200),
-    size = 3.5,
-    vjust = 1.3,
-    hjust = .25,
-    color = "gray20",
-    show.legend = F
-  ) +
-  scale_fill_manual(values = cores_lai) +
-  scale_color_manual(values = cores_lai, breaks = names(cores_lai)[c(3,1,2)]) +
-  scale_x_date(
-    breaks = scales::date_breaks("4 months"),
-    date_labels = "%b",
-    expand = c(0, 0)) +
-  labs(
-    y = "Quantidade",
-    x = NULL,
-    fill = NULL,
-    color = NULL,
-    title = "Manifestações para ógãos e entidades do governo executivo Federal",
-    subtitle = "Quantidades por mês"
-  ) +
-  theme(legend.position = "top",
-        legend.justification = "left",
-        legend.text = element_text(margin = margin(2, 5, 2, 5, "pt")))
+    ) +
+    scale_fill_manual(values = cores_lai) +
+    scale_color_manual(values = cores_lai, breaks = names(cores_lai)[c(3,1,2)]) +
+    scale_x_date(
+      breaks = scales::date_breaks("3 months"),
+      date_labels = "%b",
+      expand = c(0, 0)) +
+    labs(
+      y = "Quantidade",
+      x = NULL,
+      fill = NULL,
+      color = NULL,
+      title = "Manifestações para ógãos e entidades do governo executivo Federal",
+      subtitle = "Quantidades por mês"
+    ) +
+    theme(
+      legend.position = "top",
+      legend.justification = "left",
+      legend.text = element_text(margin = margin(2, 5, 2, 5, "pt"))
+    )
+}
 ```
 
-## Histórico de pedidos de acesso a informação por decisão de acesso
+### A partir de 2013
 
-```{r fig.height=11, fig.width=10}
+```{r}
+plot_lai_a_partir_de("2013")
+```
+
+### A partir de 2015
+
+```{r}
+plot_lai_a_partir_de("2015")
+```
+
+# Histórico de pedidos de acesso a informação por decisão de acesso
+
+* **Descartar:** "Pergunta duplicada/repetida" e "Não se trata de solicitação de informação"
+* **Calcular** a proporção de "Acesso Concedido", "Acesso Negado" e "Acesso Parcialmente Concedido" em relação ao que sobra sem as categorias acima
+
+```{r fig.height=8, fig.width=11}
 # tipo respostas mais comuns histórico -----------------------------------------
-decisao <- pedidos_cgu %>%
-  count(data_resposta, decisao, name = "qt") %>%
-  mutate(decisao = fct_reorder(decisao, qt, .desc = T)) %>% 
+decisao <- pedidos_painel %>% 
   filter(decisao %notin% c(
     "Pergunta Duplicada/Repetida",
     "Não se trata de solicitação de informação"
-  ))
+  )) %>% 
+  count(data_registro, decisao, name = "qt") %>%
+  mutate(decisao = fct_reorder(decisao, qt, .desc = T))
 
 my_lbl <- function(x) scales::percent(x, accuracy = .1, decimal.mark = ",")
 
 # plot esquerdo ----------------------------------------------------------------
 p1 <- decisao %>%
-  add_count(data_resposta, wt = qt, name = "qt_mes") %>% 
+  add_count(data_registro, wt = qt, name = "qt_mes") %>%
+  filter(decisao %in% c(
+    "Acesso Concedido",
+    "Acesso Negado",
+    "Acesso Parcialmente Concedido"
+  )) %>% 
   mutate(per = qt / qt_mes) %>% 
-  ggplot(aes(x = data_resposta, y = per)) +
+  ggplot(aes(x = data_registro, y = per)) +
   geom_rect(
     data = . %>%
-      filter(data_resposta == min(data_resposta) | data_resposta == max(data_resposta)),
+      filter(data_registro == min(data_registro) | data_registro == max(data_registro)),
     aes(
-      xmin = min(data_resposta),
-      xmax = max(data_resposta),
+      xmin = min(data_registro),
+      xmax = max(data_registro),
       ymin = -Inf,
       ymax = Inf,
       fill = decisao
@@ -250,15 +280,15 @@ p1 <- decisao %>%
   geom_line(show.legend = F, size = .7) +
   geom_vline(xintercept = seq(ymd('2012-01-01'), ymd('2021-01-01'), by = 'year'), lty = 3) +
   geom_text(
-    data = . %>% filter(month(data_resposta) == 2),
-    aes(label = year(data_resposta), y = .01),
-    size = 3,
+    data = . %>% filter(month(data_registro) == 2),
+    aes(label = year(data_registro), y = .005),
+    size = 3.5,
     vjust = .1,
     hjust = .25,
     color = "gray20"
   ) +
   ggforce::geom_mark_circle(
-    aes(filter = data_resposta == ymd("2018-09-01") & decisao == "Acesso Concedido",
+    aes(filter = data_registro == ymd("2018-07-01") & decisao == "Acesso Concedido",
         label = "Máximas anuais"),
     color = "gray20",
     fill = NA,
@@ -266,15 +296,15 @@ p1 <- decisao %>%
     expand = 0,
     con.cap = 0,
     label.fill = alpha(cores_decisao[["Acesso Concedido"]], .5),
-    label.fontsize = 9,
+    label.fontsize = 10,
     label.fontface = "plain",
-    label.buffer = unit(5, "mm"),
+    label.buffer = unit(10, "mm"),
     label.margin = margin(1, 0, 1, 0, "mm")
   ) +
   ggrepel::geom_label_repel(
     data = . %>%
-      group_by(decisao, year(data_resposta)) %>%
-      arrange(year(data_resposta), decisao, -per) %>%
+      group_by(decisao, year(data_registro)) %>%
+      arrange(year(data_registro), decisao, -per) %>%
       filter(row_number() == 1) %>%
       ungroup(),
     aes(label = my_lbl(per), fill = decisao, color = decisao),
@@ -282,13 +312,12 @@ p1 <- decisao %>%
     size = 3.2,
     label.padding = unit(0.1, "lines"),
     label.size = NA,
-    show.legend = F,
-    direction = "y"
+    show.legend = F
   ) +
   geom_point(
     data = . %>%
-      group_by(decisao, year(data_resposta)) %>%
-      arrange(year(data_resposta), decisao, -per) %>%
+      group_by(decisao, year(data_registro)) %>%
+      arrange(year(data_registro), decisao, -per) %>%
       filter(row_number() == 1) %>%
       ungroup()
   ) +
@@ -296,7 +325,7 @@ p1 <- decisao %>%
   scale_color_manual(values = cores_decisao3) +
   scale_y_percent(expand = c(0.2, 0)) +
   scale_x_date(
-    breaks = scales::date_breaks("3 months"),
+    breaks = scales::date_breaks("6 months"),
     date_labels = "%b",
     expand = c(0, 0)
   ) +
@@ -321,9 +350,14 @@ p1 <- decisao %>%
 
 # plot direito -----------------------------------------------------------------
 p2 <- decisao %>%
-  count(ano = year(data_resposta), decisao, wt = qt, name = "qt") %>%
+  count(ano = year(data_registro), decisao, wt = qt, name = "qt") %>%
   add_count(ano, wt = qt, name = "qt_ano") %>%
-  mutate(perc_ano = qt / qt_ano) %>% 
+  mutate(perc_ano = qt / qt_ano) %>%
+  filter(decisao %in% c(
+    "Acesso Concedido",
+    "Acesso Negado",
+    "Acesso Parcialmente Concedido"
+  )) %>% 
   ggplot(aes(x = perc_ano, y = reorder(ano, -ano), fill = decisao, color = decisao)) +
   facet_wrap(~ reorder(decisao, -perc_ano), ncol = 1, scales = "free_x") +
   geom_col(aes(x = 1), alpha = .3, fill = "gray70", color = "white") +
@@ -366,23 +400,30 @@ rm(comb)
 
 ## Negativas de acesso a informação
 
-```{r}
+```{r fig.height=6}
 decisao %>%
-  mutate(mesmo_periodo = month(data_resposta) <= 9) %>%
-  add_count(data_resposta, mesmo_periodo, wt = qt, name = "qt_mes") %>%
+  mutate(mesmo_periodo = month(data_registro) <= 9) %>%
+  add_count(data_registro, mesmo_periodo, wt = qt, name = "qt_mes") %>%
   mutate(perc = qt / qt_mes) %>%
-  filter(decisao == "Acesso Negado") %>%
-  group_by(ano = year(data_resposta), mesmo_periodo) %>%
+  # filter(decisao == "Acesso Negado") %>%
+  filter(decisao %in% c(
+    "Acesso Negado",
+    "Acesso Parcialmente Concedido"
+  )) %>% 
+  group_by(ano = year(data_registro), mesmo_periodo, decisao) %>%
   mutate(media_perc = if_else(mesmo_periodo, mean(perc), NA_real_)) %>%
   ungroup() %>%
-  ggplot(aes(x = data_resposta, y = perc, fill = mesmo_periodo)) +
+  mutate(
+   decisao2 = if_else(mesmo_periodo, as.character(decisao), "")
+  ) %>% 
+  ggplot(aes(x = data_registro, y = perc, fill = decisao2)) +
   geom_vline(
     xintercept = seq(ymd("2013-01-01"), ymd("2022-01-01"), by = "year"),
     lty = 3
   ) +
   geom_text(
-    data = . %>% filter(month(data_resposta) == 2),
-    aes(label = year(data_resposta), y = .002),
+    data = . %>% filter(month(data_registro) == 2),
+    aes(label = year(data_registro), y = .002),
     size = 3.5,
     fontface = "bold",
     hjust = 0.1
@@ -390,45 +431,52 @@ decisao %>%
   geom_col(alpha = .5) +
   geom_point(aes(y = media_perc), shape = 95, size = 4) +
   geom_text(
-    data = . %>% filter(month(data_resposta) == 6),
+    data = . %>% filter(month(data_registro) == 6),
     check_overlap = TRUE,
     fontface = "bold",
+    size = 3.5,
     aes(
       y = media_perc,
       label = my_lbl(media_perc)
       ),
-    nudge_y = .002
+    nudge_y = .01,
+    hjust = .1,
   ) +
   geom_curve(
-    aes(x = ymd("2015-06-01"),
-        y = 0.18,
-        xend = ymd("2014-06-01"),
-        yend = 0.14),
+    data = . %>% filter(decisao2 == "Acesso Parcialmente Concedido"),
+    aes(x = ymd("2019-05-01"),
+        y = 0.115, 
+        xend = ymd("2019-05-01"),
+        yend = 0.075),
     colour = "black",
     size = 0.6,
     curvature = .35,
     arrow = arrow(length = unit(0.2, "cm"))
   ) +
   geom_label(
-    data = . %>% filter(data_resposta == ymd("2015-06-01")),
-    aes(label = "Média anual\n(mesmo período)", y = .18),
+    data = . %>% filter(data_registro == ymd("2019-06-01") & decisao2 == "Acesso Parcialmente Concedido"),
+    aes(label = "Média anual\n(mesmo período)", y = .15),
     fill = "white",
     size = 3,
     label.size = NA
   ) +
-  scale_fill_manual(values = c("gray70", cores_decisao[["Acesso Negado"]])) +
+  scale_fill_manual(values = c("gray70", cores_decisao[c(3, 4)])) +
+  facet_wrap(. ~ reorder(decisao, -perc), ncol = 1, scales = "free_x") +
   hrbrthemes::scale_y_percent() +
   scale_x_date(
-    breaks = ymd(c(glue("{2012:2021}-01-01"), glue("{2012:2021}-09-01"))),
-    date_labels = "%b"#,
-    #expand = c(.1, .1)
+    breaks = ymd(c(glue("{2012:2021}-09-01"), glue("{2012:2021}-09-01"))),
+    date_labels = "%b"
     ) +
   theme_minimal() +
-  theme(legend.position = "none", panel.grid.minor = element_blank()) +
+  theme(
+    legend.position = "none",
+    panel.grid.minor = element_blank(),
+    strip.text = element_text(hjust = 0)
+  ) +
   labs(
     x = NULL,
-    y = "%",
-    title = "Acessos negados por mês - comparação entre períodos iguais",
-    subtitle = "Como % do total de acessos negados"
+    y = NULL,
+    title = "Não atendimento da LAI na comparação entre períodos iguais",
+    subtitle = "Como % do total de pedidos de acesso a informação"
   )
 ```

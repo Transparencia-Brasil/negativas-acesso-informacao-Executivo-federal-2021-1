@@ -42,20 +42,37 @@ glue::glue(
   "[{docs_fmt}]({url})\n"
 )
 ```
-1. [Pedidos de acesso a informação via LAI no FalaBr](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/1-pedidos-decisoes.html)
-2. [Acesso negado nos órgãos - geral](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/2-pedidos-orgaos-acesso-negado.html)
-3. [Acesso negado nos órgãos - caso a caso](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/3-acesso-negado-para-cada-orgao.html)
-4. [Uso da LGPD nas respostas aos pedidos de acesso a informação via LAI](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/4-controversos-lgpd.html)
-5. [Recursos](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/5-recursos.html)
-6. [Comparativo entre as bases disponíveis no FalaBr](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/6-comparativo-entre-bases-do-falabr.html)
 
-#### outros
-1. [PAINEL-CGU: Pedidos de acesso a informação via LAI no FalaBr](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/1-b-pedidos-decisoes-painel.html)
+1. **Pedidos de acesso a informação via LAI no FalaBr**
+
+    + [Base anonimizada](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/1-pedidos-decisoes.html)
+    + [Base completa (painel CGU)](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/1-b-pedidos-decisoes-painel.html)
+
+2. **Acesso negado nos órgãos**
+
+    + [Base anonimizada - geral](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/2-pedidos-orgaos-acesso-negado.html)
+    + [Base completa (painel) - órgão a órgão](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/3-acesso-negado-para-cada-orgao.html)
+
+3. **Uso da LGPD nas respostas aos pedidos de acesso a informação via LAI**
+  
+    + [Base anonimizada](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/4-controversos-lgpd.html)
+
+4. **Recursos**
+
+    + [Base anonimizada](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/5-recursos.html)
+
+
+
 
 ## Base de dados
 
-* Site do e-SIC/CGU - [clique aqui](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx)
+* Base de dados da CGU com pedidos e respostas [clique aqui](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx)
+    + Esses dados vão de 2015 até 2021 e possuem os campos de texto dos pedidos, das resposta e dos recursos completos.
+* Base de dados do [painel da cgu](http://paineis.cgu.gov.br/lai/index.htm), disponível para download [neste link](https://falabr.cgu.gov.br/publico/DownloadDados/DownloadDadosLai.aspx)
+    + Esses dados vão de 2012 até 2021 mas não possuem os campos de texto dos pedidos, das respostas e dos recursos.
 * Dicionário de variáveis - [clique aqui](http://www.consultaesic.cgu.gov.br/arquivosRelatorios/PedidosRespostas/Dicionario-Dados-Exportacao.txt)
+
+[**Comparativo entre as bases disponíveis no FalaBr**](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/6-comparativo-entre-bases-do-falabr.html)
 
 #### Download da base bruta
 
