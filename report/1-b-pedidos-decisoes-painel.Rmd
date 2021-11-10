@@ -288,7 +288,7 @@ p1 <- decisao %>%
     color = "gray20"
   ) +
   ggforce::geom_mark_circle(
-    aes(filter = data_registro == ymd("2018-07-01") & decisao == "Acesso Concedido",
+    aes(filter = data_registro == ymd("2018-10-01") & decisao == "Acesso Concedido",
         label = "Máximas anuais"),
     color = "gray20",
     fill = NA,
@@ -483,7 +483,7 @@ decisao %>%
 
 ## Análise de decisão "Não se trata de do solicitação de informação"
 
-A tabela abaixo mostra os assuntos e 
+A tabela abaixo mostra os assuntos e os órgãos que classificaram manifestações no FalaBr com "Não se trata de do solicitação de informação". Contou-se o número de vezes que cada órgão classificou uma manifestação em um ano como "não se trata de solicitação de informação", para cada assunto. A contagem dos órgãos/assuntos/ano foi ordenada do maior para o menor e as 100 primeiras linhas foram selecionadas.
 
 ```{r}
 assunto <- pedidos_painel %>%
