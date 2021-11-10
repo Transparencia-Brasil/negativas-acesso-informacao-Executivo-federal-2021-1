@@ -17,8 +17,10 @@ Negativas de acesso a informação no governo Federal
 
     -   [Base anonimizada -
         geral](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/2-pedidos-orgaos-acesso-negado.html)
-    -   [Base completa (painel) - órgão a
+    -   [Base completa (painel CGU) - órgão a
         órgão](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/3-acesso-negado-para-cada-orgao.html)
+    -   [Base completa (painel CGU) -
+        geral](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/2-b-pedidos-orgaos-acesso-negado.html)
 
 3.  **Uso da LGPD nas respostas aos pedidos de acesso a informação via
     LAI**
