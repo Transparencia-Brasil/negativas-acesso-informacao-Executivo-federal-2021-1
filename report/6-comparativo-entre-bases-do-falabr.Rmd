@@ -190,6 +190,82 @@ bind_rows(painel, cgu) %>%
   theme(legend.position = "top")
 ```
 
+Comparação por decisão que caracteriza pedido de informação LAI
+
+```{r}
+pedidos_painel %>%
+  filter(str_detect(orgao, "^CEF –")) %>% 
+  mutate(is_pedido_de_informacao = case_when(
+    decisao %notin% c(
+      "Pergunta Duplicada/Repetida",
+      "Não se trata de solicitação de informação" 
+    ) ~ "Pedidos de acesso a informação via LAI",
+    TRUE ~ decisao
+  ) %>% str_wrap(25)) %>% 
+  count(data_registro, orgao, is_pedido_de_informacao) %>% 
+  group_by(is_pedido_de_informacao) %>% 
+  mutate(n = zoo::rollapply(n, 3, mean, align = 'right', fill = NA)) %>% 
+  ggplot(aes(x = data_registro, y = n, color = is_pedido_de_informacao)) +
+  geom_vline(xintercept = seq(ymd('2015-01-01'), ymd('2022-01-01'), by = 'year'), lty = 3) +
+  geom_line(size = 1.5) +
+  scale_fill_manual(values = cores_lai) +
+  scale_color_manual(values = cores_lai, breaks = names(cores_lai)[c(3,1,2)]) +
+  scale_x_date(
+    breaks = scales::date_breaks("6 months"),
+    date_labels = "%b",
+    expand = c(0, 0)) +
+  labs(
+    y = "Quantidade",
+    x = NULL,
+    fill = NULL,
+    color = NULL,
+    title = "CEF - Caixa Econômica Federal - PAINEL CGU",
+    subtitle = "Quantidades por mês"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "top",
+        legend.justification = "left",
+        legend.text = element_text(margin = margin(2, 5, 2, 5, "pt")))
+```
+
+
+
+```{r}
+pedidos_cgu %>%
+  filter(str_detect(orgao, "^CEF –")) %>% 
+  mutate(is_pedido_de_informacao = case_when(
+    decisao %notin% c(
+      "Pergunta Duplicada/Repetida",
+      "Não se trata de solicitação de informação" 
+    ) ~ "Pedidos de acesso a informação via LAI",
+    TRUE ~ decisao
+  ) %>% str_wrap(25)) %>% 
+  count(data_registro, orgao, is_pedido_de_informacao) %>% 
+  mutate(n = zoo::rollapply(n, 3, mean, align = 'right', fill = NA)) %>% 
+  ggplot(aes(x = data_registro, y = n, color = is_pedido_de_informacao)) +
+  geom_vline(xintercept = seq(ymd('2015-01-01'), ymd('2022-01-01'), by = 'year'), lty = 3) +
+  geom_line(size = 1.5) +
+  scale_fill_manual(values = cores_lai) +
+  scale_color_manual(values = cores_lai, breaks = names(cores_lai)[c(3,1,2)]) +
+  scale_x_date(
+    breaks = scales::date_breaks("3 months"),
+    date_labels = "%b",
+    expand = c(0, 0)) +
+  labs(
+    y = "Quantidade",
+    x = NULL,
+    fill = NULL,
+    color = NULL,
+    title = "CEF - Caixa Econômica Federal - BASE ANONIMIZADA",
+    subtitle = "Quantidades por mês"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "top",
+        legend.justification = "left",
+        legend.text = element_text(margin = margin(2, 5, 2, 5, "pt")))
+```
+
+
 ### Comparação entre percentual de pedidos
 
 ```{r fig.height=11, fig.width=10}
@@ -219,7 +295,8 @@ cgu <- pedidos_cgu %>%
 
 p <- bind_rows(cgu, painel) %>% 
   add_count(data_registro, base, wt = qt, name = "qt_mes") %>% 
-  mutate(per = qt / qt_mes)
+  mutate(per = qt / qt_mes) %>% 
+    mutate(per = zoo::rollapply(per, 3, mean, align = 'right', fill = NA))
 
 p %>% 
   ggplot(aes(x = data_registro, y = per, size = base, color = base)) +

@@ -480,3 +480,32 @@ decisao %>%
     subtitle = "Como % do total de pedidos de acesso a informação"
   )
 ```
+
+## Análise de decisão "Não se trata de do solicitação de informação"
+
+A tabela abaixo mostra os assuntos e 
+
+```{r}
+assunto <- pedidos_painel %>%
+  filter(decisao == "Não se trata de solicitação de informação") %>%
+  select(id_pedido, decisao, data_registro, assunto_pedido, orgao) %>% 
+  count(
+    `Ano` = as.character(year(data_registro)),
+    `Assunto do pedido` = assunto_pedido, 
+    `Órgão` = orgao,
+    name = "Quantidade de pedidos por ano",
+    sort = T
+  )
+  
+library(reactable)
+assunto %>%
+  ungroup() %>% 
+  slice_max(order_by = `Quantidade de pedidos por ano`, n = 100) %>%
+  reactable(
+    filterable = T,
+    searchable = T,
+    defaultSortOrder = "desc",
+    defaultSorted = c("Quantidade de pedidos por ano"),
+  )
+```
+
