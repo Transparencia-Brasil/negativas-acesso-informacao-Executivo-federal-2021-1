@@ -7,7 +7,6 @@ output:
     toc_depth: 4
     theme: paper
     df_print: default
-runtime: shiny
 editor_options: 
   chunk_output_type: console
 ---
@@ -137,7 +136,7 @@ taxas_smry <- taxas %>%
   )
 ```
 
-```{r fig.height=8, fig.width=10}
+```{r fig.height=9, fig.width=11}
 taxas_smry %>% 
   group_by(data_registro) %>% 
   arrange(data_registro, -taxa_de_negativa_relativa) %>% 
@@ -225,115 +224,63 @@ pedidos_painel %>%
 
 A maioria das negativas de acesso a informação eram concentradas em poucos órgãos:
 
-```{r}
-taxas_smry %>% 
+```{r fig.height=8, fig.width=10}
+rank_orgao <- taxas_smry %>% #sample_n(1) %>% glimpse()
+  #glimpse()
   group_by(ano = year(data_registro), orgao) %>% 
   summarise(
     n_ano = sum(n_mes),
     n_ano_orgao = sum(n_mes_orgao),
     n_ano_acesso_negado = sum(n_mes_acesso_negado),
-    n_ano_acesso_negado_orgao = sum(n_mes_acesso_negado_orgao)
+    n_ano_acesso_negado_orgao = sum(n_mes_acesso_negado_orgao),
+    .groups = "drop"
   ) %>% 
-  mutate(per = n_ano_acesso_negado_orgao / n_ano_acesso_negado) %>% 
-  arrange(ano, -per) %>% 
-  mutate(per_ac = cumsum(per), ord = row_number()) %>% 
-  filter(ord == 5) %>% 
-  ggplot(aes(x = ano, y = per_ac)) +
-  geom_line(color = cores_aep[["marrom"]], size = 1) +
-  geom_point(color = cores_aep[["marrom"]]) +
-  theme_minimal() +
+  group_by(ano) %>% 
+  slice_max(order_by = n_ano_acesso_negado_orgao, n = 5) %>%
+  mutate(ord = 1:n()) %>% 
+  ungroup() %>% 
+  add_count(orgao, wt = n_ano_acesso_negado_orgao, name = "rank_orgao")
+
+pal <- tibble(
+  orgao = str_extract(unique(rank_orgao$orgao), "^[:upper:]+(?= )|^GSI-PR"),
+  cor = if_else(orgao %in% c(
+    "MCIDADANIA", "INEP", "ANEEL", "DPF", "MS"
+    ), "white", "black")
+  ) %>% 
+  mutate(cor = if_else(orgao == "TRANSPETRO", "#F9DC75", cor)) %>% 
+  deframe()
+
+rank_orgao %>% 
+  mutate(orgao2 = str_extract(orgao, "^[:upper:]+(?= )|^GSI-PR")) %>% 
+  ggplot(aes(
+    y = n_ano_acesso_negado_orgao / n_ano_acesso_negado,
+    x = ano,
+    fill = reorder(orgao, rank_orgao),
+    color = reorder(orgao2, rank_orgao),
+    label = orgao2
+  )) +
+  geom_col(color = "gray40") +
+  geom_label(
+    position = position_stack(vjust = .5),
+    show.legend = F,
+    size = 3
+  ) +
+  scale_fill_ordinal(option = 3) +
+  scale_color_manual(values = pal) +
+  scale_x_continuous(breaks = 2012:2021) +
   hrbrthemes::scale_y_percent() +
   labs(
-    title = "Participação dos 5 órgãos que mais negaram acesso a informação",
-    subtitle = "Como % do total de acessos negados no ano",
+    title =
+      "Percentual acumulado dos 5 órgãos que mais negaram pedidos de acesso a informação em 1 ano",
+    fill = "Sigla do órgão:",
     y = NULL,
     x = NULL
+  ) +
+  guides(fill = guide_legend(ncol = 2, title.position = "top")) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    legend.text = element_text(size = 9, margin = margin(5, 0, 5, 0, "pt"))
   )
-```
-
-```{r}
-library(shiny)
-library(shinyWidgets)
-library(plotly)
-choices <- sort(readRDS(here(glue("cgu-interact/data/select_orgao.rds"))))
-
-shinyApp(
-
-  ui = fluidPage(
-    selectizeInput(
-      inputId = "select_orgao",
-      label = "Digite o nome ou selecione um órgão",
-      choices = choices,
-      options = list(
-        placeholder = "Digite/selecione um órgão",
-        onInitialize = I('function() { this.setValue(""); }')
-      )),
-    sliderTextInput(
-      inputId = "date_range",
-      label = "Selecione um intervalo de tempo:",
-      choices = seq.Date(ymd("2012-05-01"), ymd("2021-12-01"), by = "month"),
-      selected = c(ymd("2012-05-01"), ymd("2021-12-01"))
-    ),
-    h4("Acessos negados em relação ao total de negativas no FalaBr"),
-    textOutput(outputId = "data_inicio"),
-    textOutput(outputId = "value"),
-              plotlyOutput(
-                outputId = "acesso_negado_global",
-                width = "1000px",
-                height = "400px"
-              )
-  ),
-  
-  server = function(input, output) {
-    
-    output$value <- renderPrint({
-      validate(need(input$select_orgao, ""))
-      glue("Órgão: {input$select_orgao}")
-    })
-          
-    my_date_fmt <- function(x) format(as.Date(x), format = "%b.%Y")
-    dt_ini <- reactive({
-      glue("Período: {my_date_fmt(input$date_range[1])} até {my_date_fmt(input$date_range[2])}")
-    })
-      
-    output$data_inicio <- renderPrint({dt_ini()})
-    
-    acesso_negado <- reactive({
-      taxas_smry %>%
-        filter(between(data_registro, ymd(input$date_range[1]), ymd(input$date_range[2])))
-    })
-    
-    output$acesso_negado_global  <- renderPlotly({
-        validate(need(input$select_orgao, "Selecione um órgão"))
-    
-        my_plot <- acesso_negado() %>% 
-        filter(orgao == input$select_orgao) %>%
-        ggplot(aes(
-          x = data_registro, 
-          y = taxa_de_negativa_relativa,
-          fill = "Acesso Negado",
-          text = glue("{orgao} - {data_registro}<br>Total pedidos do órgão: {n_mes_orgao}<br>Total pedidos do órgão com Acesso Negado: {n_mes_acesso_negado_orgao}<br>Total de pedidos com Acesso negado no FalaBr: {n_mes_acesso_negado}")
-        )) +
-        geom_col(show.legend = F) +
-        scale_fill_manual(values = cores_decisao[["Acesso Negado"]]) +
-        geom_point() +
-        theme_minimal() +
-        labs(
-          y = "% em relação ao total\nde acessos negados no FalaBr",
-          x = NULL
-        )
-    
-        ggplotly(my_plot, tooltip = "text", dynamicTicks = T) %>% 
-          layout(
-            yaxis = list(tickformat = '%', range = c(0, 100)), 
-            showlegend = F
-          )
-
-    })
-      
-  },
-
-  options = list(height = 500)
-)
 ```
 
