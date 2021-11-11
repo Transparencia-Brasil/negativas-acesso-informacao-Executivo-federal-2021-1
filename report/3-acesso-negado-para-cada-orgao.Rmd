@@ -145,7 +145,7 @@ orgaos <- orgaos_count_decisao %>%
 top_20 <- orgaos %>% filter(ord < 21)
 ```
 
-```{r fig.height=400, fig.width=10, eval = FALSE}
+```{r fig.height=400, fig.width=10}
 my_lbl <- function(x) scales::percent(x, accuracy = .1, decimal.mark = ",")
 
 decisao_rect <- tibble(
@@ -162,11 +162,6 @@ my_plot <- function(x) {
       "Pergunta Duplicada/Repetida",
       "Não se trata de solicitação de informação"
     )) %>%
-    filter(str_detect(orgao, "^ME ")) %>%  #|
-             # str_detect(orgao, "Relações Exteriore") |
-             # str_detect(orgao, "^CEF ") |
-             # str_detect(orgao, "^ME ") |
-             # str_detect(orgao, "^GSI-PR ")) %>%
     filter(decisao == x) %>%
     ggplot(aes(
       # y = reorder(orgao, taxa_media_orgao),
