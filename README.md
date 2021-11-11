@@ -44,7 +44,7 @@ Foram utilizadas duas bases de dados para as análises deste repositório:
       - Esses dados vão de 2012 até 2021 mas não possuem os campos de
         texto dos pedidos, das respostas e dos recursos.
       - Dicionário de variáveis:
-          - [Pedidos](https://falabr.cgu.gov.br/publico/DownloadDados/Pedidos-Formato.txt)+
+          - [Pedidos](https://falabr.cgu.gov.br/publico/DownloadDados/Pedidos-Formato.txt)
           - [Recursos](https://falabr.cgu.gov.br/publico/DownloadDados/Recursos-Formato.txt)
           - [Solicitantes](https://falabr.cgu.gov.br/publico/DownloadDados/Solicitantes-Formato.txt)
 
@@ -70,7 +70,7 @@ Foram utilizadas duas bases de dados para as análises deste repositório:
 
 ### **Acesso negado nos órgãos**
 
-  - cessos negados para cada órgão:
+  - Acessos negados para cada órgão:
       - [Base anonimizada - órgão a
         órgão](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/3-acesso-negado-para-cada-orgao.html)
       - [Base completa (painel CGU) - órgão a
