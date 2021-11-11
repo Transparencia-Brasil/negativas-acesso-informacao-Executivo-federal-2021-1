@@ -1,71 +1,109 @@
 Negativas de acesso a informação no governo Federal
 ================
 
--   [Relatório](#relatório)
--   [Base de dados](#base-de-dados)
-
-## Relatório
-
-1.  **Pedidos de acesso a informação via LAI no FalaBr**
-
-    -   [Base
-        anonimizada](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/1-pedidos-decisoes.html)
-    -   [Base completa (painel
-        CGU)](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/1-b-pedidos-decisoes-painel.html)
-
-2.  **Acesso negado nos órgãos**
-
-    -   [Base anonimizada -
-        geral](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/2-pedidos-orgaos-acesso-negado.html)
-    -   [Base completa (painel CGU) - órgão a
-        órgão](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/3-acesso-negado-para-cada-orgao.html)
-    -   [Base completa (painel CGU) -
-        geral](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/2-b-pedidos-orgaos-acesso-negado.html)
-    -   [Base completa (painel
-        CGU)](https://rdurl0.shinyapps.io/cgu-interact/): gráficos
-        interativos com shiny app.
-
-3.  **Uso da LGPD nas respostas aos pedidos de acesso a informação via
-    LAI**
-
-    -   [Base
-        anonimizada](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/4-controversos-lgpd.html)
-
-4.  **Recursos**
-
-    -   [Base
-        anonimizada](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/5-recursos.html)
+  - [Base de dados](#base-de-dados)
+      - [Base anonimizada](#base-anonimizada)
+      - [Base completa (painel CGU)](#base-completa-painel-cgu)
+      - [Comparativo entre as duas
+        bases](#comparativo-entre-as-duas-bases)
+  - [Relatório](#relatório)
+      - [**Pedidos de acesso a informação via LAI no
+        FalaBr**](#pedidos-de-acesso-a-informação-via-lai-no-falabr)
+      - [**Acesso negado nos órgãos**](#acesso-negado-nos-órgãos)
+      - [**Uso da LGPD nas respostas aos pedidos de acesso a informação
+        via
+        LAI**](#uso-da-lgpd-nas-respostas-aos-pedidos-de-acesso-a-informação-via-lai)
+      - [**Recursos**](#recursos)
+  - [Download da base bruta](#download-da-base-bruta)
+      - [Arquivos:](#arquivos)
+  - [Download da base pré-processada](#download-da-base-pré-processada)
+  - [Preview: pedidos](#preview-pedidos)
+  - [Preview: recursos](#preview-recursos)
+  - [Código para download e sanitização dos campos para
+    análise](#código-para-download-e-sanitização-dos-campos-para-análise)
 
 ## Base de dados
 
--   Base de dados da CGU com pedidos e respostas [clique
+Foram utilizadas duas bases de dados para as análises deste repositório:
+
+### Base anonimizada
+
+  - Base de dados da CGU com pedidos e respostas [clique
     aqui](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx)
-    -   Esses dados vão de 2015 até 2021 e possuem os campos de texto
+      - Esses dados vão de 2015 até 2021 e possuem os campos de texto
         dos pedidos, das resposta e dos recursos completos.
--   Base de dados do [painel da
+      - Dicionário de variáveis - [clique
+        aqui](http://www.consultaesic.cgu.gov.br/arquivosRelatorios/PedidosRespostas/Dicionario-Dados-Exportacao.txt)
+
+### Base completa (painel CGU)
+
+  - Base de dados do [painel da
     cgu](http://paineis.cgu.gov.br/lai/index.htm), disponível para
     download [neste
     link](https://falabr.cgu.gov.br/publico/DownloadDados/DownloadDadosLai.aspx)
-    -   Esses dados vão de 2012 até 2021 mas não possuem os campos de
+      - Esses dados vão de 2012 até 2021 mas não possuem os campos de
         texto dos pedidos, das respostas e dos recursos.
--   Dicionário de variáveis - [clique
-    aqui](http://www.consultaesic.cgu.gov.br/arquivosRelatorios/PedidosRespostas/Dicionario-Dados-Exportacao.txt)
+      - Dicionário de variáveis:
+          - [Pedidos](https://falabr.cgu.gov.br/publico/DownloadDados/Pedidos-Formato.txt)+
+          - [Recursos](https://falabr.cgu.gov.br/publico/DownloadDados/Recursos-Formato.txt)
+          - [Solicitantes](https://falabr.cgu.gov.br/publico/DownloadDados/Solicitantes-Formato.txt)
 
-[**Comparativo entre as bases disponíveis no
-FalaBr**](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/6-comparativo-entre-bases-do-falabr.html)
+> De acordo com a própria CGU, diferença principal entre as duas bases
+> existem devido a divulgação de dados sensíveis nos campos de pedidos e
+> respostas. Para a base **anonimizada** são retirados pedidos que
+> possuam esses dados e mantidos somente aqueles com informações
+> públicas.
 
-#### Download da base bruta
+### Comparativo entre as duas bases
 
--   Os dados brutos estão disponíveis ano a ano no site do e-sic da
+  - [**Comparativo entre as bases disponíveis no
+    FalaBr**](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/6-comparativo-entre-bases-do-falabr.html)
+
+## Relatório
+
+### **Pedidos de acesso a informação via LAI no FalaBr**
+
+  - [Base
+    anonimizada](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/1-pedidos-decisoes.html)
+  - [Base completa (painel
+    CGU)](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/1-b-pedidos-decisoes-painel.html)
+
+### **Acesso negado nos órgãos**
+
+  - cessos negados para cada órgão:
+      - [Base anonimizada - órgão a
+        órgão](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/3-acesso-negado-para-cada-orgao.html)
+      - [Base completa (painel CGU) - órgão a
+        órgão](https://rdurl0.shinyapps.io/cgu-interact/): gráficos
+        interativos com shiny app.
+  - Acessos negados - geral
+      - [Base anonimizada -
+        geral](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/2-pedidos-orgaos-acesso-negado.html)
+      - [Base completa (painel CGU) -
+        geral](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/2-b-pedidos-orgaos-acesso-negado.html)
+
+### **Uso da LGPD nas respostas aos pedidos de acesso a informação via LAI**
+
+  - [Base
+    anonimizada](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/4-controversos-lgpd.html)
+
+### **Recursos**
+
+  - [Base
+    anonimizada](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/5-recursos.html)
+
+## Download da base bruta
+
+  - Os dados brutos estão disponíveis ano a ano no site do e-sic da
     Controladoria Geral da União. Para baixar manualmente [acesse o site
     do
     esic](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx),
     selecione ano e formato (trabalhamos com XML) e clique em download.
 
-##### Arquivos:
+### Arquivos:
 
 |   Tipo   | Ano  |              Arquivo              | Tamanho (mb) |
-|:--------:|:----:|:---------------------------------:|-------------:|
+| :------: | :--: | :-------------------------------: | -----------: |
 | Pedidos  | 2015 | 20211025\_Pedidos\_xml\_2015.xml  |        277,0 |
 | Pedidos  | 2016 | 20211025\_Pedidos\_xml\_2016.xml  |        324,2 |
 | Pedidos  | 2017 | 20211025\_Pedidos\_xml\_2017.xml  |        346,3 |
@@ -81,12 +119,12 @@ FalaBr**](https://transparencia-brasil.github.io/negativas-acesso-informacao-Exe
 | Recursos | 2020 | 20211025\_Recursos\_xml\_2020.xml |         68,9 |
 | Recursos | 2021 | 20211025\_Recursos\_xml\_2021.xml |         42,8 |
 
-#### Download da base pré-processada
+## Download da base pré-processada
 
 Disponibilzamos a base de dados em formatos `csv` e `rds`: [CLIQUE
 AQUI](https://drive.google.com/drive/folders/12a0qO8Spxc8IE_Wdlb0fjm88kD6JjVgk)
 
-##### Preview: pedidos
+## Preview: pedidos
 
     #> Rows: 608,836
     #> Columns: 25
@@ -116,7 +154,7 @@ AQUI](https://drive.google.com/drive/folders/12a0qO8Spxc8IE_Wdlb0fjm88kD6JjVgk)
     #> $ governo_que_respondeu    <fct> Dilma II, Dilma II, Temer, Dilma II, Dilma II~
     #> $ governo_que_registrou    <fct> Dilma II, Dilma II, Dilma II, Dilma II, Dilma~
 
-##### Preview: recursos
+## Preview: recursos
 
     #> Rows: 76,750
     #> Columns: 21
@@ -141,3 +179,14 @@ AQUI](https://drive.google.com/drive/folders/12a0qO8Spxc8IE_Wdlb0fjm88kD6JjVgk)
     #> $ ts_resposta           <chr> "28/12/2015", "10/02/2016", "23/12/2015", "28/12~
     #> $ governo_que_respondeu <fct> Dilma II, Dilma II, Dilma II, Dilma II, Dilma II~
     #> $ governo_que_registrou <fct> Dilma II, Dilma II, Dilma II, Dilma II, Dilma II~
+
+## Código para download e sanitização dos campos para análise
+
+  - 1-download-funcao-crawler-esic.R
+  - 2-download-crawler-exec.R
+  - 3-pedidos-cgu-pre-processamento.R
+  - 4-lista-de-regex.R
+  - 5-nlp.R
+  - 5-pedidos-cgu-nlp.R
+  - 6-termos-controversos.R
+  - 7-base-alternativa.R

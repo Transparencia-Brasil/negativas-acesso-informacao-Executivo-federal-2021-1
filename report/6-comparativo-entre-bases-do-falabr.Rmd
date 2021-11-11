@@ -145,6 +145,8 @@ bind_rows(painel, cgu) %>%
   theme(legend.position = "top")
 ```
 
+### Dados da Caixa Econômica Federal
+
 Os dados da Caixa Econômica Federal também não estão disponibilizados por completo na base [com pedidos e respostas completas](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx)
 
 ```{r}
@@ -178,6 +180,15 @@ bind_rows(painel, cgu) %>%
   ggplot(aes(x = data_registro, y = qt, color = base)) +
   geom_line(size = 1)  +
   geom_vline(xintercept = seq(ymd('2012-01-01'), ymd('2022-01-01'), by = 'year'), lty = 3) +
+  geom_text(
+    data = . %>% filter(month(data_registro) == 2),
+    aes(label = year(data_registro), y = -200),
+    size = 3.5,
+    vjust = 1.3,
+    hjust = .25,
+    color = "gray20",
+    show.legend = F
+  ) +
   theme_minimal() +
   labs(
     title = "CEF - Caixa Econômica Federal",
@@ -204,7 +215,7 @@ pedidos_painel %>%
   ) %>% str_wrap(25)) %>% 
   count(data_registro, orgao, is_pedido_de_informacao) %>% 
   group_by(is_pedido_de_informacao) %>% 
-  mutate(n = zoo::rollapply(n, 3, mean, align = 'right', fill = NA)) %>% 
+  #mutate(n = zoo::rollapply(n, 3, mean, align = 'right', fill = NA)) %>% 
   ggplot(aes(x = data_registro, y = n, color = is_pedido_de_informacao)) +
   geom_vline(xintercept = seq(ymd('2015-01-01'), ymd('2022-01-01'), by = 'year'), lty = 3) +
   geom_line(size = 1.5) +
@@ -241,7 +252,7 @@ pedidos_cgu %>%
     TRUE ~ decisao
   ) %>% str_wrap(25)) %>% 
   count(data_registro, orgao, is_pedido_de_informacao) %>% 
-  mutate(n = zoo::rollapply(n, 3, mean, align = 'right', fill = NA)) %>% 
+  #mutate(n = zoo::rollapply(n, 3, mean, align = 'right', fill = NA)) %>% 
   ggplot(aes(x = data_registro, y = n, color = is_pedido_de_informacao)) +
   geom_vline(xintercept = seq(ymd('2015-01-01'), ymd('2022-01-01'), by = 'year'), lty = 3) +
   geom_line(size = 1.5) +
