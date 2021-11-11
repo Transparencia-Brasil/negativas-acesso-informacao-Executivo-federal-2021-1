@@ -268,18 +268,7 @@ cores_lai &lt;- tibble(
   c2 = c(&quot;#F9A521&quot;, &quot;#969696&quot;, &quot;#D81755&quot;)
 ) %&gt;% deframe()</code></pre>
 <p>Análises de pedidos de acesso a informação via LAI considerando a decisão de acesso.</p>
-<pre class="r"><code>#periodo_final &lt;- &quot;2021-08-01&quot;
-instancias_recursais &lt;- c(
-  &quot;Primeira Instância&quot;,
-  &quot;Segunda Instância&quot;,
-  &quot;Terceira Instância&quot;,
-  &quot;CGU&quot;,
-  &quot;CMRI&quot;,
-  &quot;Pedido de Revisão&quot;,
-  &quot;Não houve recurso&quot;
-)
-
-pedidos_painel &lt;- &quot;dados/load/rds/base_cgu.rds&quot; %&gt;%
+<pre class="r"><code>pedidos_painel &lt;- &quot;dados/load/rds/base_cgu.rds&quot; %&gt;%
   here() %&gt;%
   readRDS() %&gt;%
   pluck(&quot;pedidos&quot;) %&gt;%
@@ -291,6 +280,25 @@ pedidos_painel &lt;- &quot;dados/load/rds/base_cgu.rds&quot; %&gt;%
     data_resposta = dmy(data_resposta) %&gt;% floor_date(unit = &quot;month&quot;)) %&gt;% 
   rename(orgao = orgao_destinatario) %&gt;%
   filter(!is.na(decisao), !is.na(data_resposta), data_registro &lt; ymd(&quot;2021-10-01&quot;))</code></pre>
+<pre class="r"><code>duplicada &lt;- pedidos_painel %&gt;% 
+  select(id_pedido, decisao) %&gt;% 
+  filter(decisao == &quot;Pergunta Duplicada/Repetida&quot;) %&gt;%
+  nrow()
+
+nao_pedido &lt;- pedidos_painel %&gt;% 
+  select(id_pedido, decisao) %&gt;% 
+  filter(decisao == &quot;Não se trata de solicitação de informação&quot;) %&gt;%
+  nrow()
+
+pedidos_lai &lt;- pedidos_painel %&gt;% 
+  select(id_pedido, decisao) %&gt;% 
+  filter(decisao %notin% c(
+    &quot;Pergunta Duplicada/Repetida&quot;,
+    &quot;Não se trata de solicitação de informação&quot;
+  )) %&gt;% nrow()
+
+total &lt;- duplicada + nao_pedido + pedidos_lai</code></pre>
+<p>Foram analisadas 942.784 demandas feitas por meio do Fala.br, o sistema do governo federal para receber pedidos de informação, de novembro de 2012 a julho de 2021. É o correspondente a 88% de toda a base de dados disponibilizada pela Controladoria-Geral da União (CGU). O restante foi descartado por, segundo classificação atribuída pelos próprios órgãos, “não se tratarem de solicitação de informação” (10%) ou serem “perguntas duplicadas/repetidas” (2%).</p>
 <div id="análise-de-pedidos-por-decisão-de-acesso" class="section level2">
 <h2>Análise de pedidos por decisão de acesso</h2>
 <pre class="r"><code>glimpse(pedidos_painel)

@@ -101,17 +101,6 @@ cores_lai <- tibble(
 Análises de pedidos de acesso a informação via LAI considerando a decisão de acesso.
 
 ```{r}
-#periodo_final <- "2021-08-01"
-instancias_recursais <- c(
-  "Primeira Instância",
-  "Segunda Instância",
-  "Terceira Instância",
-  "CGU",
-  "CMRI",
-  "Pedido de Revisão",
-  "Não houve recurso"
-)
-
 pedidos_painel <- "dados/load/rds/base_cgu.rds" %>%
   here() %>%
   readRDS() %>%
@@ -125,6 +114,29 @@ pedidos_painel <- "dados/load/rds/base_cgu.rds" %>%
   rename(orgao = orgao_destinatario) %>%
   filter(!is.na(decisao), !is.na(data_resposta), data_registro < ymd("2021-10-01"))
 ```
+
+```{r}
+duplicada <- pedidos_painel %>% 
+  select(id_pedido, decisao) %>% 
+  filter(decisao == "Pergunta Duplicada/Repetida") %>%
+  nrow()
+
+nao_pedido <- pedidos_painel %>% 
+  select(id_pedido, decisao) %>% 
+  filter(decisao == "Não se trata de solicitação de informação") %>%
+  nrow()
+
+pedidos_lai <- pedidos_painel %>% 
+  select(id_pedido, decisao) %>% 
+  filter(decisao %notin% c(
+    "Pergunta Duplicada/Repetida",
+    "Não se trata de solicitação de informação"
+  )) %>% nrow()
+
+total <- duplicada + nao_pedido + pedidos_lai
+```
+
+Foram analisadas `r pedidos_lai` demandas feitas por meio do Fala.br, o sistema do governo federal para receber pedidos de informação, de novembro de 2012 a julho de 2021. É o correspondente a `r round(pedidos_lai / total * 100, 2)`% de toda a base de dados disponibilizada pela Controladoria-Geral da União (CGU). O restante foi descartado por, segundo classificação atribuída pelos próprios órgãos, “não se tratarem de solicitação de informação” (`r round(nao_pedido / total * 100, 2)`%) ou serem “perguntas duplicadas/repetidas" (`r round(duplicada / total * 100, 2)`%).
 
 ## Análise de pedidos por decisão de acesso
 
