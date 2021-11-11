@@ -9,13 +9,24 @@ library(lubridate)
 library(plotly)
 library(wordcloud)
 
-path <- "cgu-interact/"
-#path <- ""
+#path <- "cgu-interact/"
+path <- ""
 
-# helpers -----
+#' seletor de órgãos
 choices <- sort(readRDS(here(glue("{path}data/select_orgao.rds"))))
+
+#' contagens de pedidos
 quantidades_orgao <- readRDS(here(glue("{path}data/count_pedidos.rds")))
-conteudo_acesso_negado <- readRDS(here(glue("{path}data/conteudo_acesso_negado.rds")))
+
+#' Assuntos por decisão
+assuntos_decisao <- readRDS(here(glue("{path}data/assuntos_decisao.rds"))) %>% 
+  count(data_registro, orgao, decisao, assunto_pedido,
+        name = "count_assunto_decisao_orgao_data") %>%
+  group_by(data_registro, orgao, assunto_pedido) %>% 
+  mutate(count_decisao_orgao_data = sum(count_assunto_decisao_orgao_data)) %>% 
+  ungroup()
+
+#' paletas de cores
 source(here(glue("{path}3-cores.R")), encoding = "utf-8")
 
 modulo_quantidades_orgao_UI <- function(id) {
@@ -40,14 +51,14 @@ modulo_quantidades_orgao_UI <- function(id) {
           sliderTextInput(
             inputId = ns("date_range"),
             label = "Selecione um intervalo de tempo:",
-            choices = seq.Date(ymd("2015-01-01"), ymd("2021-12-01"), by = "month"),
-            selected = c(ymd("2015-01-01"), ymd("2021-12-01"))
+            choices = seq.Date(ymd("2012-05-01"), ymd("2021-12-01"), by = "month"),
+            selected = c(ymd("2012-05-01"), ymd("2021-12-01"))
           )
         ),
         mainPanel(
           tabsetPanel(
             tabPanel(
-              "mês a mês - por decisão",
+              "mês a mês - por decisão e órgão selecionado",
               h2("Quantidade de pedidos mês a mês - por decisão"),
               textOutput(outputId = ns("data_inicio1")),
               textOutput(outputId = ns("value1")),
@@ -58,8 +69,8 @@ modulo_quantidades_orgao_UI <- function(id) {
               )
             ),
             tabPanel(
-              "Acessos negados (top 10)",
-              h2("Acessos negados - por mês"),
+              "Acessos negados - top 10 órgãos",
+              h2("% de acessos negados por órgão no período selecionado"),
               textOutput(outputId = ns("data_inicio2")),
               plotlyOutput(
                 outputId = ns("top_10_acesso_negado"),
@@ -68,7 +79,7 @@ modulo_quantidades_orgao_UI <- function(id) {
               )
             ),
             tabPanel(
-              "Acessos negados - histórico",
+              "Acessos negados - órgão selecionado",
               h4("Acessos negados em relação ao total de negativas no FalaBr"),
               textOutput(outputId = ns("data_inicio3")),
               textOutput(outputId = ns("value3")),
@@ -85,32 +96,15 @@ modulo_quantidades_orgao_UI <- function(id) {
                 outputId = ns("acesso_negado_interna"),
                 width = "1000px",
                 height = "400px"
-              )
-            ),
-            tabPanel(
-              "Wordcloud - Acesso Negado",
-              h3("Wordcloud termos utilizados no pedido e na resposta"),
-              textOutput(outputId = ns("data_inicio5")),
-              textOutput(outputId = ns("value5")),
-              h4("Pedido"),
-              plotOutput(
-                outputId = ns("wordcloud_negativas_pedido"),
-                width = "700px",
-                height = "700px"
               ),
               hr(),
-              h4("Resposta"),
-              plotOutput(
-                outputId = ns("wordcloud_negativas_resposta"),
-                width = "700px",
-                height = "700px"
-              ),              
-              hr(),
               h4("Assuntos mais frequêntes"),
+              textOutput(outputId = ns("data_inicio5")),
+              textOutput(outputId = ns("value5")),
               plotlyOutput(
                 outputId = ns("assuntos_acesso_negado"),
-                width = "700px",
-                height = "700px"
+                width = "800px",
+                height = "600px"
               )
             )
           )
@@ -124,8 +118,7 @@ modulo_quantidades_orgao_server <- function(id) {
   moduleServer(
     id,
     function(input, output, session) {
-      # # You can access the value of the widget with input$select, e.g.
-
+      
       output$value1 <- renderPrint({
         validate(need(input$select_orgao, ""))
         glue("Órgão: {input$select_orgao}")
@@ -157,18 +150,18 @@ modulo_quantidades_orgao_server <- function(id) {
       output$data_inicio3 <- renderPrint({dt_ini()})
       output$data_inicio4 <- renderPrint({dt_ini()})
       output$data_inicio5 <- renderPrint({dt_ini()})
-
+      
       count_pedidos_orgao <- reactive({
         quantidades_orgao %>%
           mutate(per = count_pedidos / count_pedidos_total) %>%
           filter(orgao == input$select_orgao) %>%
-          filter(between(data_resposta, ymd(input$date_range[1]), ymd(input$date_range[2]))) %>%
+          filter(between(data_registro, ymd(input$date_range[1]), ymd(input$date_range[2]))) %>%
           mutate(
-            min_data = min(data_resposta),
-            max_data = max(data_resposta)
+            min_data = min(data_registro),
+            max_data = max(data_registro)
           ) %>%
           complete(
-            data_resposta,
+            data_registro,
             orgao,
             decisao,
             fill = list(
@@ -182,42 +175,29 @@ modulo_quantidades_orgao_server <- function(id) {
             "Pergunta Duplicada/Repetida"
           )))
       })
-
+      
       acesso_negado <- reactive({
         quantidades_orgao %>%
           filter(decisao == "Acesso Negado") %>%
           mutate(per_global = count_pedidos / count_pedidos_decisao,
                  per_interna = count_pedidos / count_pedidos_orgao) %>%
-          filter(between(data_resposta, ymd(input$date_range[1]), ymd(input$date_range[2])))
+          filter(between(data_registro, ymd(input$date_range[1]), ymd(input$date_range[2])))
       })
       
-      wordcloud_negativas_pedido <- reactive({
-        validate(need(input$select_orgao, "Selecione um órgão"))
-        set.seed(43)
-        conteudo_acesso_negado %>%
-          filter(interacao == "detalhamento_solicitacao") %>% 
-          filter(orgao == input$select_orgao) %>%
-          filter(between(data_resposta, ymd(input$date_range[1]), ymd(input$date_range[2])))
+      assuntos <- reactive({
+        assuntos_decisao %>% 
+          filter(between(data_registro, ymd(input$date_range[1]), ymd(input$date_range[2])))
       })
-
-      wordcloud_negativas_resposta <- reactive({
-        validate(need(input$select_orgao, "Selecione um órgão"))
-        set.seed(43)
-        conteudo_acesso_negado %>%
-          filter(interacao == "resposta") %>% 
-          filter(orgao == input$select_orgao) %>%
-          filter(between(data_resposta, ymd(input$date_range[1]), ymd(input$date_range[2])))
-      })
-
+      
       output$lai_historico <- renderPlotly({
         validate(need(input$select_orgao, "Selecione um órgão"))
-
+        
         my_plot <- count_pedidos_orgao() %>%
           ggplot(aes(
-            x = data_resposta,
+            x = data_registro,
             y = count_pedidos,
             fill = decisao,
-            text = glue("Data resposta: {data_resposta}<br>Quantidade: {count_pedidos}<br>Decisão: {decisao}<br>% do total: {round(per*100,2)}%")
+            text = glue("Data resposta: {data_registro}<br>Quantidade: {count_pedidos}<br>Decisão: {decisao}<br>% do total: {round(per*100,2)}%")
           )) +
           geom_col(show.legend = F) +
           facet_wrap(~decisao, ncol = 1, scales = "free_x", drop = T) +
@@ -229,12 +209,12 @@ modulo_quantidades_orgao_server <- function(id) {
           ) +
           scale_fill_manual(values = cores_decisao) +
           theme_minimal()
-
+        
         ggplotly(my_plot, tooltip = "text", dynamicTicks = T)
       })
 
       output$top_10_acesso_negado <- renderPlotly({
-
+        
         my_plot <- acesso_negado() %>%
           slice_max(n = 10, order_by = per_global, with_ties = FALSE) %>% 
           mutate(orgao_rank = glue("{row_number()}º - {orgao}")) %>% 
@@ -242,7 +222,7 @@ modulo_quantidades_orgao_server <- function(id) {
             x = reorder(orgao_rank, per_global),
             y = per_global,
             fill = per_global,
-            text = glue("{orgao} - {data_resposta}<br>Quantidade de pedidos do orgao: {count_pedidos}<br>Quantidade de pedidos que o órgão negou: {count_pedidos_orgao}<br>Quantidade de acessos negados no período: {count_pedidos_decisao}")
+            text = glue("{orgao} - {data_registro}<br>Quantidade de pedidos do orgao: {count_pedidos}<br>Quantidade de pedidos que o órgão negou: {count_pedidos_orgao}<br>Quantidade de acessos negados no período: {count_pedidos_decisao}")
           )) +
           geom_col(color = "gray40") +
           scale_fill_gradient(low = "white", high = cores_decisao[["Acesso Negado"]]) +
@@ -259,95 +239,97 @@ modulo_quantidades_orgao_server <- function(id) {
             xaxis = list(tickformat = '%', range = c(0, 100)), 
             showlegend = F
           )
-
+        
       })
-
+      
       output$acesso_negado_global  <- renderPlotly({
         validate(need(input$select_orgao, "Selecione um órgão"))
-
+        
         my_plot <- acesso_negado() %>% 
-        filter(orgao == input$select_orgao) %>%
-        ggplot(aes(
-          x = data_resposta, 
-          y = per_global,
-          fill = decisao,
-          text = glue("{orgao} - {data_resposta}<br>Total pedidos do órgão: {count_pedidos}<br>Total pedidos do órgão com {decisao}: {count_pedidos_orgao}<br>Total de pedidos com {decisao} no FalaBr: {count_pedidos_decisao}")
-        )) +
-        geom_col(show.legend = F) +
-        scale_fill_manual(values = cores_decisao[["Acesso Negado"]]) +
-        geom_point() +
-        theme_minimal() +
-        labs(
-          y = "% em relação ao total\nde acessos negados no FalaBr",
-          x = NULL
-        )
-
+          filter(orgao == input$select_orgao) %>%
+          ggplot(aes(
+            x = data_registro, 
+            y = per_global,
+            fill = decisao,
+            text = glue("{orgao} - {data_registro}<br>Total pedidos do órgão: {count_pedidos_orgao}<br>Total pedidos do órgão com {decisao}: {count_pedidos}<br>Total de pedidos com {decisao} no FalaBr: {count_pedidos_decisao}")
+          )) +
+          geom_col(show.legend = F) +
+          scale_fill_manual(values = cores_decisao[["Acesso Negado"]]) +
+          geom_point() +
+          theme_minimal() +
+          labs(
+            y = "% em relação ao total\nde acessos negados no FalaBr",
+            x = NULL
+          )
+        
         ggplotly(my_plot, tooltip = "text", dynamicTicks = T) %>% 
           layout(
             yaxis = list(tickformat = '%', range = c(0, 100)), 
             showlegend = F
           )
-
+        
       })
-
+      
       output$acesso_negado_interna <- renderPlotly({
         validate(need(input$select_orgao, "Selecione um órgão"))
 
-        my_plot <- acesso_negado() %>% 
-        filter(orgao == input$select_orgao) %>%
-        ggplot(aes(
-          x = data_resposta,
-          y = per_interna,
-          fill = decisao,
-          text = glue("{orgao} - {data_resposta}<br>Total pedidos do órgão: {count_pedidos}<br>Total pedidos do órgão com {decisao}: {count_pedidos_orgao}<br>Total de pedidos com {decisao} no FalaBr: {count_pedidos_decisao}")
-        )) +
-        geom_col() +
-        scale_fill_manual(values = cores_decisao[["Acesso Negado"]]) +
-        geom_point() +
-        theme_minimal() +
-        labs(
-          y = "% percentual em relação ao total\nde pedidos feitos ao órgão",
-          x = NULL
-        )
+        my_plot <- acesso_negado() %>%
+          filter(orgao == input$select_orgao) %>% 
+          ggplot(aes(
+            x = data_registro,
+            y = per_interna,
+            fill = decisao,
+            text = glue("{orgao} - {data_registro}<br>Total pedidos do órgão: {count_pedidos_orgao}<br>Total pedidos do órgão com {decisao}: {count_pedidos}<br>Total de pedidos com {decisao} no FalaBr: {count_pedidos_decisao}")
+          )) +
+          geom_col() +
+          scale_fill_manual(values = cores_decisao[["Acesso Negado"]]) +
+          geom_point() +
+          theme_minimal() +
+          labs(
+            y = "% percentual em relação ao total\nde pedidos feitos ao órgão",
+            x = NULL
+          )
 
         ggplotly(my_plot, tooltip = "text", dynamicTicks = T) %>% 
           layout(
             yaxis = list(tickformat = '%', range = c(0, 100)),
             showlegend = F
           )
+        
       })
-
-      output$wordcloud_negativas_pedido <- renderPlot({
-        wordcloud_negativas_pedido() %>%
-          count(word, sort = T) %>%
-          with(wordcloud(word, n, max.words = 150))
-      })
-
-      output$wordcloud_negativas_resposta <- renderPlot({
-        wordcloud_negativas_resposta() %>%
-          count(word, sort = T) %>%
-          with(wordcloud(word, n, max.words = 150))
-      })
-
+      
       output$assuntos_acesso_negado <- renderPlotly({
-
-        wordcloud_negativas_pedido() %>% 
-          distinct(id_pedido, assunto_pedido) %>% 
-          count(assunto_pedido) %>% 
-          slice_max(order_by = n, n = 10) %>% 
-          ggplot(aes(x = reorder(assunto_pedido, -n), y = n, fill = n)) +
-          geom_col(color = 'gray40') +
+        validate(need(input$select_orgao, "Selecione um órgão"))
+        
+        my_plot <- assuntos() %>% 
+          filter(orgao == input$select_orgao) %>% 
+          group_by(decisao, assunto_pedido) %>% 
+          summarise(count_assunto_decisao_orgao = sum(count_assunto_decisao_orgao_data),
+                    count_decisao_orgao = sum(count_decisao_orgao_data),
+                    .groups = "drop") %>% 
+          mutate(per = count_assunto_decisao_orgao) %>% 
+          filter(decisao == "Acesso Negado") %>% 
+          group_by(decisao, assunto_pedido) %>% 
+          slice_max(order_by = count_assunto_decisao_orgao, n = 10) %>% 
+          ungroup() %>% 
+          ggplot(aes(
+            x = reorder(assunto_pedido, per),
+            y = per,
+            fill = decisao,
+            text = glue("{input$select_orgao}<br>Acessos negados neste assunto: {count_assunto_decisao_orgao}<br>Total pedidos do órgão com este assunto {count_decisao_orgao}")
+          )) +
+          geom_col() +
           coord_flip() +
-          scale_fill_gradient(low = "white", high = cores_decisao[["Acesso Negado"]]) +
+          scale_fill_manual(values = cores_decisao) +
           theme_minimal() +
           labs(
-            x = NULL,
-            y = "Quantidde",
-            fill = NULL
+            x = "Assunto",
+            y = "Quantidade de acessos negados"
           )
+        
+        ggplotly(my_plot, tooltip = "text", dynamicTicks = T) %>% 
+          layout(showlegend = F)
       })
-
-    }
-  )
+    })
 }
 
