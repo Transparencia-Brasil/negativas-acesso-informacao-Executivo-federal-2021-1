@@ -112,7 +112,10 @@ pedidos_painel <- "dados/load/rds/base_cgu.rds" %>%
     data_registro = dmy(data_registro) %>% floor_date(unit = "month"),
     data_resposta = dmy(data_resposta) %>% floor_date(unit = "month")) %>% 
   rename(orgao = orgao_destinatario) %>%
-  filter(!is.na(decisao), !is.na(data_resposta), data_registro < ymd("2021-10-01"))
+  filter(!is.na(decisao),
+         !is.na(data_resposta),
+         data_registro < ymd("2021-10-01"), 
+         esfera == "Federal")
 ```
 
 ```{r}

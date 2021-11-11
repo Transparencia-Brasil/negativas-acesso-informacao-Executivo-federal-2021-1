@@ -78,6 +78,7 @@ glue::glue(
 * Acessos negados para cada órgão:
   + [Base anonimizada - órgão a órgão](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/3-acesso-negado-para-cada-orgao.html)
   + [Base completa (painel CGU) - órgão a órgão](https://rdurl0.shinyapps.io/cgu-interact/): gráficos interativos com shiny app.
+  + [Base completa (painel CGU) - ministérios](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/3-acesso-negado-ministerios.html)
   
 * Acessos negados - geral 
   + [Base anonimizada - geral](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/2-pedidos-orgaos-acesso-negado.html)
