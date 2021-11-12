@@ -112,6 +112,7 @@
   #' regex quando há menção a lai
   rgx_lai <- c(
     "lei de acesso a informacao",
+    "lai",
     "12527",
     "12 527"
   ) %>% paste(collapse = "|")

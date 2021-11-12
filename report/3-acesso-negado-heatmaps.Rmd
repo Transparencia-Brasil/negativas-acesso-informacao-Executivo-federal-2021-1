@@ -198,7 +198,6 @@ wafflechart_acesso_negado <- function(x) {
 ### Órgãos militares
 
 ```{r}
-
 militares <- "^(CEX|CMAR|COMAER|DPF|IMBEL|DPRF|^AMAZUL)"
 ministerio <- "Ministério|^CGU|^CC-PR|^SEGOV|^SGPR|^AGU|^GSI|^VPR|^PR"
 empresa_publica <- "Ltda$|S\\.A\\.?$|Empresa|Companhia"
