@@ -101,6 +101,8 @@ cores_lai <- tibble(
 
 Análises de pedidos de acesso a informação via LAI considerando a decisão de acesso.
 
+> **Atenção**: Eu fiz os agrupamentos para visualizar os órgãos de maneira mais focada, mas os critérios apenas intuitivos e baseados nos próprios nomes dos órgãos.
+
 ```{r}
 pedidos_painel <- "dados/load/rds/base_cgu.rds" %>%
   here() %>%
@@ -123,7 +125,7 @@ pedidos_cgu <- readRDS(here("dados/load/rds/pedidos-clean.rds")) %>%
   rename(orgao = orgaodestinatario)
 ```
 
-```{r fig.width=11, fig.height=7}
+```{r}
 orgaos_count_decisao <- pedidos_painel %>%
   select(id_pedido, data_registro, decisao, orgao) %>%
   add_count(data_registro, name = "n_mes") %>%
@@ -132,56 +134,224 @@ orgaos_count_decisao <- pedidos_painel %>%
   add_count(data_registro, decisao, orgao, name = "n_mes_decisao_orgao") %>% 
   select(id_pedido:n_mes, n_mes_decisao, n_mes_orgao, n_mes_decisao_orgao)
 
-orgaos_count_decisao %>%
-  filter(str_detect(orgao, "Ministério|^CGU|^CC-PR|^SEGOV|^SGPR|^AGU|^GSI"),
-         decisao == "Acesso Negado") %>% #distinct(orgao) %>% arrange(orgao) %>%
-  mutate(
-    taxa_interna = n_mes_decisao_orgao / n_mes_orgao,
-    taxa_global = n_mes_decisao_orgao / n_mes_decisao,
-    #orgao = str_wrap(orgao, 25)
-  ) %>% 
-  group_by(ano = year(data_registro),
-           orgao) %>% 
-  summarise(
-    `Taxa interna máxima registrada em um ano` = max(taxa_interna, na.rm = T),
-    `Taxa global máxima registrada em um ano` = max(taxa_global, na.rm = T),
-    .groups = "drop"
-  ) %>% 
-  pivot_longer(
-    -c(ano, orgao),
-    names_to = "categoria",
-    values_to = "valor",
-  ) %>%
-  complete(ano, orgao, categoria) %>% 
-  filter(categoria == "Taxa interna máxima registrada em um ano") %>% 
-  ggplot(aes(x = factor(ano),
-             y = reorder(orgao, -valor, na.rm = T),
-             fill = valor)) +
-  geom_tile(color = "gray60") +
-  geom_text(
-    data = . %>% 
-      filter(valor >= .15 | (valor >= .1 & str_detect(orgao, "^MEC "))),
-    aes(label = scales::percent(valor, accuracy = 0.1, decimal.mark = ",")), size = 2.5) +
-  scale_x_discrete(position = "top") +
-  scale_fill_gradient2(low = "white",
-                       mid = "white",
-                       high = cores_aep[["rosa"]],
-                       na.value = "gray90",
-                       labels = scales::percent_format()
-                       ) +
-  theme_minimal() +
-  theme(
-    panel.grid = element_blank(),
-    legend.position = "top",
-    legend.direction = "horizontal",
-    legend.justification = "left"
-  ) +
-  labs(
-    title = "Maiores % de negativas de acess por ano",
-    subtitle = "Proporção de pedidos negados em relação ao\ntotal de pedidos recebidos pelas pastas ministeriais",
-    x = NULL,
-    y = NULL,
-    fill = "%"
-  )
+wafflechart_acesso_negado <- function(x) {
+  
+  orgaos_count_decisao %>%
+    filter(str_detect(orgao, x),
+           decisao == "Acesso Negado") %>% #distinct(orgao) %>% arrange(orgao) %>%
+    mutate(
+      taxa_interna = n_mes_decisao_orgao / n_mes_orgao,
+      taxa_global = n_mes_decisao_orgao / n_mes_decisao,
+      #orgao = str_wrap(orgao, 25)
+    ) %>% 
+    group_by(orgao) %>% 
+    filter(mean(n_mes_orgao) >= 10) %>% 
+    ungroup() %>% 
+    group_by(ano = year(data_registro),
+             orgao) %>% 
+    summarise(
+      `Taxa interna máxima registrada em um ano` = max(taxa_interna, na.rm = T),
+      `Taxa global máxima registrada em um ano` = max(taxa_global, na.rm = T),
+      .groups = "drop"
+    ) %>% 
+    pivot_longer(
+      -c(ano, orgao),
+      names_to = "categoria",
+      values_to = "valor",
+    ) %>%
+    complete(ano, orgao, categoria) %>% 
+    filter(categoria == "Taxa interna máxima registrada em um ano") %>% 
+    ggplot(aes(x = factor(ano),
+               y = reorder(orgao, valor, na.rm = T),
+               fill = valor)) +
+    geom_tile(color = "gray80") +
+    geom_text(
+      data = . %>% 
+        filter(valor >= .15 | (valor >= .1 & str_detect(orgao, "^MEC "))),
+      aes(label = scales::percent(valor, accuracy = 0.1, decimal.mark = ",")),
+      size = 2.5) +
+    scale_x_discrete(position = "top") +
+    scale_fill_gradientn(
+      colors = c("white", cores_aep[["laranja"]], cores_aep[["rosa"]]),
+      na.value = "gray90",
+      labels = scales::percent_format()
+    ) +
+    theme_minimal() +
+    theme(
+      panel.grid = element_blank(),
+      legend.position = "top",
+      legend.direction = "horizontal",
+      legend.justification = "left"
+    ) +
+    labs(
+      title = "Maiores % de negativas de acess por ano",
+      subtitle = "Proporção de pedidos negados em relação ao\ntotal de pedidos recebidos pe  las pastas ministeriais",
+      x = NULL,
+      y = NULL,
+      fill = "%"
+    )
+
+}
+
+```
+
+### Órgãos militares
+
+```{r}
+
+militares <- "^(CEX|CMAR|COMAER|DPF|IMBEL|DPRF|^AMAZUL)"
+ministerio <- "Ministério|^CGU|^CC-PR|^SEGOV|^SGPR|^AGU|^GSI|^VPR|^PR"
+empresa_publica <- "Ltda$|S\\.A\\.?$|Empresa|Companhia"
+educacao <- "Universidade|Escola|Colégio|Instituto Federal de Educação|^CEFET"
+saude <- "EBSERH|Hospital|Maternidade"
+bancos <- "^(BB|CEF|CMB)\\s|Banco"
+cultura <- c(
+  "ANCINE",
+  "FBN",
+  "FCP",
+  "FUNARTE",
+  "FCRB",
+  "IPHAN",
+  "FUNDAJ"
+) %>% paste(collapse = "|")
+cultura <- glue("^({cultura})\\s|Museu")
+
+meio_ambiente <- c(
+  "ANA",
+  "FUNAI",
+  "ICMBio",
+  "IBAMA",
+  "INCRA",
+  "INPA"
+) %>% paste(collapse = "|")
+meio_ambiente <- glue("^({meio_ambiente})\\s")
+
+ciencia <- c(
+  "AEB",
+  "CAPES",
+  "CNPQ",
+  "FINEP",
+  "FNDE",
+  "CBPF",
+  "JBRJ",
+  "CETEM",
+  "CETENE",
+  "CNEN",
+  "INT",
+  "LNCC-MCT",
+  "ON-MCT",
+  "LNA",
+  "INPI",
+  "ITI",
+  "INPE-MCT",
+  "IBICT",
+  "CTI",
+  "IPEA",
+  "FIOCRUZ",
+  "IBC",
+  "IBGE",
+  "INEP",
+  "INES",
+  "INSA",
+  "FUNDACENTRO",
+  "FUNASA"
+) %>% paste(collapse = "|")
+ciencia <- glue("^({ciencia})\\s")
+
+agencias_reguladoras <- c(
+  "INMETRO",
+  "ANA(C|TEL)?",
+  "ANEEL",
+  "ANTAQ",
+  "ANTT",
+  "ANP",
+  "ANM",
+  "ANPD",
+  "ANS",
+  "ANVISA",
+  "CADE",
+  "COAF",
+  "CVM",
+  "SERPRO"
+) %>% paste(collapse = "|")
+agencias_reguladoras <- glue("^({agencias_reguladoras})\\s")
+
+
+pedidos_painel %>% distinct(orgao) %>% 
+  arrange(orgao) %>% 
+  filter(
+    !str_detect(orgao, educacao),
+    !str_detect(orgao, saude),
+    !str_detect(orgao, militares),
+    !str_detect(orgao, ministerio),
+    !str_detect(orgao, empresa_publica),
+    !str_detect(orgao, bancos),
+    !str_detect(orgao, cultura),
+    !str_detect(orgao, meio_ambiente),
+    !str_detect(orgao, ciencia),
+    !str_detect(orgao, agencias_reguladoras)
+  ) %>% print(n = Inf)
+```
+
+### Pastas ministeriais
+
+```{r fig.width=11, fig.height=7}
+wafflechart_acesso_negado(ministerio)
+```
+
+### Órgãos militares
+
+```{r}
+wafflechart_acesso_negado(militares)
+```
+
+### Órgãos sócioambientais
+
+```{r}
+wafflechart_acesso_negado(meio_ambiente)
+```
+
+### Bancos públicos
+
+```{r}
+wafflechart_acesso_negado(bancos)
+```
+
+### Ciência, pesquisa e educação
+
+```{r fig.width=11, fig.height=7}
+wafflechart_acesso_negado(ciencia)
+```
+
+```{r fig.width=11, fig.height=10}
+wafflechart_acesso_negado(educacao)
+```
+
+```{r fig.width=11, fig.height=10}
+#wafflechart_acesso_negado(saude)
+```
+
+### empresas públicas
+
+```{r fig.width=11, fig.height=10}
+wafflechart_acesso_negado(empresa_publica)
+```
+
+### Cultura
+
+```{r}
+wafflechart_acesso_negado(cultura)
+```
+
+### Agencias reguladoras
+
+```{r}
+wafflechart_acesso_negado(agencias_reguladoras)
+```
+
+### INSS
+
+```{r}
+wafflechart_acesso_negado("INSS")
 ```
 
