@@ -147,8 +147,6 @@ bind_rows(painel, cgu) %>%
 
 ### Dados da Caixa Econômica Federal
 
-Os dados da Caixa Econômica Federal também não estão disponibilizados por completo na base [com pedidos e respostas completas](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx)
-
 ```{r}
 painel <- pedidos_painel %>% 
   filter(str_detect(orgao, "^CEF ")) %>% 
@@ -159,7 +157,9 @@ painel <- pedidos_painel %>%
     ) ~ "Pedidos de acesso a informação via LAI",
     TRUE ~ decisao
   ) %>% str_wrap(25)) %>% 
-  count(data_registro, is_pedido_de_informacao, name = "qt", base = "Base de dados do painel da CGU")
+  count(data_registro, is_pedido_de_informacao,
+        name = "qt", 
+        base = "Base de dados do painel da CGU")
 
 cgu <- "dados/load/rds/pedidos-cgu.rds" %>% 
   here() %>% 
@@ -173,8 +173,22 @@ cgu <- "dados/load/rds/pedidos-cgu.rds" %>%
     ) ~ "Pedidos de acesso a informação via LAI",
     TRUE ~ decisao
   ) %>% str_wrap(25)) %>% 
-  count(data_registro, is_pedido_de_informacao, name = "qt", base = "Base de dados com\ntextos de pedidos e respostas")
+  count(data_registro, is_pedido_de_informacao, 
+        name = "qt",
+        base = "Base de dados com\ntextos de pedidos e respostas")
+```
 
+Os dados da Caixa Econômica Federal também não estão disponibilizados por completo na base [com pedidos e respostas completas](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx)
+
+```{r}
+qt_cef <- painel %>% 
+  filter(year(data_registro) <= 2019) %>% 
+  count(is_pedido_de_informacao, wt = qt) %>% deframe()
+```
+
+Na base de dados sobre atendimento à LAI extraída do Fala.br (o sistema usado para gerenciar pedidos de informação no Executivo federal), que contém dados de todos os pedidos recebidos - menos o conteúdo das solicitações ou das respostas -, de 2019 a 2021 a Caixa recebeu e respondeu `r sum(qt_cef)` demandas via Fala.br. `r qt_cef[[2]]` delas eram pedidos de informação, outras `r qt_cef[[1]]` “não eram solicitações de informação” e `r qt_cef[[3]]` eram perguntas duplicadas ou repetidas. 
+
+```{r}
 bind_rows(painel, cgu) %>% 
   filter(is_pedido_de_informacao == "Pedidos de acesso a\ninformação via LAI") %>% 
   ggplot(aes(x = data_registro, y = qt, color = base)) +
