@@ -57,63 +57,13 @@ Sys.setlocale("LC_TIME", "pt_BR")
 ```
 
 ```{r color-settings}
-# aplica identidade visual da TB/AeP:
-cores_aep <- c(
-  laranja = "#F9A521",
-  rosa = "#D81755",
-  cinza = "#969696",
-  marrom = "#B27D5C"
-)
-
-cores_tb <- c(
-  laranja = "#F6A323",
-  cinza_escuro = "#1d1d1b",
-  cinza_claro = "#6f7171",
-  cinza_quase_branco = "#ececec",
-  azul = "#41ACBD"
-)
-
-cores_decisao <- c(
-  "Acesso Concedido" = cores_tb[["azul"]],
-  "Não se trata de solicitação de informação" = cores_aep[["marrom"]],
-  "Acesso Negado" = cores_aep[["rosa"]],
-  "Acesso Parcialmente Concedido" = cores_aep[["laranja"]],
-  "Pergunta Duplicada/Repetida" = cores_aep[["cinza"]],
-  "Órgão não tem competência para responder sobre o assunto" = cores_tb[["cinza_escuro"]],
-  "Informação Inexistente" = cores_tb[["cinza_quase_branco"]]
-)
-
-cores_decisao2 <- cores_decisao
-cores_decisao2[["Informação Inexistente"]] <- "gray20"
-
-cores_decisao3 <- c("black", "gray90", "gray20", "gray80", "gray20")
-names(cores_decisao3) <- names(cores_decisao)[-c(5, 2)] 
-
-cores_lai <- tibble(
-  c1 = c("Não se trata de solicitação de informação",
-         "Pergunta Duplicada/Repetida",
-         "Pedidos de acesso a informação via LAI"
-         ) %>% str_wrap(25),
-  c2 = c("#F9A521", "#969696", "#D81755")
-) %>% deframe()
+source(here("src/0-paleta-de-cores.R"), encoding = "utf-8")
 ```
 
 Análises de pedidos de acesso a informação via LAI considerando a decisão de acesso.
 
 ```{r}
-#periodo_final <- "2021-08-01"
-instancias_recursais <- c(
-  "Primeira Instância",
-  "Segunda Instância",
-  "Terceira Instância",
-  "CGU",
-  "CMRI",
-  "Pedido de Revisão",
-  "Não houve recurso"
-)
-
 pedidos_cgu <- readRDS(here("dados/load/rds/pedidos-clean.rds")) %>%
-  #filter(data_resposta <= periodo_final, data_resposta <= periodo_final) %>%
   rename(orgao = orgaodestinatario)
 ```
 
@@ -427,37 +377,112 @@ decisao %>%
 ## Análise de decisão "Não se trata de do solicitação de informação"
 
 ```{r fig.height=30, fig.width=11}
-t <- pedidos_cgu %>%
-  filter(decisao == "Não se trata de solicitação de informação") %>%
-  select(id_pedido, detalhamento_solicitacao, resposta, orgao, data_registro)
+pedidos_clean <- readRDS(here("dados/load/rds/pedidos-clean.rds"))
 
-o <- t %>% count(orgao) %>% slice_max(n = 30, order_by = n) %>% 
-  rename(n_manifestacao = n)
-
-clean_strings <- function(x) {
-  x %>% 
-    str_replace_all(" \\w ", " ") %>% 
-    str_replace_all("gostaria", " ") %>% 
-    str_replace_all("saber|sobre", " ") %>% 
-    str_squish()
-}
-
-t %>% 
-  #filter(str_detect(orgaodestinatario, "^CGU")) %>% 
-  filter(orgao %in% o$orgao) %>%
-  add_count(orgao, name = "total_orgao") %>% 
-  mutate(detalhamento_solicitacao = clean_strings(detalhamento_solicitacao),
-         orgao = glue("{orgao}\n{total_orgao} manifestações")) %>% 
-  unnest_tokens(word, detalhamento_solicitacao) %>%
-  count(orgao, word, sort = TRUE) %>% 
-  mutate(word = fct_reorder(word, n, mean)) %>%
-  group_by(orgao) %>% 
-  slice_max(n = 15, order_by = n) %>%
-  ungroup() %>% 
-  ggplot(aes(n, word)) +
-  geom_col() +
-  labs(y = NULL,
-       title = 'Termos frequêntes nas solicitações classificadas como "Não se trata de solicitação de informação"') +
-  facet_wrap(~reorder(orgao, -n), scales = "free", ncol = 3) +
-  theme_minimal()
+not_lai <- pedidos_painel <- "dados/load/rds/base-cgu.rds" %>%
+  here() %>%
+  readRDS() %>%
+  pluck("pedidos") %>%
+  janitor::clean_names() %>% 
+  mutate(
+    ts_registro = data_registro,
+    ts_resposta = data_resposta,
+    data_registro = dmy(data_registro) %>% floor_date(unit = "month"),
+    data_resposta = dmy(data_resposta) %>% floor_date(unit = "month")) %>% 
+  rename(orgao = orgao_destinatario) %>%
+  filter(!is.na(decisao),
+         !is.na(data_resposta),
+         data_registro < ymd("2021-10-01"), 
+         esfera == "Federal") %>% 
+  filter(decisao == "Não se trata de solicitação de informação",
+         str_detect(orgao, "^MCIDADANIA"),
+         year(data_registro) == 2020) %>%
+  select(id_pedido, assunto_pedido, orgao, data_registro, decisao)
 ```
+
+```{r}
+mcidadania <- left_join(not_lai, pedidos_clean)
+
+mcidadania %>% 
+  count(orgao, assunto_pedido, sort = T) %>% 
+  filter(n > 10) %>% 
+  ggplot(aes(x = reorder(assunto_pedido, n), y = n)) +
+  geom_col(fill = cores_decisao2[2], color = "gray60") +
+  geom_label(aes(
+    x = "Atendimento",
+    y = 7500,
+    label = glue("Em 2020 foram {format(nrow(mcidadania), big.mark = '.')}\n",
+                 "solicitações classificadas como\n",
+                 "\"Não se trata de solicitação de informação\"\n",
+                 "pelo {str_wrap(orgao, 30)}"),
+  ), label.size = NA) +
+  coord_flip() +
+  labs(
+    title = glue("Ministério da Cidadania - Assuntos mais frequentes para decisão\n",
+                 "não se trata de solicitação de informação - Ano de 2020"),
+    x = NULL,
+    y = "Quantidade de manifestações em 2020"
+  ) +
+  theme_minimal()
+``` 
+
+A núvem de palavras foi extraída do resumo da solicitação, onde o usuário escreve um texto curto sobre o conteúdo abordado na solicitação. A homogeneidade de tamanhos entre as palavras revela uma frequência semelhante do uso do termo. 
+
+```{r fig.height=7, fig.width=7}
+source(here("src/5-funcao-limpando-texto.R"))
+
+library(tidytext)
+library(wordcloud)
+mcidadania %>% 
+  filter(!is.na(detalhamento_solicitacao)) %>% 
+  transmute(
+    id_pedido,
+    assunto_pedido,
+    resumo_solicitacao = limpando_texto(resumo_solicitacao)) %>% 
+  unnest_tokens(word, resumo_solicitacao) %>% 
+  anti_join(stopwords) %>%
+  filter(!word %in% c(
+    "dostaria",
+    "solicito",
+    "liguei",
+    "fiz",
+    "venho",
+    "gostaria",
+    "pq",
+    "porque",
+    "aux"
+  )) %>%
+  count(word, sort = TRUE) %>% 
+  with(wordcloud(word, n, max.words = 200, scale = c(7, 1), 
+          random.order = F,
+          random.color = F,
+          colors = c(cores_aep[2], cores_tb[5])))
+```
+
+```{r}
+mcidadania %>% 
+  filter(!is.na(detalhamento_solicitacao)) %>% 
+  transmute(
+    id_pedido,
+    assunto_pedido,
+    resumo_solicitacao = limpando_texto(resumo_solicitacao)) %>% 
+  unnest_tokens(word, resumo_solicitacao) %>% 
+  anti_join(stopwords) %>%
+  filter(!word %in% c(
+    "dostaria",
+    "solicito",
+    "liguei",
+    "fiz",
+    "venho",
+    "gostaria",
+    "pq",
+    "porque",
+    "aux"
+  )) %>%
+  count(word, sort = TRUE) %>%
+  slice_max(order_by = n, n = 30) %>% 
+  ggplot(aes(x = reorder(word, n), y = n)) +
+  geom_col() +
+  coord_flip()
+```
+

@@ -1,7 +1,5 @@
 library(tidyverse)
 library(here)
-library(glue)
-library(lubridate)
 
 #' lista com as regex utilizadas, são construídas em um arquivo à parte chamado `lista-de-regex.R`
 lista_de_regex <- readRDS(here("dados/load/rds/lista-de-regex.rds"))
@@ -70,35 +68,6 @@ limpando_texto <- function(x) {
     str_replace_all("urlurlurl", "URL")
 }
 
-#' base de dados de pedidos de acesso a informação, construída em um arquivo à parte chamado `pedidos-cgu-pre-processamento.R`
-pedidos_clean <- readRDS(here("dados/load/rds/pedidos-cgu.rds")) %>% 
-  transmute(
-    id_pedido = id_pedido,
-    across(c(detalhamento_solicitacao, resposta), limpando_texto, .names = "{.col}_clean")
-  )
-
-#' base de dados de recursos, construída em um arquivo à parte chamado `pedidos-cgu-pre-processamento.R`
-recursos_clean <- readRDS(here("dados/load/rds/recursos-cgu.rds")) %>% 
-  transmute(
-    id_pedido = id_pedido,
-    id_recurso = id_recurso,
-    across(c(desc_recurso, resposta_recurso), limpando_texto, .names = "{.col}_clean")
-  )
-
-#' salva
-saveRDS(pedidos_clean, here("dados/load/rds/pedidos_clean.rds"))
-saveRDS(recursos_clean, here("dados/load/rds/recursos_clean.rds"))
-
-#' testa
-pedidos_clean <- readRDS(here("dados/load/rds/pedidos-clean.rds"))
-recursos_clean <- readRDS(here("dados/load/rds/recursos-clean.rds"))
-
-#' base com textos e todas as colunas
-pedidos_cgu <- readRDS(here("dados/load/rds/pedidos-cgu.rds"))
-recursos_cgu <- readRDS(here("dados/load/rds/recursos-cgu.rds"))
-
-library(tidytext)
-
 #' stopwords do pacote `tm`
 stopwords_tm <- tibble(
   word = limpando_texto(tm::stopwords("pt")),
@@ -132,55 +101,3 @@ stopwords_lai <- tibble(
 
 #' base de stopword completa
 stopwords <- bind_rows(stopwords_tm, stopwords_lai)
-
-#' pedidos tokenizados
-tidy_pedidos <- pedidos_clean %>% 
-  transmute(
-    id_pedido,
-    ano = year(data_resposta),
-    assunto_pedido,
-    orgao = orgaodestinatario,
-    detalhamento_solicitacao,
-    resposta
-  ) %>% 
-  filter(str_detect(orgao, "^INCRA\\s")) %>% 
-  unnest_tokens(word, resposta)
-
-#' respostas tokenizadas
-tidy_resposta <- pedidos_clean %>% 
-  transmute(
-    id_pedido,
-    ano = year(data_resposta),
-    assunto_pedido,
-    orgao = orgaodestinatario,
-    detalhamento_solicitacao,
-    resposta
-  ) %>% 
-  filter(str_detect(orgao, "^INCRA\\s")) %>% 
-  unnest_tokens(word, resposta)
-
-#' wordcloud
-library(wordcloud)
-tidy_resposta %>% 
-  filter(ano == 2021) %>%
-  mutate(
-    word = word %>% 
-      str_extract("[a-z']+") %>% 
-      str_replace_all("^processos$", "processo") %>% 
-      str_replace_all("^informacoes$", "informacao") %>% 
-      str_replace_all("urlurlurl", "URL") %>% 
-      str_replace_all("lai", "LAI") %>% 
-      str_replace_all("lgpd", "LGPD")
-  ) %>%
-  anti_join(stopwords) %>% 
-  count(ano, orgao, word, sort = TRUE) %>%
-  with(wordcloud(word, n, max.words = 200))
-
-
-
-glimpse()
-
-transmute(
-  id_pedido = id_pedido,
-  across(c(detalhamento_solicitacao, resposta), limpando_texto, .names = "{.col}_clean")
-)
