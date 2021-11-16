@@ -61,7 +61,7 @@ source(here("src/0-paleta-de-cores.R"))
 ```
 
 ```{r}
-pedidos_painel <- "dados/load/rds/base_cgu.rds" %>%
+pedidos_painel <- "dados/load/rds/base-cgu.rds" %>%
   here() %>%
   readRDS() %>%
   pluck("pedidos") %>%
@@ -82,8 +82,6 @@ pedidos_painel <- "dados/load/rds/base_cgu.rds" %>%
 pedidos_painel
 ```
 
-
-
 ```{r}
 taxas <- pedidos_painel %>%
   filter(decisao %notin% c(
@@ -92,12 +90,12 @@ taxas <- pedidos_painel %>%
   )) %>% 
   mutate(orgao = str_wrap(orgao, 40)) %>% 
   select(id_pedido, data_registro, decisao, orgao) %>% 
-  # valores anuais
+  # contagem de pedidos anuais
   add_count(ano = year(data_registro), name = "n_ano") %>% 
   add_count(ano, orgao, name = "n_ano_orgao") %>% 
   add_count(ano, decisao, name = "n_ano_decisao") %>% 
   add_count(ano, decisao, orgao, name = "n_ano_decisao_orgao") %>% 
-  # valores mensais
+  # contagem de pedidos mensais
   add_count(data_registro, name = "n_mes") %>% 
   add_count(data_registro, orgao, name = "n_mes_orgao") %>% 
   add_count(data_registro, decisao, name = "n_mes_decisao") %>% 
@@ -120,6 +118,8 @@ taxas <- pedidos_painel %>%
 ```
 
 ```{r fig.height=9, fig.width=11}
+month.abb2 <- function(x) month.abb[month(x)]  
+
 taxas %>% 
   filter(decisao == "Acesso Negado") %>% 
   transmute(
@@ -130,7 +130,7 @@ taxas %>%
   group_by(data_registro) %>% 
   slice_max(order_by = per, n = 1) %>% 
   ungroup() %>% 
-  mutate(mes = month.abb[month(data_registro)]) %>%
+  mutate(mes = month.abb2(data_registro)) %>%
   ggplot(aes(x = data_registro, y = per, color = orgao)) +
   geom_segment(aes(
     y = 0,
@@ -139,7 +139,10 @@ taxas %>%
     xend = data_registro),
     color = "gray60"
   ) +
-  geom_vline(xintercept = seq(ymd('2012-01-01'), ymd('2022-01-01'), by = 'year'), lty = 3) +
+  geom_vline(
+    xintercept = seq(ymd('2012-01-01'), ymd('2022-01-01'), by = 'year'),
+    lty = 3
+  ) +
   scale_y_percent(limits = c(0, 0.7)) +
   scale_x_date(
     limits = c(ymd("2012-01-01"), ymd("2022-01-01")),
@@ -186,12 +189,12 @@ taxas %>%
   )
 ```
 
-```{r}
+```{r fig.height=4, fig.width=5}
 pedidos_painel %>% 
   count(ano = year(data_registro), orgao) %>% 
   count(ano) %>% 
   ggplot(aes(x = as.character(ano), y = n)) +
-  geom_col(fill = cores_aep[["marrom"]]) +
+  geom_col(fill = cores_aep[["laranja"]], alpha = .9) +
   geom_hline(aes(yintercept = n_distinct(pedidos_painel$orgao))) +
   geom_text(
     aes(
@@ -201,7 +204,7 @@ pedidos_painel %>%
     ),
     check_overlap = T
   ) +
-  geom_text(aes(label = n), vjust = 1, fontface = "bold", size = 5) +
+  geom_text(aes(label = n), color = "gray30", vjust = 1, fontface = "bold", size = 5) +
   theme_minimal() +
   labs(
     x = "Ano",
@@ -212,7 +215,7 @@ pedidos_painel %>%
 
 A maioria das negativas de acesso a informação eram concentradas em poucos órgãos:
 
-```{r fig.height=8, fig.width=10}
+```{r}
 top_opacos <- taxas %>% 
   filter(decisao == "Acesso Negado") %>%
   distinct(
@@ -232,15 +235,12 @@ top_opacos <- taxas %>%
   ) %>% 
   filter(cutoff) %>% 
   ungroup() %>% 
-  mutate(sigla = str_extract(orgao, "^[:upper:]+(?= )|^GSI-PR"),
-         sigla = if_else(
-           per > .05,
-           str_glue("{sigla}\n",
-                          "{scales::percent(per, accuracy = .1,
-                          decimal.mark = ',')}"),
-           sigla
-         ))
+  mutate(sigla = str_extract(orgao, "^[:upper:]+(?= )|^GSI-PR"))
+```
 
+
+```{r fig.height=7.5, fig.width=11}
+#' paleta de cores
 pal <- c(
   "white",
   "ivory",
@@ -251,16 +251,21 @@ pal <- c(
   cores_aep[["rosa"]]
 )
 
-cores <- top_opacos %>% 
-  select(orgao, per) %>% 
-  group_by(orgao) %>% 
+#' paleta de cores associada aos órgãos
+cores <- top_opacos %>%
+  select(orgao, per) %>%
+  group_by(orgao) %>%
   summarise(per = sum(per), .groups = "drop") %>%
-  arrange(per) %>% 
-  mutate(cor = colorRampPalette(pal)(18)) %>% 
-  select(-per) %>% 
+  arrange(per) %>%
+  mutate(cor = colorRampPalette(pal)(18)) %>%
+  select(-per) %>%
   deframe()
 
+my_lbl <- function(x) scales::percent(x, accuracy = .1, decimal.mark = ',')
 top_opacos %>% 
+  mutate(
+    sigla = if_else(per >= .05, glue("{sigla}\n {my_lbl(per)}"), sigla)
+  ) %>% 
   ggplot(aes(
     x = ano,
     y = per,
@@ -276,7 +281,11 @@ top_opacos %>%
     label.padding = unit(0.05, "lines")
   ) +
   labs(
-    title = "Órgãos do executivo Federal que compõem mais da metade dos pedidos dos acessos negados - por ano",
+    title = glue(
+      "Órgãos do executivo Federal que compõem",
+      "mais da metade dos pedidos com acessos negados -",
+      "por ano"
+    ),
     fill = "Sigla do órgão",
     x = NULL, y = NULL
   ) +
@@ -293,6 +302,148 @@ top_opacos %>%
   ) +
   theme(
     legend.position = "bottom"
+  )
+
+```
+
+```{r}
+top_opacos %>%
+  mutate(sigla2 = case_when(
+    sigla == "ME" & ano %in% c(2013, 2017) ~ sigla,
+    sigla == "INSS" & ano == 2016 ~ sigla,
+    sigla == "BACEN" & ano == 2013 ~ sigla,
+    sigla == "BB" & ano %in% c(2013, 2016, 2020) ~ sigla,
+    sigla == "CEF" & ano == 2015 ~ sigla,
+    sigla %in% c("CEX", "TRANSPETRO", "INCRA") ~ sigla,
+    sigla == "INEP" & ano == 2018 ~ sigla,
+    sigla %in% c("DPF", "MAPA", "MRE") & ano == 2019 ~ sigla,
+    sigla %in% c("MEC", "MCIDADANIA", "ANTAQ", "MS", "ANEEL") & ano %in% 2020 ~ sigla,
+    TRUE ~ ""
+  )) %>% 
+  complete(ano, orgao, fill = list(per = 0)) %>% 
+  ggplot(aes(
+    x = ano,
+    y = per,
+    fill = reorder(orgao, -per),
+    group = reorder(orgao, -per),
+    color = reorder(orgao, -per)
+  )) +
+  geom_area(position = "stack", alpha = .7, color = "gray50") +
+  geom_text(
+    aes(label = sigla2),
+    position = position_stack(vjust = .5),
+    show.legend = F,
+    size = 3,
+    color = "black",
+    label.size = NA,
+    label.padding = unit(0.05, "lines")
+  ) +
+  labs(
+    title = glue(
+      "Órgãos do executivo Federal que compõem mais",
+      "da metade dos pedidos dos acessos negados - por ano"
+      ),
+    fill = "Sigla do órgão",
+    x = NULL, y = NULL
+  ) +
+  theme_minimal() +
+  scale_x_continuous(breaks = 2012:2021) +
+  hrbrthemes::scale_y_percent() +
+  guides(fill = guide_legend(ncol = 2, title.position = "top", reverse = T)) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    legend.text = element_text(size = 9, margin = margin(5, 0, 5, 0, "pt"))
+  ) +
+  theme(
+    legend.position = "none",
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_blank()
+  )
+```
+
+
+```{r fig.height=7, fig.width=9}
+top_opacos_pqn <- top_opacos %>% 
+  filter(per <= .05, ano > 2016) %>%
+  arrange(ano, -per) %>% 
+  group_by(ano) %>% 
+  nest() %>% 
+  ungroup() %>% 
+  mutate(
+    sigla = map(data, pull, sigla),
+    sigla = paste(sigla),
+    sigla = str_remove_all(sigla, "^c\\(|\\\"|\\)" ),
+    sigla = str_replace_all(sigla, ", ", "\n"),
+    # orgao = map(data, pull, orgao),
+    # orgao = paste(orgao),
+    # orgao = str_remove_all(orgao, "^c\\(|\\\"|\\)" ),
+    # orgao = str_replace_all(orgao, ", ", ",\n"),
+    orgao = "menores",
+    per = map(data, select, per),
+    per = map_dbl(per, sum),
+    qtd_orgaos = map_int(data, nrow)
+  ) %>% select(-data) 
+
+top_opacos2 <- top_opacos %>% 
+  filter(per > .05 | ano < 2017) %>% 
+  mutate(qtd_orgaos = 1) %>% 
+  bind_rows(top_opacos_pqn)
+
+#' paleta de cores
+pal <- c(
+  cores_tb[["laranja"]],
+  "#0c93a8",
+  cores_tb[["azul"]],
+  cores_aep[["marrom"]],
+  cores_aep[["cinza"]],
+  cores_aep[["laranja"]],
+  "ivory",
+  cores_aep[["rosa"]]
+)
+
+#' paleta de cores associada aos órgãos
+cores <- top_opacos2 %>%
+  select(orgao, per) %>%
+  group_by(orgao) %>%
+  summarise(per = sum(per), .groups = "drop") %>%
+  arrange(per) %>%
+  mutate(cor = colorRampPalette(pal)(12)) %>%
+  select(-per) %>%
+  deframe()
+
+top_opacos2 %>%
+  mutate(sigla = if_else(orgao != "menores", 
+                         glue("{sigla}\n {my_lbl(per)}"),
+                         glue("(< 5%)\n{sigla}\nsoma: {my_lbl(per)}")
+                         )) %>% 
+  ggplot(aes(x = ano, y = per, fill = fct_reorder2(orgao, -per, -ano))) +
+  geom_col(color = "black") + 
+  geom_text(aes(label = sigla), 
+            size = 3, position = position_stack(vjust = .5)) +
+  theme(legend.position = "none") +
+  labs(
+    title = glue(
+      "Órgãos do executivo Federal que compõem",
+      "mais da metade dos pedidos com acessos negados -",
+      "por ano"
+    ),
+    fill = "Sigla do órgão",
+    x = NULL, y = NULL
+  ) +
+  theme_minimal() +
+  scale_x_continuous(breaks = 2012:2021) +
+  #scale_fill_ordinal() +
+  scale_fill_manual(values = cores) +
+  hrbrthemes::scale_y_percent() +
+  guides(fill = guide_legend(ncol = 2, title.position = "top", reverse = T)) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    legend.text = element_text(size = 9, margin = margin(5, 0, 5, 0, "pt"))
+  ) +
+  theme(
+    legend.position = "none"
   )
 ```
 

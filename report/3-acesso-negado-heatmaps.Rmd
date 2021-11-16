@@ -59,44 +59,7 @@ Sys.setlocale("LC_TIME", "pt_BR")
 
 ```{r color-settings}
 # aplica identidade visual da TB/AeP:
-cores_aep <- c(
-  laranja = "#F9A521",
-  rosa = "#D81755",
-  cinza = "#969696",
-  marrom = "#B27D5C"
-)
-
-cores_tb <- c(
-  laranja = "#F6A323",
-  cinza_escuro = "#1d1d1b",
-  cinza_claro = "#6f7171",
-  cinza_quase_branco = "#ececec",
-  azul = "#41ACBD"
-)
-
-cores_decisao <- c(
-  "Acesso Concedido" = cores_tb[["azul"]],
-  "Não se trata de solicitação de informação" = cores_aep[["marrom"]],
-  "Acesso Negado" = cores_aep[["rosa"]],
-  "Acesso Parcialmente Concedido" = cores_aep[["laranja"]],
-  "Pergunta Duplicada/Repetida" = cores_aep[["cinza"]],
-  "Órgão não tem competência para responder sobre o assunto" = cores_tb[["cinza_escuro"]],
-  "Informação Inexistente" = cores_tb[["cinza_quase_branco"]]
-  )
-
-cores_decisao2 <- cores_decisao
-cores_decisao2[["Informação Inexistente"]] <- "gray20"
-
-cores_decisao3 <- c("black", "gray90", "gray20", "gray80", "gray20")
-names(cores_decisao3) <- names(cores_decisao)[-c(5, 2)] 
-
-cores_lai <- tibble(
-  c1 = c("Não se trata de solicitação de informação",
-         "Pergunta Duplicada/Repetida",
-         "Pedidos de acesso a informação via LAI"
-         ) %>% str_wrap(25),
-  c2 = c("#F9A521", "#969696", "#D81755")
-) %>% deframe()
+source(here("src/0-paleta-de-cores.R"), encoding = "utf-8")
 ```
 
 Análises de pedidos de acesso a informação via LAI considerando a decisão de acesso.
@@ -104,7 +67,7 @@ Análises de pedidos de acesso a informação via LAI considerando a decisão de
 > **Atenção**: Eu fiz os agrupamentos para visualizar os órgãos de maneira mais focada, mas os critérios apenas intuitivos e baseados nos próprios nomes dos órgãos.
 
 ```{r}
-pedidos_painel <- "dados/load/rds/base_cgu.rds" %>%
+pedidos_painel <- "dados/load/rds/base-cgu.rds" %>%
   here() %>%
   readRDS() %>%
   pluck("pedidos") %>%
@@ -134,18 +97,16 @@ orgaos_count_decisao <- pedidos_painel %>%
   add_count(data_registro, decisao, orgao, name = "n_mes_decisao_orgao") %>% 
   select(id_pedido:n_mes, n_mes_decisao, n_mes_orgao, n_mes_decisao_orgao)
 
-wafflechart_acesso_negado <- function(x) {
+wafflechart_acesso_negado <- function(df, x, 
+  titulo = "Maiores % de negativas de acesso por ano") {
   
-  orgaos_count_decisao %>%
-    filter(str_detect(orgao, x),
-           decisao == "Acesso Negado") %>% #distinct(orgao) %>% arrange(orgao) %>%
+  df %>%
+    filter(str_detect(orgao, x), decisao == "Acesso Negado") %>% 
     mutate(
       taxa_interna = n_mes_decisao_orgao / n_mes_orgao,
-      taxa_global = n_mes_decisao_orgao / n_mes_decisao,
-      #orgao = str_wrap(orgao, 25)
+      taxa_global = n_mes_decisao_orgao / n_mes_decisao
     ) %>% 
     group_by(orgao) %>% 
-    filter(mean(n_mes_orgao) >= 10) %>% 
     ungroup() %>% 
     group_by(ano = year(data_registro),
              orgao) %>% 
@@ -154,22 +115,20 @@ wafflechart_acesso_negado <- function(x) {
       `Taxa global máxima registrada em um ano` = max(taxa_global, na.rm = T),
       .groups = "drop"
     ) %>% 
-    pivot_longer(
-      -c(ano, orgao),
-      names_to = "categoria",
-      values_to = "valor",
-    ) %>%
+    pivot_longer(-c(ano, orgao), names_to = "categoria", values_to = "valor") %>%
     complete(ano, orgao, categoria) %>% 
     filter(categoria == "Taxa interna máxima registrada em um ano") %>% 
-    ggplot(aes(x = factor(ano),
-               y = reorder(orgao, valor, na.rm = T),
-               fill = valor)) +
+    ggplot(aes(
+      x = factor(ano),
+      y = reorder(orgao, valor, na.rm = T),
+      fill = valor
+    )) +
     geom_tile(color = "gray80") +
     geom_text(
       data = . %>% 
         filter(valor >= .15 | (valor >= .1 & str_detect(orgao, "^MEC "))),
       aes(label = scales::percent(valor, accuracy = 0.1, decimal.mark = ",")),
-      size = 2.5) +
+      size = 3) +
     scale_x_discrete(position = "top") +
     scale_fill_gradientn(
       colors = c("white", cores_aep[["laranja"]], cores_aep[["rosa"]]),
@@ -184,22 +143,25 @@ wafflechart_acesso_negado <- function(x) {
       legend.justification = "left"
     ) +
     labs(
-      title = "Maiores % de negativas de acess por ano",
-      subtitle = "Proporção de pedidos negados em relação ao\ntotal de pedidos recebidos pe  las pastas ministeriais",
+      title = titulo,
+      subtitle = glue(
+        "Proporção de pedidos negados em relação ao\n",
+        "total de pedidos recebidos pelas pastas ministeriais\n",
+        "Valor máximo registrado no ano de referência"
+      ),
       x = NULL,
       y = NULL,
       fill = "%"
     )
 
 }
-
 ```
 
 ### Órgãos militares
 
 ```{r}
-militares <- "^(CEX|CMAR|COMAER|DPF|IMBEL|DPRF|^AMAZUL)"
-ministerio <- "Ministério|^CGU|^CC-PR|^SEGOV|^SGPR|^AGU|^GSI|^VPR|^PR"
+militares <- "^(CEX|CMAR|COMAER)"
+ministerio <- "Ministério|^(CGU|CC-PR|SEGOV|SGPR|AGU|GSI|VPR|PR )"
 empresa_publica <- "Ltda$|S\\.A\\.?$|Empresa|Companhia"
 educacao <- "Universidade|Escola|Colégio|Instituto Federal de Educação|^CEFET"
 saude <- "EBSERH|Hospital|Maternidade"
@@ -216,11 +178,13 @@ cultura <- c(
 cultura <- glue("^({cultura})\\s|Museu")
 
 meio_ambiente <- c(
-  "ANA",
+  "MMA ",
   "FUNAI",
   "ICMBio",
   "IBAMA",
   "INCRA",
+  "FCP",
+  "INPE-MCT",
   "INPA"
 ) %>% paste(collapse = "|")
 meio_ambiente <- glue("^({meio_ambiente})\\s")
@@ -294,63 +258,69 @@ pedidos_painel %>% distinct(orgao) %>%
 
 ### Pastas ministeriais
 
-```{r fig.width=11, fig.height=7}
-wafflechart_acesso_negado(ministerio)
+```{r fig.width=8, fig.height=13}
+orgaos_count_decisao %>% 
+  mutate(orgao = str_wrap(orgao, 40)) %>% 
+  wafflechart_acesso_negado(ministerio)
 ```
 
 ### Órgãos militares
 
 ```{r}
-wafflechart_acesso_negado(militares)
+orgaos_count_decisao %>%
+  wafflechart_acesso_negado(militares)
 ```
 
 ### Órgãos sócioambientais
 
 ```{r}
-wafflechart_acesso_negado(meio_ambiente)
+orgaos_count_decisao %>% 
+  mutate(orgao = str_wrap(orgao, 40)) %>% 
+  wafflechart_acesso_negado(meio_ambiente)
 ```
 
 ### Bancos públicos
 
 ```{r}
-wafflechart_acesso_negado(bancos)
+orgaos_count_decisao %>% 
+  wafflechart_acesso_negado(bancos)
 ```
 
 ### Ciência, pesquisa e educação
 
 ```{r fig.width=11, fig.height=7}
-wafflechart_acesso_negado(ciencia)
+orgaos_count_decisao %>% wafflechart_acesso_negado(ciencia)
 ```
 
-```{r fig.width=11, fig.height=10}
-wafflechart_acesso_negado(educacao)
+```{r fig.width=18, fig.height=10}
+orgaos_count_decisao %>% wafflechart_acesso_negado(educacao)
 ```
 
-```{r fig.width=11, fig.height=10}
-#wafflechart_acesso_negado(saude)
+```{r fig.width=18, fig.height=10}
+orgaos_count_decisao %>% wafflechart_acesso_negado(saude)
 ```
 
 ### empresas públicas
 
 ```{r fig.width=11, fig.height=10}
-wafflechart_acesso_negado(empresa_publica)
+orgaos_count_decisao %>% wafflechart_acesso_negado(empresa_publica)
 ```
 
 ### Cultura
 
 ```{r}
-wafflechart_acesso_negado(cultura)
+orgaos_count_decisao %>% wafflechart_acesso_negado(cultura)
 ```
 
 ### Agencias reguladoras
 
 ```{r}
-wafflechart_acesso_negado(agencias_reguladoras)
+orgaos_count_decisao %>% wafflechart_acesso_negado(agencias_reguladoras)
 ```
 
 ### INSS
 
 ```{r}
-wafflechart_acesso_negado("INSS")
+orgaos_count_decisao %>% wafflechart_acesso_negado("INSS")
 ```
 
