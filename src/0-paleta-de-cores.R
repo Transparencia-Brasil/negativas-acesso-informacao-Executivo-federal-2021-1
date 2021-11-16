@@ -37,3 +37,30 @@ cores_lai <- tibble(
   ) %>% str_wrap(25),
   c2 = c("#F9A521", "#969696", "#D81755")
 ) %>% deframe()
+
+cores_instancia <- c(
+  "Primeira Instância" = cores_tb[["azul"]],
+  "Segunda Instância" = cores_aep[["laranja"]],
+  "CGU" = cores_aep[["marrom"]],
+  "CMRI" = cores_aep[["rosa"]]
+)
+
+cores_tipo_resposta <- c(
+  cores_tb[["azul"]],
+  alpha(cores_tb[["azul"]], .4),
+  cores_tb[["cinza_claro"]],
+  alpha(cores_tb[["laranja"]], .25),
+  alpha(cores_tb[["laranja"]], .6),
+  cores_tb[["laranja"]],
+  cores_aep[["rosa"]]
+)
+
+names(cores_tipo_resposta) <- c(
+  "Deferido",
+  "Parcialmente deferido",
+  "Acolhimento",
+  "Perda de objeto parcial",
+  "Perda de objeto",
+  "Não conhecimento",
+  "Indeferido"
+)

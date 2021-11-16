@@ -58,7 +58,7 @@ Sys.setenv(LANGUAGE = "pt-br")
 ```
 
 ```{r color-settings}
-source(here("src/0-paleta-de-cores.R"))
+source(here("src/0-paleta-de-cores.R"),encoding = "UTF-8")
 ```
 
 ```{r}
@@ -96,6 +96,62 @@ recursos_painel <- "dados/load/rds/base-cgu.rds" %>%
          data_registro < ymd("2021-10-01"), 
          esfera == "Federal")
 ```
+
+
+```{r}
+# filtra pedidos com recursos, na instância recursal em que ele finalizou:
+recursos_por_id_instancia_e_decisao <- recursos_painel %>% 
+  filter(instancia != "Pedido de Revisão") %>% 
+  group_by(id_pedido) %>%
+  arrange(id_pedido, instancia) %>% 
+  mutate(ord = 1:n()) %>% # ordenação por instancia recursal
+  select(id_pedido, instancia, data_registro_recurso = data_registro, ord) %>% 
+  ungroup()
+```
+
+```{r fig.height=3}
+my_lbl <- function(x) scales::percent(x, accuracy = 0.01, decimal.mark = ",")
+
+recursos_por_id_instancia_e_decisao %>%
+  group_by(id_pedido) %>% 
+  filter(ord == max(ord)) %>% 
+  left_join(
+    select(pedidos_painel, 
+           id_pedido, data_registro_pedido = data_registro, decisao), 
+    .) %>% 
+  mutate(instancia = fct_expand(instancia, "Não houve recurso"),
+         instancia = replace_na(instancia, "Não houve recurso")) %>% 
+  mutate(ano = year(data_registro_pedido)) %>% 
+  count(ano, instancia, decisao,
+        name = "n_recursos_ano_instancia_e_decisao")  %>% 
+  mutate(houve_recurso = instancia == "Não houve recurso") %>%  
+  count(ano, houve_recurso,
+        wt = n_recursos_ano_instancia_e_decisao,
+        name = "n_ano_houve_recurso") %>% 
+  add_count(ano,
+            wt = n_ano_houve_recurso,
+            name = "n_ano") %>% 
+  mutate(per = n_ano_houve_recurso / n_ano) %>% 
+  ggplot(aes(x = ano, y = per, fill = houve_recurso, color = houve_recurso)) +
+  geom_text(data = . %>% filter(houve_recurso), show.legend = F,
+            aes(label = my_lbl(per)), nudge_y = .1, check_overlap = T) +
+  geom_text(data = . %>% filter(!houve_recurso), show.legend = F,
+            aes(label = my_lbl(per)), nudge_y = -.1, check_overlap = T) +
+  geom_line(size = 2) +
+  geom_point(size = 2.5, shape = 21, fill = "white") +
+  scale_color_manual(values = c(cores_aep[["rosa"]], cores_tb[["azul"]]),
+                     labels = c("Não houve recurso", "Houve recurso*"),
+                     name = "% do total de pedidos"
+                     ) +
+  scale_x_continuous(breaks = 2012:2021) + 
+  guides(colour = guide_legend(reverse=T)) +
+  scale_y_continuous(labels = scales::percent) +
+  theme_minimal() +
+  labs(title = "Pedidos que entraram com recurso",
+       subtitle = "% do total de pedidos que entraram com recurso",
+       x = NULL, y = NULL, caption = "*Pelo menos um recurso em 1ª instância")
+```
+
 
 ```{r}
 depara_orgao <- pedidos_painel %>%
@@ -195,13 +251,18 @@ plot_correlacao_negativas_e_recursos <- function(df, decisao_pedido) {
                    "(% do total de recursos impetrados ao órgão)")
     ) +
     theme_minimal() +
-    theme(legend.position = "none") +
-    facet_grid(~ instancia)
+    scale_color_manual(values = cores_instancia) +
+    scale_fill_manual(values = cores_instancia) +
+    theme(legend.position = "none",
+          panel.background = element_rect(fill = "gray95", color = "transparent")) +
+    facet_wrap(~ instancia)
   
 }
 ```
 
-```{r fig.width=10}
+### Acesso Negado
+
+```{r fig.height=8}
 plot_correlacao_negativas_e_recursos(count_recursos, "Acesso Negado") +
   geom_label(
     data = . %>% distinct(correl, instancia),
@@ -238,7 +299,9 @@ plot_correlacao_negativas_e_recursos(count_recursos, "Acesso Negado") +
   )
 ```
 
-```{r fig.width=10}
+### Acesso Concedido
+
+```{r fig.height=8}
 plot_correlacao_negativas_e_recursos(count_recursos, "Acesso Concedido") +
   geom_label(
     data = . %>% distinct(correl, instancia),
@@ -254,7 +317,9 @@ plot_correlacao_negativas_e_recursos(count_recursos, "Acesso Concedido") +
   )
 ```
 
-```{r fig.width=10}
+### Acesso Concedido
+
+```{r fig.height=8}
 plot_correlacao_negativas_e_recursos(count_recursos, 
                                      "Acesso Parcialmente Concedido") +
   geom_label(
@@ -270,3 +335,64 @@ plot_correlacao_negativas_e_recursos(count_recursos,
     fontface = "bold"
   )
 ```
+
+### Recursos e tipo de resposta para instâncias recursais
+
+```{r fig.height=8, fig.width=10}
+my_lbl <- function(x) scales::percent(x, accuracy = 1, decimal.mark = ",")
+names(cores_tipo_resposta) <- names(cores_tipo_resposta) %>% str_wrap(15)
+
+recursos_painel %>% 
+  filter(instancia != "Pedido de Revisão", tipo_resposta != "Acolhimento") %>% 
+  mutate(
+    tipo_resposta = str_wrap(tipo_resposta, 15),
+    tipo_resposta = ordered(tipo_resposta, levels = names(cores_tipo_resposta)),
+    instancia = ordered(instancia, names(cores_instancia))
+  ) %>% 
+  group_by(id_pedido) %>%
+  arrange(id_pedido, instancia) %>% 
+  mutate(ord = 1:n()) %>% 
+  ungroup() %>% 
+  select(id_pedido,
+         instancia,
+         data_registro_recurso = data_registro, 
+         tipo_resposta,
+         ord) %>% 
+  count(ano = year(data_registro_recurso), instancia, tipo_resposta,
+        name = "n_recursos_ano_instancia_e_tipo_resposta") %>%
+  complete(ano, 
+           nesting(instancia, tipo_resposta), 
+           fill = list(n_recursos_ano_instancia_e_tipo_resposta = 0)) %>% 
+  add_count(ano, instancia,
+            wt = n_recursos_ano_instancia_e_tipo_resposta,
+            name = "n_recursos_ano_instancia") %>% 
+  #filter(instancia == "Primeira Instância") %>% 
+  mutate(per = n_recursos_ano_instancia_e_tipo_resposta / n_recursos_ano_instancia) %>% 
+  ggplot(aes(
+    x = ano,
+    y = per,
+    fill = tipo_resposta
+  )) +
+  geom_hline(yintercept = .5, lty = "dashed", color = "gray60") +
+  geom_col(position = "dodge", color = "gray25") +
+  geom_text(
+    data = . %>% filter(ano == 2021, instancia == "Primeira Instância"),
+    aes(label = my_lbl(per)),
+    color = "gray20", fontface = "bold", size = 2.5, nudge_y = .05, nudge_x = 0.01
+  ) +
+  scale_x_continuous(breaks = 2012:2021, labels = glue("'{12:21}")) +
+  scale_fill_manual(values = cores_tipo_resposta, guide = "none") +
+  scale_color_manual(values = cores_tipo_resposta) +
+  scale_y_percent(breaks = seq(0, 1, .25)) +
+  facet_grid(instancia ~ tipo_resposta) +
+  labs(x = "Ano",
+       y = "% de recursos",
+       fill = "Tipo de resposta", 
+       title = "Tipo de resposta dada ao recurso",
+       subtitle = "Como % do total de recursos em cada instância, por ano") +
+  theme_minimal() +
+  theme(strip.text = element_text(face = "bold"),
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = "gray95", color = "transparent"))
+```
+
