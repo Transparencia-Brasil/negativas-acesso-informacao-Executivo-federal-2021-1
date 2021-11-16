@@ -98,7 +98,7 @@ orgaos_count_decisao <- pedidos_painel %>%
   select(id_pedido:n_mes, n_mes_decisao, n_mes_orgao, n_mes_decisao_orgao)
 
 wafflechart_acesso_negado <- function(df, x, 
-  titulo = "Maiores % de negativas de acesso por ano") {
+  titulo = "Maiores taxas de acessos negados registrada em um ano, por órgão") {
   
   df %>%
     filter(str_detect(orgao, x), decisao == "Acesso Negado") %>% 
@@ -145,9 +145,7 @@ wafflechart_acesso_negado <- function(df, x,
     labs(
       title = titulo,
       subtitle = glue(
-        "Proporção de pedidos negados em relação ao\n",
-        "total de pedidos recebidos pelas pastas ministeriais\n",
-        "Valor máximo registrado no ano de referência"
+        "Valor máximo registrado no ano de referência (% ao total de pedidos recebidos)"
       ),
       x = NULL,
       y = NULL,
@@ -178,7 +176,7 @@ cultura <- c(
 cultura <- glue("^({cultura})\\s|Museu")
 
 meio_ambiente <- c(
-  "MMA ",
+  "MMA",
   "FUNAI",
   "ICMBio",
   "IBAMA",
@@ -258,7 +256,7 @@ pedidos_painel %>% distinct(orgao) %>%
 
 ### Pastas ministeriais
 
-```{r fig.width=8, fig.height=13}
+```{r fig.width=9, fig.height=12}
 orgaos_count_decisao %>% 
   mutate(orgao = str_wrap(orgao, 40)) %>% 
   wafflechart_acesso_negado(ministerio)
@@ -266,7 +264,7 @@ orgaos_count_decisao %>%
 
 ### Órgãos militares
 
-```{r}
+```{r fig.height=4}
 orgaos_count_decisao %>%
   wafflechart_acesso_negado(militares)
 ```
