@@ -39,9 +39,7 @@ library(tidytext)
 
 ```{r set-options}
 set.seed(1014)
-
 knitr::knit_hooks$set(inline = function(x) prettyNum(x, big.mark = ".", decimal.mark = ","))
-
 options(
   digits = 1,
   scipen = 999,
@@ -49,10 +47,8 @@ options(
   knitr.kable.NA = "",
   radian.auto_match = FALSE
 )
-
 Sys.setenv(LANGUAGE = "pt-br")
 Sys.setlocale("LC_TIME", "pt_BR")
-
 # helper
 `%notin%` <- function(x, y) !(x %in% y)
 ```
@@ -66,19 +62,14 @@ pedidos_clean <- "dados/load/rds/pedidos-clean.rds" %>%
   here() %>% 
   readRDS() %>% 
   rename(orgao = orgaodestinatario)
-
 pedidos_cgu <- pedidos_cgu %>% 
   filter(decisao %notin% c(
     "Pergunta Duplicada/Repetida",
     "Não se trata de solicitação de informação"
   ))
-
-
-
 ped_controversos_lgpd <- "dados/load/rds/pedidos-controversos-lgpd.rds" %>%
   here() %>%
   readRDS()
-
 rec_controversos_lgpd <- "dados/load/rds/recursos-controversos-lgpd.rds" %>%
   here() %>%
   readRDS()
@@ -127,12 +118,10 @@ cores_interacao  <- c(
   "Pedido" = cores_aep[["laranja"]],
   "Resposta" = cores_aep[["rosa"]]
 )
-
 cores_interacao1  <- c(
   "Recurso" = cores_aep[["laranja"]],
   "Resposta recurso" = cores_aep[["rosa"]]
 )
-
 instancias_lvs_new <- c(
   "Pedido de acesso a informação via",
   "Recurso: primeira Instância",
@@ -141,7 +130,6 @@ instancias_lvs_new <- c(
   "Recurso: CMRI",
   "Pedido de Revisão"
 ) %>% fct_reorder(1:6)
-
 instancias_lvs_tx <- c(
   "Pedido de acesso a informação via",
   "Primeira Instância",
@@ -150,7 +138,6 @@ instancias_lvs_tx <- c(
   "CMRI",
   "Pedido de Revisão"
 )
-
 ped_controversos_lgpd %>%
   filter(year(data_resposta) >= 2019) %>% 
   transmute(ano = year(data_resposta),
@@ -178,7 +165,6 @@ ped_controversos_lgpd %>%
     title = "Menções à LGPD detectada nos conteúdos dos\npedidos de acesso a informação"
   ) +
   theme(panel.grid.major.x = element_blank())
-
 rec_controversos_lgpd %>%
   count(ano = year(data_resposta), controversos_lgpd_recurso, instancia, controversos_lgpd_resposta_recurso) %>%
   filter(controversos_lgpd_recurso & controversos_lgpd_resposta_recurso) %>%
@@ -223,17 +209,14 @@ controv <- pedidos_cgu %>%
     )) %>%
   select(id_pedido, data_resposta, orgao, decisao, assunto_pedido, id_solicitante) %>% 
   inner_join(ped_controversos_lgpd) 
-
 aux <- cores_decisao %>% 
   enframe() %>% 
   mutate(name = str_wrap(name, 25)) %>% 
   deframe()
-
 aux2 <- cores_decisao3 %>% 
   enframe() %>% 
   mutate(name = str_wrap(name, 25)) %>%
   deframe()
-
 controv %>%  
   count(ano = year(data_resposta), tipo, decisao, name = "n_ano") %>% 
   mutate(decisao = str_wrap(decisao, 25)) %>% 
@@ -318,9 +301,7 @@ controv2 <- pedidos_cgu %>%
   add_count(ano, orgao, wt = n_ano_orgao_decisao_lgpd, name = "n_ano_orgao") %>% 
   add_count(orgao, wt = n_ano_orgao, name = "n_orgao_total") %>% 
   arrange(orgao, ano, decisao, controverso_id) 
-
 my_lbl <- function(x) scales::percent(x, .1, decimal.mark = ",")
-
 controv2 %>%
   filter(str_detect(orgao, "^MCIDADANIA|^INCRA|^CNPQ|^ME|^IMBEL")) %>% 
   mutate(decisao = str_replace_all(decisao, "\n", " ")) %>% 
@@ -350,16 +331,13 @@ controv2 %>%
 ## Word count para órgãos que mais utilizaram a LGPD nas respostas
 
 ```{r fig.height=50, fig.width=8}
-
 t <- pedidos_cgu %>%
   select(id_pedido, data_registro, detalhamento_solicitacao, resposta, orgao, decisao) %>% 
   inner_join(ped_controversos_lgpd) %>%
   mutate(sigla = str_extract(orgao, "^[:upper:]*-?\\/?[:upper:]+([:lower:]{2})?(?= )|^CEITEC\\/S\\.A|UFCAT$"))
-
 o <- t %>%
   count(orgao, sigla, name = "n_manifestacao", sort = T) %>% 
   slice_max(n = 10, order_by = n_manifestacao)
-
 clean_strings <- function(x) {
   x %>% 
     str_replace_all(" \\w ", " ") %>% 
@@ -376,7 +354,6 @@ clean_strings <- function(x) {
     str_replace_all("saber|sobre", " ") %>% 
     str_squish()
 }
-
 p1 <- t %>% 
   #filter(str_detect(orgaodestinatario, "^CGU")) %>% 
   filter(orgao %in% o$orgao) %>%
@@ -400,7 +377,6 @@ p1 <- t %>%
     axis.text.y = element_text(size = 12),
     axis.text.x = element_text(size = 9)
   )
-
 p2 <- t %>% 
   #filter(str_detect(orgaodestinatario, "^CGU")) %>% 
   filter(orgao %in% o$orgao) %>%
@@ -424,9 +400,7 @@ p2 <- t %>%
     axis.text.y = element_text(size = 12),
     axis.text.x = element_text(size = 9)
   )
-
 p1 + p2 + plot_annotation(
   title = "Termos frequêntes nas solicitações ocasionaram em menções\na LGPD na resposta"
 )
 ```
-

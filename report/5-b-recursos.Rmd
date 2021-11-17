@@ -168,11 +168,6 @@ count_recursos_total %>%
   scale_fill_manual(
     values = c(cores_tb[["azul"]], cores_aep[["rosa"]]),
     labels = c("Não houve recurso", "Houve recurso*"),
-    name = "% do total de pedidos", guide = "none"
-  ) +
-  scale_fill_manual(
-    values = c(cores_tb[["azul"]], cores_aep[["rosa"]]),
-    labels = c("Não houve recurso", "Houve recurso*"),
     name = "% do total de pedidos"
   ) +
   scale_x_continuous(breaks = 2012:2021) + 
@@ -447,7 +442,7 @@ recursos_painel %>%
   theme_minimal() +
   theme(strip.text = element_text(face = "bold"),
         panel.grid.minor = element_blank(),
-        panel.background = element_rect(fill = "gray95"))
+        panel.background = element_rect(fill = "gray95", color = "transparent"))
 ```
 
 ## Motivo da abertura do recurso

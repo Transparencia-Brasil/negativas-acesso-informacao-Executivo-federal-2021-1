@@ -27,5 +27,5 @@ recursos_clean <- "dados/load/rds/recursos-cgu.rds" %>%
   )
 
 #' salva
-saveRDS(pedidos_clean, here("dados/load/rds/pedidos_clean.rds"))
-saveRDS(recursos_clean, here("dados/load/rds/recursos_clean.rds"))
+saveRDS(pedidos_clean, here("dados/load/rds/pedidos-clean.rds"))
+saveRDS(recursos_clean, here("dados/load/rds/recursos-clean.rds"))
