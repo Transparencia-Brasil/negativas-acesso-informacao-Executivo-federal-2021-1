@@ -58,59 +58,13 @@ Sys.setlocale("LC_TIME", "pt_BR")
 ```
 
 ```{r color-settings}
-# aplica identidade visual da TB/AeP:
-cores_aep <- c(
-  laranja = "#F9A521",
-  rosa = "#D81755",
-  cinza = "#969696",
-  marrom = "#B27D5C"
-)
-
-cores_tb <- c(
-  laranja = "#F6A323",
-  cinza_escuro = "#1d1d1b",
-  cinza_claro = "#6f7171",
-  cinza_quase_branco = "#ececec",
-  azul = "#41ACBD"
-)
-
-cores_decisao <- c(
-  "Acesso Concedido" = cores_tb[["azul"]],
-  "Não se trata de solicitação de informação" = cores_aep[["marrom"]],
-  "Acesso Negado" = cores_aep[["rosa"]],
-  "Acesso Parcialmente Concedido" = cores_aep[["laranja"]],
-  "Pergunta Duplicada/Repetida" = cores_aep[["cinza"]],
-  "Órgão não tem competência para responder sobre o assunto" = cores_tb[["cinza_escuro"]],
-  "Informação Inexistente" = cores_tb[["cinza_quase_branco"]]
-  )
-
-cores_decisao2 <- cores_decisao
-cores_decisao2[["Informação Inexistente"]] <- "gray20"
-
-cores_decisao3 <- c("black", "gray90", "gray20", "gray80", "gray20")
-names(cores_decisao3) <- names(cores_decisao)[-c(5, 2)] 
-
-cores_lai <- tibble(
-  c1 = c("Não se trata de solicitação de informação",
-         "Pergunta Duplicada/Repetida",
-         "Pedidos de acesso a informação via LAI"
-         ) %>% str_wrap(25),
-  c2 = c("#F9A521", "#969696", "#D81755")
-) %>% deframe()
+source(here("src/0-paleta-de-cores.R"), encoding = "UTF-8")
 ```
 
 ```{r}
-instancias_recursais <- c(
-  "Primeira Instância",
-  "Segunda Instância",
-  "Terceira Instância",
-  "CGU",
-  "CMRI",
-  "Pedido de Revisão",
-  "Não houve recurso"
-)
-
-pedidos_cgu <- readRDS(here("dados/load/rds/pedidos-clean.rds")) %>%
+pedidos_clean <- "dados/load/rds/pedidos-clean.rds" %>% 
+  here() %>% 
+  readRDS() %>% 
   rename(orgao = orgaodestinatario)
 
 pedidos_cgu <- pedidos_cgu %>% 
@@ -118,6 +72,8 @@ pedidos_cgu <- pedidos_cgu %>%
     "Pergunta Duplicada/Repetida",
     "Não se trata de solicitação de informação"
   ))
+
+
 
 ped_controversos_lgpd <- "dados/load/rds/pedidos-controversos-lgpd.rds" %>%
   here() %>%
@@ -132,6 +88,13 @@ rec_controversos_lgpd <- "dados/load/rds/recursos-controversos-lgpd.rds" %>%
 result <- ped_controversos_lgpd %>% count(controversos_lgpd_pedido, controversos_lgpd_resposta)
 result
 ```
+
+```{r}
+pedidos_clean %>% 
+  filter(str_detect(detalhamento_solicitacao, "lgpd")) %>% 
+  slice(1) %>% glimpse()
+```
+
 
 ```{r}
 ped_controversos_lgpd %>%

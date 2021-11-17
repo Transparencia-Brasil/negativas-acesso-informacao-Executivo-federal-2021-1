@@ -8,8 +8,6 @@ recursos <- readRDS(here("dados/load/rds/recursos-clean.rds"))
 
 # termos controversos ----------------------------------------------------------
 
-regex_lgpd <- 'lei geral de proteção de dados|lei de protecao de dados pessoais|13\\.?709|lgpd'
-
 pedidos_controversos_lgpd <- pedidos %>% 
   rename(resposta_pedido = resposta) %>% 
   mutate(controversos_lgpd_resposta = str_detect(resposta_pedido, regex_lgpd),
