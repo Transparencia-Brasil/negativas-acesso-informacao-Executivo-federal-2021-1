@@ -15,39 +15,6 @@ recursos_cgu <- readRDS(here("dados/load/rds/recursos-cgu.rds"))
 
 library(tidytext)
 
-#' stopwords do pacote `tm`
-stopwords_tm <- tibble(
-  word = limpando_texto(tm::stopwords("pt")),
-  lexicon = "tm"
-)
-
-#' stopwords adicionais
-stopwords_lai <- tibble(
-  word = c(
-    "prezada",
-    "prezado",
-    "prezados",
-    "prezadas",
-    "senhor",
-    "senhora",
-    "ser",
-    "atenciosamente",
-    "ainda",
-    "desde",
-    "br",
-    "n",
-    "sr",
-    "sra",
-    "i",
-    "ii",
-    "iii",
-    "iv"
-  ),
-  lexicon = "lai"
-)
-
-#' base de stopword completa
-stopwords <- bind_rows(stopwords_tm, stopwords_lai)
 
 #' pedidos tokenizados
 tidy_pedidos <- pedidos_clean %>% 

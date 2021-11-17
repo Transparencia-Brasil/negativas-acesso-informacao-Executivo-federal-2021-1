@@ -94,7 +94,8 @@ stopwords_lai <- tibble(
     "i",
     "ii",
     "iii",
-    "iv"
+    "iv",
+    "sobre"
   ),
   lexicon = "lai"
 )
