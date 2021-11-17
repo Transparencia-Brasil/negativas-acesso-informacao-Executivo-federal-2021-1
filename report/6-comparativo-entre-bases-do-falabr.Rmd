@@ -34,44 +34,15 @@ library(lubridate)
 
 ```{r}
 # aplica identidade visual da TB/AeP:
-cores_aep <- c(
-  laranja = "#F9A521",
-  rosa = "#D81755",
-  cinza = "#969696",
-  marrom = "#B27D5C"
+source(here("src/0-paleta-de-cores.R"), encoding = "UTF-8")
+
+theme_set(theme_minimal())
+
+theme_update(
+  panel.grid.minor = element_blank(),
+  panel.background = element_rect(fill = cores_tb[["cinza_quase_branco"]],
+                                  color = "transparent")
 )
-
-cores_tb <- c(
-  laranja = "#F6A323",
-  cinza_escuro = "#1d1d1b",
-  cinza_claro = "#6f7171",
-  cinza_quase_branco = "#ececec",
-  azul = "#41ACBD"
-)
-
-cores_decisao <- c(
-  "Acesso Concedido" = cores_tb[["azul"]],
-  "Não se trata de solicitação de informação" = cores_aep[["marrom"]],
-  "Acesso Negado" = cores_aep[["rosa"]],
-  "Acesso Parcialmente Concedido" = cores_aep[["laranja"]],
-  "Pergunta Duplicada/Repetida" = cores_aep[["cinza"]],
-  "Órgão não tem competência para responder sobre o assunto" = cores_tb[["cinza_escuro"]],
-  "Informação Inexistente" = cores_tb[["cinza_quase_branco"]]
-  )
-
-cores_decisao2 <- cores_decisao
-cores_decisao2[["Informação Inexistente"]] <- "gray20"
-
-cores_decisao3 <- c("black", "gray90", "gray20", "gray80", "gray20")
-names(cores_decisao3) <- names(cores_decisao)[-c(5, 2)] 
-
-cores_lai <- tibble(
-  c1 = c("Não se trata de solicitação de informação",
-         "Pergunta Duplicada/Repetida",
-         "Pedidos de acesso a informação via LAI"
-         ) %>% str_wrap(25),
-  c2 = c("#F9A521", "#969696", "#D81755")
-) %>% deframe()
 ```
 
 ## Quais são as bases de dados disponilizadas no Portal FalaBR?
@@ -89,7 +60,7 @@ Existe uma defasagem entre a base do [painel CGU](https://falabr.cgu.gov.br/publ
 > Qual o motivo dessa diferença entre as duas bases?
 
 ```{r}
-pedidos_painel <- "dados/load/rds/base_cgu.rds" %>%
+pedidos_painel <- "dados/load/rds/base-cgu.rds" %>%
   here() %>%
   readRDS() %>%
   pluck("pedidos") %>%
@@ -117,7 +88,10 @@ painel <- pedidos_painel %>%
     ) ~ "Pedidos de acesso a informação via LAI",
     TRUE ~ decisao
   ) %>% str_wrap(25)) %>% 
-  count(data_registro, is_pedido_de_informacao, name = "qt", base = "Base de dados do painel da CGU")
+  count(data_registro,
+        is_pedido_de_informacao,
+        name = "qt",
+        base = "Base de dados extraída do Fala.br")
 
 cgu <- pedidos_cgu %>% 
   mutate(is_pedido_de_informacao = case_when(
@@ -127,23 +101,46 @@ cgu <- pedidos_cgu %>%
     ) ~ "Pedidos de acesso a informação via LAI",
     TRUE ~ decisao
   ) %>% str_wrap(25)) %>% 
-  count(data_registro, is_pedido_de_informacao, name = "qt", base = "Base de dados com\ntextos de pedidos e respostas")
+  count(data_registro,
+        is_pedido_de_informacao,
+        name = "qt",
+        base = "Base de dados extraída da\nBusca de Pedidos e Respostas")
 
+# bind_rows(painel, cgu) %>% 
+#   filter(is_pedido_de_informacao == "Pedidos de acesso a\ninformação via LAI") %>% 
+#   ggplot(aes(x = data_registro, y = qt, color = base)) +
+#   geom_line(size = 1)  +
+#   geom_vline(xintercept = seq(ymd('2012-01-01'), ymd('2022-01-01'), by = 'year'), lty = 3) +
+#   theme_minimal() +
+#   labs(
+#     title = "Comparação entre as duas bases de dados disponíveis no FalaBR",
+#     caption = "Painel CGU: https://falabr.cgu.gov.br/publico/DownloadDados/DownloadDadosLai.aspx\nBase com tetos de pedidos: http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx",
+#     x = "Mês do registro",
+#     y = "Quantidade de manifestações",
+#     color = NULL
+#   ) +
+#   theme(legend.position = "top")
+```
+
+```{r}
 bind_rows(painel, cgu) %>% 
   filter(is_pedido_de_informacao == "Pedidos de acesso a\ninformação via LAI") %>% 
   ggplot(aes(x = data_registro, y = qt, color = base)) +
   geom_line(size = 1)  +
-  geom_vline(xintercept = seq(ymd('2012-01-01'), ymd('2022-01-01'), by = 'year'), lty = 3) +
-  theme_minimal() +
+  geom_vline(xintercept = seq(ymd('2012-01-01'), ymd('2022-01-01'),
+                              by = 'year'), lty = 3) +
+  scale_color_manual(values = c(cores_aep[["rosa"]], cores_tb[["azul"]])) +
+  scale_x_date(date_breaks = "year", date_labels = "%Y") +
   labs(
     title = "Comparação entre as duas bases de dados disponíveis no FalaBR",
-    caption = "Painel CGU: https://falabr.cgu.gov.br/publico/DownloadDados/DownloadDadosLai.aspx\nBase com tetos de pedidos: http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx",
     x = "Mês do registro",
     y = "Quantidade de manifestações",
     color = NULL
   ) +
-  theme(legend.position = "top")
+  theme(legend.position = "top",
+        legend.justification = "left")
 ```
+
 
 ### Dados da Caixa Econômica Federal
 
@@ -159,7 +156,7 @@ painel <- pedidos_painel %>%
   ) %>% str_wrap(25)) %>% 
   count(data_registro, is_pedido_de_informacao,
         name = "qt", 
-        base = "Base de dados do painel da CGU")
+        base = "Base de dados extraída do Fala.br")
 
 cgu <- "dados/load/rds/pedidos-cgu.rds" %>% 
   here() %>% 
@@ -175,7 +172,7 @@ cgu <- "dados/load/rds/pedidos-cgu.rds" %>%
   ) %>% str_wrap(25)) %>% 
   count(data_registro, is_pedido_de_informacao, 
         name = "qt",
-        base = "Base de dados com\ntextos de pedidos e respostas")
+        base = "Base de dados extraída da\nBusca de Pedidos e Respostas")
 ```
 
 Os dados da Caixa Econômica Federal também não estão disponibilizados por completo na base [com pedidos e respostas completas](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx)
@@ -215,6 +212,25 @@ bind_rows(painel, cgu) %>%
   theme(legend.position = "top")
 ```
 
+```{r}
+bind_rows(painel, cgu) %>% 
+  filter(is_pedido_de_informacao == "Pedidos de acesso a\ninformação via LAI") %>% 
+  ggplot(aes(x = data_registro, y = qt, color = base)) +
+  geom_line(size = 1)  +
+  geom_vline(xintercept = seq(ymd('2012-01-01'), ymd('2022-01-01'),
+                              by = 'year'), lty = 3) +
+  scale_color_manual(values = c(cores_aep[["rosa"]], cores_tb[["azul"]])) +
+  scale_x_date(date_breaks = "year", date_labels = "%Y") +
+  labs(
+    title = "Comparação entre as duas bases de dados disponíveis no FalaBR",
+    x = "Mês do registro",
+    y = "Quantidade de manifestações",
+    color = NULL
+  ) +
+  theme(legend.position = "top",
+        legend.justification = "left")
+```
+
 Comparação por decisão que caracteriza pedido de informação LAI
 
 ```{r}
@@ -247,7 +263,7 @@ pedidos_painel %>%
     title = "CEF - Caixa Econômica Federal - PAINEL CGU",
     subtitle = "Quantidades por mês"
   ) +
-  theme_minimal() +
+  #theme_minimal() +
   theme(legend.position = "top",
         legend.justification = "left",
         legend.text = element_text(margin = margin(2, 5, 2, 5, "pt")))
@@ -284,7 +300,7 @@ pedidos_cgu %>%
     title = "CEF - Caixa Econômica Federal - BASE ANONIMIZADA",
     subtitle = "Quantidades por mês"
   ) +
-  theme_minimal() +
+  #theme_minimal() +
   theme(legend.position = "top",
         legend.justification = "left",
         legend.text = element_text(margin = margin(2, 5, 2, 5, "pt")))
@@ -349,7 +365,7 @@ p %>%
     date_labels = "%b",
     expand = c(0, 0)
   ) +
-  theme_minimal() +
+  #theme_minimal() +
   theme(
     legend.position = "top",
     axis.ticks.x = element_line(), 
@@ -394,7 +410,7 @@ p %>%
   ggplot(aes(x = data_registro, y = qt, fill = reorder(base, qt))) +
   geom_col() +
   facet_wrap(~ reorder(decisao, -qt), scales = 'free', ncol = 1) +
-  theme_minimal() +
+  #theme_minimal() +
   theme(
     legend.position = "top",
     axis.ticks.x = element_line(), 
