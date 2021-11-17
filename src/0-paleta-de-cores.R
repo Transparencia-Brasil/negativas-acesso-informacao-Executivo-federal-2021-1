@@ -64,3 +64,12 @@ names(cores_tipo_resposta) <- c(
   "Não conhecimento",
   "Indeferido"
 )
+
+cores_motivo_recurso <- c(
+  "Informação incompleta" = cores_aep[["rosa"]],
+  "Informação recebida não corresponde à\nsolicitada" = cores_aep[["cinza"]],
+  "Outros" = cores_tb[["azul"]],
+  "Justificativa para o sigilo\ninsatisfatória/não informada" = cores_aep[["marrom"]],
+  "Ausência de justificativa legal para\nclassificação" = "gray30",
+  "Resposta não foi dada no prazo" = "darkred"
+)

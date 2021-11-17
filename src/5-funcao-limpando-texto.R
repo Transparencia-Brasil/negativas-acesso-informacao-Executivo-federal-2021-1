@@ -62,7 +62,6 @@ limpando_texto <- function(x) {
     str_replace_all("(?<=\\d) +(?=\\d)", "") %>% 
     str_replace_all("lai( lai)*", "LAI") %>% 
     str_replace_all("lgpd( lgpd)*", "LGPD") %>% 
-    str_extract("[a-z']+") %>% 
     str_replace_all("^processos$", "processo") %>% 
     str_replace_all("^informacoes$", "informacao") %>% 
     str_replace_all("urlurlurl", "URL")

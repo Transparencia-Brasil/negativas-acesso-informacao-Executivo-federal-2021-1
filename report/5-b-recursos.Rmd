@@ -59,6 +59,13 @@ Sys.setenv(LANGUAGE = "pt-br")
 
 ```{r color-settings}
 source(here("src/0-paleta-de-cores.R"),encoding = "UTF-8")
+
+theme_set(theme_minimal())
+
+theme_update(
+  panel.grid.minor = element_blank(),
+  panel.background = element_rect(fill = "gray97", color = "transparent")
+)
 ```
 
 ```{r}
@@ -165,11 +172,6 @@ count_recursos_total %>%
   ggplot(aes(x = ano, y = n_ano_houve_recurso,
              fill = reorder(houve_recurso, -per))) +
   geom_col() +
-  scale_fill_manual(
-    values = c(cores_tb[["azul"]], cores_aep[["rosa"]]),
-    labels = c("Não houve recurso", "Houve recurso*"),
-    name = "% do total de pedidos", guide = "none"
-  ) +
   scale_fill_manual(
     values = c(cores_tb[["azul"]], cores_aep[["rosa"]]),
     labels = c("Não houve recurso", "Houve recurso*"),
@@ -444,10 +446,9 @@ recursos_painel %>%
        fill = "Tipo de resposta", 
        title = "Tipo de resposta dada ao recurso",
        subtitle = "Como % do total de recursos em cada instância, por ano") +
-  theme_minimal() +
   theme(strip.text = element_text(face = "bold"),
         panel.grid.minor = element_blank(),
-        panel.background = element_rect(fill = "gray95"))
+        panel.background = element_rect(fill = "gray95", color = "transparent"))
 ```
 
 ## Motivo da abertura do recurso
@@ -469,7 +470,6 @@ recursos_painel %>%
   geom_col(position = "dodge") +
   scale_fill_manual(values = cores_tipo_resposta) +
   hrbrthemes::scale_x_percent() +
-  theme_minimal() +
   labs(
     title = "Motivo da abertura do recurso",
     y = NULL,
@@ -514,7 +514,6 @@ top_6_motivos %>%
   geom_col(position = "dodge") +
   scale_fill_manual(values = cores_tipo_resposta) +
   hrbrthemes::scale_x_percent() +
-  theme_minimal() +
   labs(
     title = "Motivo da abertura do recurso",
     y = NULL,
@@ -531,16 +530,22 @@ recursos_painel %>%
   add_count(ano, wt = n_resposta_motivo, name = "n_recursos") %>%
   add_count(ano, tipo_recurso, wt = n_resposta_motivo, name = "n_motivo") %>% 
   filter(tipo_recurso %in% unique(top_6_motivos$tipo_recurso)) %>% 
-  ggplot(aes(x = ano, y = n_resposta_motivo / n_recursos)) + 
-  geom_line(size = 1, color = "gray30") +
-  geom_point(color = cores_aep[["rosa"]]) +
-  facet_wrap(~ reorder(tipo_recurso, -n_resposta_motivo)) +
+  ggplot(aes(x = ano, y = n_resposta_motivo / n_recursos, 
+             color = reorder(tipo_recurso, -n_resposta_motivo),
+             group = reorder(tipo_recurso, -n_resposta_motivo))) + 
+  geom_line(size = 1) +
+  geom_point() +
+  scale_color_manual(values = cores_motivo_recurso) +
+  #facet_wrap(~ reorder(tipo_recurso, -n_resposta_motivo)) +
   hrbrthemes::scale_y_percent() +
-  theme_minimal() +
   labs(
     title = "Motivo da abertura do recurso - ano",
+    color = "Motivo:",
     x = NULL,
     y = "Total de recursos (%)"
+  ) +
+  theme(
+    legend.text = element_text(size = 8, margin = margin(5, 0, 5, 0, "pt"))
   )
 ```
 

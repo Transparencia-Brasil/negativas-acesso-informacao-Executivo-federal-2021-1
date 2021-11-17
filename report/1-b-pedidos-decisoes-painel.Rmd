@@ -1,6 +1,6 @@
 ---
-title: 'Negativas de acesso a informação no governo Federal'
-subtitle: 'Órgãos e entidades do poder Executivo - janeiro de 2015 até 2021'
+title: 'Pedidos de acesso a informação via LAI no FalaBr'
+subtitle: 'Órgãos e entidades do poder Executivo - 2015 até 2021'
 output:
   html_document: 
     code_folding: hide
@@ -58,50 +58,20 @@ Sys.setlocale("LC_TIME", "pt_BR")
 
 ```{r color-settings}
 # aplica identidade visual da TB/AeP:
-cores_aep <- c(
-  laranja = "#F9A521",
-  rosa = "#D81755",
-  cinza = "#969696",
-  marrom = "#B27D5C"
+source(here("src/0-paleta-de-cores.R"), encoding = "UTF-8")
+
+theme_set(theme_minimal())
+
+theme_update(
+  panel.grid.minor = element_blank(),
+  panel.background = element_rect(fill = "gray97", color = "transparent")
 )
-
-cores_tb <- c(
-  laranja = "#F6A323",
-  cinza_escuro = "#1d1d1b",
-  cinza_claro = "#6f7171",
-  cinza_quase_branco = "#ececec",
-  azul = "#41ACBD"
-)
-
-cores_decisao <- c(
-  "Acesso Concedido" = cores_tb[["azul"]],
-  "Não se trata de solicitação de informação" = cores_aep[["marrom"]],
-  "Acesso Negado" = cores_aep[["rosa"]],
-  "Acesso Parcialmente Concedido" = cores_aep[["laranja"]],
-  "Pergunta Duplicada/Repetida" = cores_aep[["cinza"]],
-  "Órgão não tem competência para responder sobre o assunto" = cores_tb[["cinza_escuro"]],
-  "Informação Inexistente" = cores_tb[["cinza_quase_branco"]]
-)
-
-cores_decisao2 <- cores_decisao
-cores_decisao2[["Informação Inexistente"]] <- "gray20"
-
-cores_decisao3 <- c("black", "gray90", "gray20", "gray80", "gray20")
-names(cores_decisao3) <- names(cores_decisao)[-c(5, 2)] 
-
-cores_lai <- tibble(
-  c1 = c("Não se trata de solicitação de informação",
-         "Pergunta Duplicada/Repetida",
-         "Pedidos de acesso a informação via LAI"
-         ) %>% str_wrap(25),
-  c2 = c("#F9A521", "#969696", "#D81755")
-) %>% deframe()
 ```
 
 Análises de pedidos de acesso a informação via LAI considerando a decisão de acesso.
 
 ```{r}
-pedidos_painel <- "dados/load/rds/base_cgu.rds" %>%
+pedidos_painel <- "dados/load/rds/base-cgu.rds" %>%
   here() %>%
   readRDS() %>%
   pluck("pedidos") %>%
@@ -187,7 +157,6 @@ plot_lai_a_partir_de <- function(ano_inicio) {
     )) +
     geom_vline(xintercept = data_sequencia, lty = 3) +
     geom_line(size = 1.5) +
-    theme_minimal() +
     geom_label(
       aes(label = qt),
       color = "black",
@@ -344,7 +313,6 @@ p1 <- decisao %>%
     date_labels = "%b",
     expand = c(0, 0)
   ) +
-  theme_minimal() +
   theme(
     legend.position = "top",
     axis.ticks.x = element_line(), 
@@ -412,6 +380,179 @@ rm(p1)
 rm(p2)
 rm(comb)
 ```
+
+```{r}
+# tipo respostas mais comuns histórico -----------------------------------------
+decisao <- pedidos_painel %>% 
+  filter(decisao %notin% c(
+    "Pergunta Duplicada/Repetida",
+    "Não se trata de solicitação de informação"
+  )) %>% 
+  count(data_registro, decisao, name = "qt") %>%
+  mutate(decisao = fct_reorder(decisao, qt, .desc = T))
+
+my_lbl <- function(x) scales::percent(x, accuracy = .1, decimal.mark = ",")
+
+# plot esquerdo ----------------------------------------------------------------
+p <- function(decisao_escolhida) {
+  
+  p1 <- decisao %>%
+    add_count(data_registro, wt = qt, name = "qt_mes") %>%
+    filter(decisao %in% c(
+      "Acesso Concedido",
+      "Acesso Negado",
+      "Acesso Parcialmente Concedido"
+    )) %>% 
+    mutate(per = qt / qt_mes) %>% 
+    filter(decisao == decisao_escolhida) %>% 
+    ggplot(aes(x = data_registro, y = per)) +
+    geom_rect(
+      data = . %>%
+        filter(data_registro == min(data_registro) | data_registro == max(data_registro)),
+      aes(
+        xmin = min(data_registro),
+        xmax = max(data_registro),
+        ymin = -Inf,
+        ymax = Inf,
+        fill = decisao
+      ),
+      alpha = .2,
+      show.legend = F
+    ) +
+    geom_line(show.legend = F, size = .7) +
+    geom_vline(xintercept = seq(ymd('2012-01-01'), ymd('2021-01-01'), by = 'year'), lty = 3) +
+    geom_text(
+      data = . %>% filter(month(data_registro) == 2),
+      aes(label = year(data_registro), 
+          y = if_else(decisao == "Acesso Concedido", .65, .005)),
+      size = 3.5,
+      vjust = .1,
+      hjust = .1,
+      color = "gray20"
+    ) +
+    ggforce::geom_mark_circle(
+      aes(filter = data_registro == ymd("2018-10-01") & decisao == "Acesso Concedido",
+          label = "Máximas anuais"),
+      color = "gray20",
+      fill = NA,
+      radius = unit(1, "mm"),
+      expand = 0,
+      con.cap = 0,
+      label.fill = alpha(cores_decisao[["Acesso Concedido"]], .5),
+      label.fontsize = 10,
+      label.fontface = "plain",
+      label.buffer = unit(10, "mm"),
+      label.margin = margin(1, 0, 1, 0, "mm")
+    ) +
+    ggrepel::geom_label_repel(
+      data = . %>%
+        group_by(decisao, year(data_registro)) %>%
+        arrange(year(data_registro), decisao, -per) %>%
+        filter(row_number() == 1) %>%
+        ungroup(),
+      aes(label = my_lbl(per), fill = decisao, color = decisao),
+      min.segment.length = 0.01,
+      size = 3.5,
+      label.padding = unit(0.1, "lines"),
+      label.size = NA,
+      show.legend = F
+    ) +
+    geom_point(
+      data = . %>%
+        group_by(decisao, year(data_registro)) %>%
+        arrange(year(data_registro), decisao, -per) %>%
+        filter(row_number() == 1) %>%
+        ungroup()
+    ) +
+    scale_fill_manual(values = cores_decisao) +
+    scale_color_manual(values = cores_decisao3) +
+    scale_y_percent(expand = c(0.2, 0)) +
+    scale_x_date(
+      breaks = scales::date_breaks("6 months"),
+      date_labels = "%b",
+      expand = c(0, 0)
+    ) +
+    theme_minimal() +
+    theme(
+      legend.position = "top",
+      axis.ticks.x = element_line(), 
+      legend.text = element_text(size = 8),
+      axis.text.x = element_text(size = 11, vjust = 2.5, hjust = .5),
+      axis.text.y = element_text(size = 11),
+      panel.grid.minor = element_blank(),
+      strip.text = element_text(size = 14, angle = 0, hjust = 0)
+    ) +
+    labs(
+      x = NULL,
+      y = NULL,
+      title = "Pedidos de acesso a informação conforme decisão sobre o acesso",
+      subtitle = "Como % do total de pedidos de acesso a informação via LAI - mês a mês",
+      color = NULL,
+      fill = NULL
+    ) +
+    facet_wrap(~ reorder(decisao, -qt), scales = 'free', ncol = 1)
+    
+  p2 <- decisao %>%
+    count(ano = year(data_registro), decisao, wt = qt, name = "qt") %>%
+    add_count(ano, wt = qt, name = "qt_ano") %>%
+    mutate(perc_ano = qt / qt_ano) %>%
+    filter(decisao %in% c(
+      "Acesso Concedido",
+      "Acesso Negado",
+      "Acesso Parcialmente Concedido"
+    )) %>% 
+    filter(decisao == decisao_escolhida) %>% 
+    ggplot(aes(x = perc_ano, y = reorder(ano, -ano), fill = decisao, color = decisao)) +
+    facet_wrap(~ reorder(decisao, -perc_ano), ncol = 1, scales = "free_x") +
+    geom_col(aes(x = 1), alpha = .3, fill = "gray97", color = "white") +
+    geom_col(alpha = .6) +
+    geom_text(aes(label = my_lbl(perc_ano)), 
+               size = 4, fontface = "bold", hjust = -.05, check_overlap = T) +
+    theme_minimal() +
+    scale_fill_manual(values = cores_decisao) +
+    scale_color_manual(values = cores_decisao2) +
+    scale_x_percent(breaks = c(0,.3, .6, .9)) +
+    scale_y_discrete(labels = glue("{2021:2012}"), expand = c(0, 0)) +
+    #coord_flip() +
+    theme(
+      plot.subtitle = element_text(),
+      panel.grid.major.y = element_line(color = "white"),
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor.y = element_line(color = "white"),
+      panel.background = element_blank(),
+      strip.text = element_text(color = "transparent"),
+      axis.text.x = element_text(size = 10, vjust = 2),
+      axis.text.y = element_text(size = 10, hjust = 3)
+    ) +
+    labs(
+      x = NULL,
+      y = NULL,
+      fill = NULL,
+      subtitle = "% respostas por ano*"
+    )
+  
+  comb <- p1 + p2 & theme(legend.position = "none") 
+  
+  comb <- comb +
+    plot_layout(ncol = 2, widths = c(2.8, 1.2))
+  
+  return(comb)
+  
+}
+```
+
+```{r fig.width=10}
+p("Acesso Concedido") 
+```
+
+```{r fig.width=10}
+p("Acesso Negado") 
+```
+
+```{r fig.width=10}
+p("Acesso Parcialmente Concedido") 
+```
+
 
 ## Negativas de acesso a informação
 
