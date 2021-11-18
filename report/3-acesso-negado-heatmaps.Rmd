@@ -83,9 +83,9 @@ pedidos_painel <- "dados/load/rds/base-cgu.rds" %>%
          data_registro < ymd("2021-10-01"), 
          esfera == "Federal")
 
-pedidos_cgu <- readRDS(here("dados/load/rds/pedidos-clean.rds")) %>%
-  #filter(data_resposta <= periodo_final, data_resposta <= periodo_final) %>% 
-  rename(orgao = orgaodestinatario)
+pedidos_clean <- "dados/load/rds/pedidos-clean.rds" %>% 
+  here() %>% 
+  readRDS()
 ```
 
 ```{r}
@@ -260,6 +260,193 @@ pedidos_painel %>% distinct(orgao) %>%
 orgaos_count_decisao %>% 
   mutate(orgao = str_wrap(orgao, 40)) %>% 
   wafflechart_acesso_negado(ministerio)
+```
+
+#### Presidência da República
+
+```{r}
+orgaos_count_decisao %>% 
+  filter(orgao == "PR – Presidência da República") %>% 
+    mutate(
+      taxa_interna = n_mes_decisao_orgao / n_mes_orgao,
+      taxa_global = n_mes_decisao_orgao / n_mes_decisao
+    ) %>% 
+    group_by(orgao, decisao) %>% 
+    summarise(
+      n_ano = sum(n_mes_decisao_orgao),
+      tx_interna_media = mean(taxa_interna, na.rm = T),
+      tx_global_media = mean(taxa_global, na.rm = T),
+      .groups = "drop"
+    )
+  
+orgao <- pedidos_painel %>%
+  filter(orgao == "PR – Presidência da República") %>% 
+  select(id_pedido, data_registro, ano, orgao, 
+         assunto_pedido, decisao, especificacao_decisao,
+         sub_assunto_pedido) %>% 
+  mutate(especificacao_decisao = replace_na(especificacao_decisao, "Não especificada"))
+```
+
+A presidência da República negou pedidos de acesso a informação somente em 2012 e 2018.
+
+```{r}
+#' paleta de cores
+pal <- c(
+  cores_tb[["azul"]],
+  cores_aep[["cinza"]],
+  cores_aep[["laranja"]],
+  cores_aep[["rosa"]]
+)
+
+orgao %>% 
+  filter(decisao == "Acesso Negado") %>%
+  count(ano, assunto_pedido, decisao, especificacao_decisao) %>% 
+  add_count(assunto_pedido, wt = n) %>% 
+  mutate(
+    assunto_pedido = if_else(
+      assunto_pedido == "Outros em Segurança e Ordem Pública",
+      str_glue("{assunto_pedido}\n(negado em {2018})"),
+      str_glue("{assunto_pedido}\n(negado em {2012})")
+    )) %>% 
+  ggplot(aes(fill = reorder(especificacao_decisao, n),
+             y = n,
+             x = reorder(assunto_pedido, nn))) +
+  scale_fill_manual(values = pal) +
+  labs(
+    title = "Acessos negados por assunto e especificação da decisão",
+    subtitle = str_glue("{unique(orgao$orgao)}"),
+    x = "Assunto do pedido",
+    y = "Quantidade",
+    fill = "Especificação da decisão"
+  ) +
+  geom_col() +
+  coord_flip()
+```
+
+#### GSI - PR 
+
+```{r}
+orgaos_count_decisao %>% 
+  filter(str_detect(orgao, "^GSI")) %>% 
+    mutate(
+      taxa_interna = n_mes_decisao_orgao / n_mes_orgao,
+      taxa_global = n_mes_decisao_orgao / n_mes_decisao
+    ) %>% 
+    group_by(orgao, decisao) %>% 
+    summarise(
+      n_ano = sum(n_mes_decisao_orgao),
+      tx_interna_media = mean(taxa_interna, na.rm = T),
+      tx_global_media = mean(taxa_global, na.rm = T),
+      .groups = "drop"
+    )
+  
+orgao <- pedidos_painel %>%
+  filter(str_detect(orgao, "^GSI")) %>% 
+  select(id_pedido, data_registro, ano, orgao, 
+         assunto_pedido, decisao, especificacao_decisao,
+         sub_assunto_pedido) %>% 
+  mutate(especificacao_decisao = replace_na(especificacao_decisao, "Não especificada"))
+
+orgao %>% 
+  filter(decisao == "Acesso Negado") %>%
+  count(ano, assunto_pedido, decisao, especificacao_decisao) %>% 
+  add_count(assunto_pedido, wt = n) %>% 
+  ggplot(aes(fill = reorder(especificacao_decisao, n),
+             y = n,
+             x = reorder(assunto_pedido, nn))) +
+  #scale_fill_manual(values = pal) +
+  labs(
+    title = "Acessos negados por assunto e especificação da decisão",
+    subtitle = str_glue("{unique(orgao$orgao)}"),
+    x = "Assunto do pedido",
+    y = "Quantidade",
+    fill = "Especificação da decisão"
+  ) +
+  geom_col() +
+  coord_flip()
+```
+
+##### Acessos negados para todos assuntos e todas especificações de decisão:
+
+```{r}
+library(tidytext)
+library(wordcloud)
+source(here("src/5-funcao-limpando-texto.R"))
+
+pedidos_clean %>% 
+  filter(id_pedido %in% orgao$id_pedido) %>% 
+  inner_join(orgao) %>% 
+  filter(decisao == "Acesso Negado") %>%
+  select(-detalhamento_solicitacao_clean, -resumo_solicitacao_clean) %>% 
+  unnest_tokens(word, resposta_clean) %>% 
+  anti_join(stopwords) %>% 
+  mutate(word = str_extract(word, "[a-z']+"),
+         word = if_else(word == "urltag", "link-url", word)) %>% 
+  filter(word != "ddmmyyyy",
+         word != "nup",
+         word != "www",
+         !str_count(word) %in% c(1, 2)) %>% 
+  count(word, sort = T) %>% 
+  with(wordcloud(word, n, max.words = 200, scale = c(7, 1), 
+          random.order = F,
+          random.color = F,
+          colors = c(cores_tb[["cinza_claro"]],
+                     cores_aep[2],
+                     cores_tb[5], 
+                     cores_aep[["laranja"]])))
+```
+
+##### Acesso negado em assunto "Outros em Defesa Nacional"
+
+```{r}
+wordcloud_gsi <- function(df, assunto) {
+  
+  pedidos_clean %>% 
+    filter(id_pedido %in% orgao$id_pedido) %>% 
+    inner_join(orgao) %>% 
+    filter(decisao == "Acesso Negado") %>%
+    filter(assunto_pedido == assunto) %>% 
+    select(-detalhamento_solicitacao_clean, -resumo_solicitacao_clean) %>% 
+    unnest_tokens(word, resposta_clean) %>% 
+    anti_join(stopwords) %>% 
+    mutate(word = str_extract(word, "[a-z']+"),
+           word = if_else(word == "urltag", "link-url", word)) %>% 
+    filter(word != "ddmmyyyy",
+           word != "nup",
+           word != "www",
+           !str_count(word) %in% c(1, 2)) %>% 
+    count(word, sort = T) %>% 
+    with(wordcloud(word, n, max.words = 200, scale = c(7, 1), 
+            random.order = F,
+            random.color = F,
+            colors = c(cores_tb[["cinza_claro"]],
+                       cores_aep[2],
+                       cores_tb[5], 
+                       cores_aep[["laranja"]])))
+
+}
+```
+
+```{r}
+wordcloud_gsi(pedidos_clean, "Outros em Defesa Nacional")
+```
+
+##### GSI - Acesso negado em assunto "Acesso à informação"
+
+```{r}
+wordcloud_gsi(pedidos_clean, "Acesso à informação")
+```
+
+##### GSI - Acesso negado em assunto "Direitos Humanos"
+
+```{r}
+wordcloud_gsi(pedidos_clean, "Direitos Humanos")
+```
+
+##### GSI - Acesso negado em assunto "Direitos Humanos"
+
+```{r}
+wordcloud_gsi(pedidos_clean, "Transparência")
 ```
 
 ### Órgãos militares
