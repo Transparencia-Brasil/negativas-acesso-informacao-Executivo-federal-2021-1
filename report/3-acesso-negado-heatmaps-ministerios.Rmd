@@ -372,33 +372,6 @@ orgao %>%
   coord_flip()
 ```
 
-##### Acessos negados para todos assuntos e todas especificações de decisão:
-
-```{r}
-pedidos_clean %>% 
-  filter(id_pedido %in% orgao$id_pedido) %>% 
-  inner_join(orgao) %>% 
-  filter(decisao == "Acesso Negado") %>%
-  select(-detalhamento_solicitacao_clean, -resumo_solicitacao_clean) %>% 
-  unnest_tokens(word, resposta_clean) %>% 
-  anti_join(stopwords) %>% 
-  mutate(word = str_extract(word, "[a-z']+"),
-         word = if_else(word == "urltag", "link-url", word)) %>% 
-  filter(word != "ddmmyyyy",
-         word != "nup",
-         word != "www",
-         word != "quot",
-         !str_count(word) %in% c(1, 2)) %>% 
-  count(word, sort = T) %>% 
-  with(wordcloud(word, n, max.words = 200, scale = c(7, 1), 
-          random.order = F,
-          random.color = F,
-          colors = c(cores_tb[["cinza_claro"]],
-                     cores_aep[2],
-                     cores_tb[5], 
-                     cores_aep[["laranja"]])))
-```
-
 ##### Acesso negado em assunto "Outros em Defesa Nacional"
 
 ```{r}
