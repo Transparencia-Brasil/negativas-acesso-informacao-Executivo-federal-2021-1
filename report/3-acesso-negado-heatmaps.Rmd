@@ -1,6 +1,6 @@
 ---
 title: 'Negativas de acesso a informação no governo Federal'
-subtitle: 'Órgãos e entidades do poder Executivo - janeiro de 2015 até 2021'
+subtitle: 'Órgãos e entidades do poder Executivo'
 output:
   html_document: 
     code_folding: hide
@@ -34,6 +34,8 @@ library(patchwork)
 library(kableExtra)
 library(hrbrthemes)
 library(tidytext)
+library(wordcloud)
+source(here("src/5-funcao-limpando-texto.R"))
 ```
 
 ```{r set-options}
@@ -64,7 +66,11 @@ source(here("src/0-paleta-de-cores.R"), encoding = "utf-8")
 
 Análises de pedidos de acesso a informação via LAI considerando a decisão de acesso.
 
+### Atenção!
+
 > **Atenção**: Eu fiz os agrupamentos para visualizar os órgãos de maneira mais focada, mas os critérios apenas intuitivos e baseados nos próprios nomes dos órgãos.
+
+> **Atenção**: a análise das núvens de palavras contemplam somente o período de 2015 até 2021, pois antes disso a base de dados não é disponibilizada pela CGU
 
 ```{r}
 pedidos_painel <- "dados/load/rds/base-cgu.rds" %>%
@@ -262,86 +268,56 @@ orgaos_count_decisao %>%
   wafflechart_acesso_negado(ministerio)
 ```
 
-#### Presidência da República
+### Órgãos militares
+
+```{r fig.height=4}
+orgaos_count_decisao %>%
+  wafflechart_acesso_negado(militares)
+```
+
+### Órgãos sócioambientais
 
 ```{r}
 orgaos_count_decisao %>% 
-  filter(orgao == "PR – Presidência da República") %>% 
-    mutate(
-      taxa_interna = n_mes_decisao_orgao / n_mes_orgao,
-      taxa_global = n_mes_decisao_orgao / n_mes_decisao
-    ) %>% 
-    group_by(orgao, decisao) %>% 
-    summarise(
-      n_ano = sum(n_mes_decisao_orgao),
-      tx_interna_media = mean(taxa_interna, na.rm = T),
-      tx_global_media = mean(taxa_global, na.rm = T),
-      .groups = "drop"
-    )
-  
+  mutate(orgao = str_wrap(orgao, 40)) %>% 
+  wafflechart_acesso_negado(meio_ambiente)
+```
+
+#### INPA - Instituto de Nacional de Pesquisas da Amazônia
+
+```{r}
 orgao <- pedidos_painel %>%
-  filter(orgao == "PR – Presidência da República") %>% 
+  filter(str_detect(orgao, "^INPA")) %>% 
   select(id_pedido, data_registro, ano, orgao, 
          assunto_pedido, decisao, especificacao_decisao,
          sub_assunto_pedido) %>% 
   mutate(especificacao_decisao = replace_na(especificacao_decisao, "Não especificada"))
-```
-
-A presidência da República negou pedidos de acesso a informação somente em 2012 e 2018.
-
-```{r}
-#' paleta de cores
-pal <- c(
-  cores_tb[["azul"]],
-  cores_aep[["cinza"]],
-  cores_aep[["laranja"]],
-  cores_aep[["rosa"]]
-)
 
 orgao %>% 
   filter(decisao == "Acesso Negado") %>%
   count(ano, assunto_pedido, decisao, especificacao_decisao) %>% 
   add_count(assunto_pedido, wt = n) %>% 
-  mutate(
-    assunto_pedido = if_else(
-      assunto_pedido == "Outros em Segurança e Ordem Pública",
-      str_glue("{assunto_pedido}\n(negado em {2018})"),
-      str_glue("{assunto_pedido}\n(negado em {2012})")
-    )) %>% 
-  ggplot(aes(fill = reorder(especificacao_decisao, n),
+  #filter(nn > 10) %>% 
+  ggplot(aes(x = reorder(especificacao_decisao, n),
              y = n,
-             x = reorder(assunto_pedido, nn))) +
-  scale_fill_manual(values = pal) +
+             fill = reorder(assunto_pedido, nn))) +
+  #scale_fill_manual(values = pal) +
   labs(
     title = "Acessos negados por assunto e especificação da decisão",
     subtitle = str_glue("{unique(orgao$orgao)}"),
-    x = "Assunto do pedido",
+    fill = "Assunto do pedido",
     y = "Quantidade",
-    fill = "Especificação da decisão"
+    x = "Especificação da decisão"
   ) +
   geom_col() +
   coord_flip()
 ```
 
-#### GSI - PR 
+#### INPE MCT - Instituto de Nacional de Pesquisas Espaciais
 
 ```{r}
-orgaos_count_decisao %>% 
-  filter(str_detect(orgao, "^GSI")) %>% 
-    mutate(
-      taxa_interna = n_mes_decisao_orgao / n_mes_orgao,
-      taxa_global = n_mes_decisao_orgao / n_mes_decisao
-    ) %>% 
-    group_by(orgao, decisao) %>% 
-    summarise(
-      n_ano = sum(n_mes_decisao_orgao),
-      tx_interna_media = mean(taxa_interna, na.rm = T),
-      tx_global_media = mean(taxa_global, na.rm = T),
-      .groups = "drop"
-    )
-  
 orgao <- pedidos_painel %>%
-  filter(str_detect(orgao, "^GSI")) %>% 
+  filter(str_detect(orgao, "^INPE-MCT")) %>% 
   select(id_pedido, data_registro, ano, orgao, 
          assunto_pedido, decisao, especificacao_decisao,
          sub_assunto_pedido) %>% 
@@ -351,9 +327,10 @@ orgao %>%
   filter(decisao == "Acesso Negado") %>%
   count(ano, assunto_pedido, decisao, especificacao_decisao) %>% 
   add_count(assunto_pedido, wt = n) %>% 
-  ggplot(aes(fill = reorder(especificacao_decisao, n),
+  #filter(nn > 10) %>% 
+  ggplot(aes(x = reorder(especificacao_decisao, n),
              y = n,
-             x = reorder(assunto_pedido, nn))) +
+             fill = reorder(assunto_pedido, nn))) +
   #scale_fill_manual(values = pal) +
   labs(
     title = "Acessos negados por assunto e especificação da decisão",
@@ -366,151 +343,41 @@ orgao %>%
   coord_flip()
 ```
 
-##### Acessos negados para todos assuntos e todas especificações de decisão:
-
-```{r}
-library(tidytext)
-library(wordcloud)
-source(here("src/5-funcao-limpando-texto.R"))
-
-pedidos_clean %>% 
-  filter(id_pedido %in% orgao$id_pedido) %>% 
-  inner_join(orgao) %>% 
-  filter(decisao == "Acesso Negado") %>%
-  select(-detalhamento_solicitacao_clean, -resumo_solicitacao_clean) %>% 
-  unnest_tokens(word, resposta_clean) %>% 
-  anti_join(stopwords) %>% 
-  mutate(word = str_extract(word, "[a-z']+"),
-         word = if_else(word == "urltag", "link-url", word)) %>% 
-  filter(word != "ddmmyyyy",
-         word != "nup",
-         word != "www",
-         word != "quot",
-         !str_count(word) %in% c(1, 2)) %>% 
-  count(word, sort = T) %>% 
-  with(wordcloud(word, n, max.words = 200, scale = c(7, 1), 
-          random.order = F,
-          random.color = F,
-          colors = c(cores_tb[["cinza_claro"]],
-                     cores_aep[2],
-                     cores_tb[5], 
-                     cores_aep[["laranja"]])))
-```
-
-##### Acesso negado em assunto "Outros em Defesa Nacional"
-
-```{r}
-wordcloud_gsi <- function(df, assunto, campo) {
-  
-  cor <- if_else(campo == "resposta_clean", cores_aep[2], cores_tb[5])
-  titulo <- if_else(
-    campo == "resposta_clean", 
-    "Frequência de palavras na resposta",
-    "Frequência de palavras no pedido"
-  )
-  
-  layout(matrix(c(1, 2), nrow = 2), heights = c(.5, 6))
-  par(mar = rep(0, 4))
-  plot.new()
-  text(x = 0.5, y = 0.5, titulo)
-  
-  pedidos_clean %>% 
-    filter(id_pedido %in% orgao$id_pedido) %>% 
-    inner_join(orgao) %>% 
-    filter(decisao == "Acesso Negado") %>%
-    filter(assunto_pedido == assunto) %>% 
-    select(
-      "id_pedido",
-      all_of(campo),
-      "data_registro",
-      "ano",
-      "orgao",
-      "assunto_pedido",
-      "decisao",
-      "especificacao_decisao",
-      "sub_assunto_pedido"
-    ) %>% 
-    unnest_tokens(word, campo) %>% 
-    anti_join(stopwords) %>% 
-    mutate(word = str_extract(word, "[a-z']+"),
-           word = if_else(word == "urltag", "link-url", word)) %>% 
-    filter(word != "ddmmyyyy",
-           word != "art",
-           word != "nup",
-           word != "www",
-           word != "quot",
-           !str_count(word) %in% c(1, 2)) %>% 
-    count(word, sort = T) %>% 
-    with(wordcloud(word, n, max.words = 150, scale = c(3, .5), 
-            random.order = F,
-            random.color = F,
-             main = title,
-            colors = c(cores_tb[["cinza_claro"]],
-                       cores_aep[["laranja"]],
-                       cor)))
-
-}
-```
-
-<style>
-  .col2 {
-    columns: 2 200px;         /* number of columns and width in pixels*/
-    -webkit-columns: 2 200px; /* chrome, safari */
-    -moz-columns: 2 200px;    /* firefox */
-  }
-  .col3 {
-    columns: 3 100px;
-    -webkit-columns: 3 100px;
-    -moz-columns: 3 100px;
-  }
-</style>
-
-<div class="col2">
-```{r fig.height=6, fig.width=5}
-wordcloud_gsi(pedidos_clean, "Outros em Defesa Nacional", "detalhamento_solicitacao_clean")
-wordcloud_gsi(pedidos_clean, "Outros em Defesa Nacional", "resposta_clean")
-```
-</div>
-
-##### GSI - Acesso negado em assunto "Acesso à informação"
-
-<div class="col2">
-```{r fig.height=6, fig.width=5}
-wordcloud_gsi(pedidos_clean, "Acesso à informação", "detalhamento_solicitacao_clean")
-wordcloud_gsi(pedidos_clean, "Acesso à informação", "resposta_clean")
-```
-</div>
-
-##### GSI - Acesso negado em assunto "Direitos Humanos"
-
-<div class="col2">
-```{r fig.height=6, fig.width=5}
-wordcloud_gsi(pedidos_clean, "Direitos Humanos", "detalhamento_solicitacao_clean")
-wordcloud_gsi(pedidos_clean, "Direitos Humanos", "resposta_clean")
-```
-</div>
-
-##### GSI - Acesso negado em assunto "Direitos Humanos"
-
-<div class="col2">
-```{r fig.height=6, fig.width=5}
-wordcloud_gsi(pedidos_clean, "Transparência", "detalhamento_solicitacao_clean")
-wordcloud_gsi(pedidos_clean, "Transparência", "resposta_clean")
-```
-</div>
-
-### Órgãos militares
-
-```{r fig.height=4}
-orgaos_count_decisao %>%
-  wafflechart_acesso_negado(militares)
-```
-
-#### CEX - Comando do Exército
+#### FCP - Fundação Culturao Palmares
 
 ```{r}
 orgao <- pedidos_painel %>%
-  filter(str_detect(orgao, "^CEX")) %>% 
+  filter(str_detect(orgao, "^FCP")) %>% 
+  select(id_pedido, data_registro, ano, orgao, 
+         assunto_pedido, decisao, especificacao_decisao,
+         sub_assunto_pedido) %>% 
+  mutate(especificacao_decisao = replace_na(especificacao_decisao, "Não especificada"))
+
+orgao %>% 
+  filter(decisao == "Acesso Negado") %>%
+  count(ano, assunto_pedido, decisao, especificacao_decisao) %>% 
+  add_count(assunto_pedido, wt = n) %>% 
+  #filter(nn > 10) %>% 
+  ggplot(aes(x = reorder(especificacao_decisao, n),
+             y = n,
+             fill = reorder(assunto_pedido, nn))) +
+  #scale_fill_manual(values = pal) +
+  labs(
+    title = "Acessos negados por assunto e especificação da decisão",
+    subtitle = str_glue("{unique(orgao$orgao)}"),
+    x = "Assunto do pedido",
+    y = "Quantidade",
+    fill = "Especificação da decisão"
+  ) +
+  geom_col() +
+  coord_flip()
+```
+
+#### FUNAI - Fundação Nacional do Índio
+
+```{r}
+orgao <- pedidos_painel %>%
+  filter(str_detect(orgao, "^FUNAI")) %>% 
   select(id_pedido, data_registro, ano, orgao, 
          assunto_pedido, decisao, especificacao_decisao,
          sub_assunto_pedido) %>% 
@@ -537,7 +404,7 @@ orgao %>%
 ```
 
 ```{r}
-wordcloud_cex <- function(df, decisao_pedido, campo) {
+wordcloud_funai <- function(df, decisao_pedido, campo) {
   
   cor <- if_else(campo == "resposta_clean", cores_aep[2], cores_tb[5])
   titulo <- if_else(
@@ -576,6 +443,8 @@ wordcloud_cex <- function(df, decisao_pedido, campo) {
            word != "nup",
            word != "www",
            word != "quot",
+           word != "sob",
+           word != "vem",
            !str_count(word) %in% c(1, 2)) %>% 
     count(word, sort = T) %>% 
     with(wordcloud(word, n, max.words = 150, scale = c(3, .5), 
@@ -589,39 +458,135 @@ wordcloud_cex <- function(df, decisao_pedido, campo) {
 }
 ```
 
-##### CEX - Negativa justificada como "Pedido desproporcional ou desarrazoado"
+##### FUNAI Negativa justificada como "Processo decisório em curso"
 
 <div class="col2">
 ```{r fig.height=6, fig.width=5}
-wordcloud_cex(pedidos_clean, "Pedido desproporcional ou desarrazoado", "detalhamento_solicitacao_clean")
-wordcloud_cex(pedidos_clean, "Pedido desproporcional ou desarrazoado", "resposta_clean")
+wordcloud_funai(pedidos_clean, "Processo decisório em curso", "detalhamento_solicitacao_clean")
+wordcloud_funai(pedidos_clean, "Processo decisório em curso", "resposta_clean")
 ```
 </div>
 
-##### CEX - Negativa justificada como "Dados pessoais"
+##### FUNAI Negativa justificada como "Dados pessoais"
 
 <div class="col2">
 ```{r fig.height=6, fig.width=5}
-wordcloud_cex(pedidos_clean, "Dados pessoais", "detalhamento_solicitacao_clean")
-wordcloud_cex(pedidos_clean, "Dados pessoais", "resposta_clean")
+wordcloud_funai(pedidos_clean, "Dados pessoais", "detalhamento_solicitacao_clean")
+wordcloud_funai(pedidos_clean, "Dados pessoais", "resposta_clean")
 ```
 </div>
 
-##### CEX - Negativa justificada como "Pedido genérico"
+##### FUNAI Negativa justificada como "Pedido genérico"
 
 <div class="col2">
 ```{r fig.height=6, fig.width=5}
-wordcloud_cex(pedidos_clean, "Pedido genérico", "detalhamento_solicitacao_clean")
-wordcloud_cex(pedidos_clean, "Pedido genérico", "resposta_clean")
+wordcloud_funai(pedidos_clean, "Pedido genérico", "detalhamento_solicitacao_clean")
+wordcloud_funai(pedidos_clean, "Pedido genérico", "resposta_clean")
 ```
 </div>
 
 
-#### CMAR - Comando da Marinha
+#### INCRA - Instituto Nacional de Colonização e Reforma Agrária
 
 ```{r}
 orgao <- pedidos_painel %>%
-  filter(str_detect(orgao, "^CMAR")) %>% 
+  filter(str_detect(orgao, "^INCRA")) %>% 
+  select(id_pedido, data_registro, ano, orgao, 
+         assunto_pedido, decisao, especificacao_decisao,
+         sub_assunto_pedido) %>% 
+  mutate(especificacao_decisao = replace_na(especificacao_decisao, "Não especificada"))
+
+orgao %>% 
+  filter(decisao == "Acesso Negado") %>%
+  count(ano, assunto_pedido, decisao, especificacao_decisao) %>% 
+  add_count(assunto_pedido, wt = n) %>% 
+  filter(nn > 10) %>% 
+  ggplot(aes(x = reorder(especificacao_decisao, n),
+             y = n,
+             fill = reorder(assunto_pedido, nn))) +
+  #scale_fill_manual(values = pal) +
+  labs(
+    title = "Acessos negados por assunto e especificação da decisão",
+    subtitle = str_glue("{unique(orgao$orgao)}"),
+    fill = "Assunto do pedido",
+    y = "Quantidade",
+    x = "Especificação da decisão"
+  ) +
+  geom_col() +
+  coord_flip()
+
+wordcloud_mma <- function(df, campo) {
+  
+  cor <- if_else(campo == "resposta_clean", cores_aep[2], cores_tb[5])
+  titulo <- if_else(
+    campo == "resposta_clean", 
+    "Frequência de palavras na resposta",
+    "Frequência de palavras no pedido"
+  )
+  
+  layout(matrix(c(1, 2), nrow = 2), heights = c(.5, 6))
+  par(mar = rep(0, 4))
+  plot.new()
+  text(x = 0.5, y = 0.5, titulo)
+  
+  pedidos_clean %>% 
+    filter(id_pedido %in% orgao$id_pedido) %>% 
+    inner_join(orgao) %>% 
+    filter(decisao == "Acesso Negado") %>%
+    select(
+      "id_pedido",
+      all_of(campo),
+      "data_registro",
+      "ano",
+      "orgao",
+      "assunto_pedido",
+      "decisao",
+      "especificacao_decisao",
+      "sub_assunto_pedido"
+    ) %>% 
+    unnest_tokens(word, campo) %>% 
+    anti_join(stopwords) %>% 
+    mutate(word = str_extract(word, "[a-z']+"),
+           word = if_else(word == "urltag", "link-url", word)) %>% 
+    filter(word != "ddmmyyyy",
+           word != "art",
+           word != "nup",
+           word != "www",
+           word != "requerida",
+           word != "requerente",
+           # word != "informacao",
+           # word != "informacoes",
+           word != "gov",
+           word != "ora",
+           word != "senhoria",
+           word != "cabe",
+           word != "faca",
+           word != "quot",
+           !str_count(word) %in% c(1, 2)) %>% 
+    count(word, sort = T) %>% 
+    with(wordcloud(word, n, max.words = 150, scale = c(3, .5), 
+            random.order = F,
+            random.color = F,
+             main = title,
+            colors = c(cores_tb[["cinza_claro"]],
+                       cores_aep[["laranja"]],
+                       cor)))
+
+}
+```
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_mma(pedidos_clean, "detalhamento_solicitacao_clean")
+wordcloud_mma(pedidos_clean, "resposta_clean")
+```
+</div>
+
+#### ICMBio - Instituto Chico Mendes de Conservação da Biodiversidade
+
+```{r}
+orgao <- pedidos_painel %>%
+  filter(str_detect(orgao, "^ICMBio")) %>% 
   select(id_pedido, data_registro, ano, orgao, 
          assunto_pedido, decisao, especificacao_decisao,
          sub_assunto_pedido) %>% 
@@ -647,81 +612,18 @@ orgao %>%
   coord_flip()
 ```
 
-##### CMAR - Negativa justificada como "Dados pessoais"
-
 <div class="col2">
 ```{r fig.height=6, fig.width=5}
-wordcloud_cex(pedidos_clean, "Dados pessoais", "detalhamento_solicitacao_clean")
-wordcloud_cex(pedidos_clean, "Dados pessoais", "resposta_clean")
-```
-
-##### CMAR - Negativa justificada como "Pedido incompreensível"
-
-<div class="col2">
-```{r fig.height=6, fig.width=5}
-wordcloud_cex(pedidos_clean, "Pedido incompreensível", "detalhamento_solicitacao_clean")
-wordcloud_cex(pedidos_clean, "Pedido incompreensível", "resposta_clean")
-```
-
-##### CMAR - Negativa justificada como "Pedido genérico"
-
-<div class="col2">
-```{r fig.height=6, fig.width=5}
-wordcloud_cex(pedidos_clean, "Pedido genérico", "detalhamento_solicitacao_clean")
-wordcloud_cex(pedidos_clean, "Pedido genérico", "resposta_clean")
+wordcloud_mma(pedidos_clean, "detalhamento_solicitacao_clean")
+wordcloud_mma(pedidos_clean, "resposta_clean")
 ```
 </div>
 
-##### CMAR - Negativa justificada como "Pedido desproporcional ou desarrazoado"
-
-<div class="col2">
-```{r fig.height=6, fig.width=5}
-wordcloud_cex(pedidos_clean, "Pedido desproporcional ou desarrazoado", "detalhamento_solicitacao_clean")
-wordcloud_cex(pedidos_clean, "Pedido desproporcional ou desarrazoado", "resposta_clean")
-```
-</div>
-
-##### CMAR - Negativa justificada como "Pedido exige tratamento adicional de dados"
-
-<div class="col2">
-```{r fig.height=6, fig.width=5}
-wordcloud_cex(pedidos_clean, "Pedido exige tratamento adicional de dados", "detalhamento_solicitacao_clean")
-wordcloud_cex(pedidos_clean, "Pedido exige tratamento adicional de dados", "resposta_clean")
-```
-</div>
-
-##### CMAR - Negativa justificada como "Informação sigilosa de acordo com legislação específica"
-
-<div class="col2">
-```{r fig.height=6, fig.width=5}
-wordcloud_cex(pedidos_clean, "Informação sigilosa de acordo com legislação específica", "detalhamento_solicitacao_clean")
-wordcloud_cex(pedidos_clean, "Informação sigilosa de acordo com legislação específica", "resposta_clean")
-```
-</div>
-
-##### CMAR - Negativa justificada como "Informação sigilosa classificada conforme a Lei 12.527/2011"
-
-<div class="col2">
-```{r fig.height=6, fig.width=5}
-wordcloud_cex(pedidos_clean, "Informação sigilosa classificada conforme a Lei 12.527/2011", "detalhamento_solicitacao_clean")
-wordcloud_cex(pedidos_clean, "Informação sigilosa classificada conforme a Lei 12.527/2011", "resposta_clean")
-```
-</div>
-
-##### CMAR - Negativa justificada como "Processo decisório em curso"
-
-<div class="col2">
-```{r fig.height=6, fig.width=5}
-wordcloud_cex(pedidos_clean, "Processo decisório em curso", "detalhamento_solicitacao_clean")
-wordcloud_cex(pedidos_clean, "Processo decisório em curso", "resposta_clean")
-```
-</div>
-
-#### COMAER - Comando da Aeronáutica
+#### IBAMA - Instituto Brasileiro de Meio Ambiente e dos Recursos Naturais Renováveis
 
 ```{r}
 orgao <- pedidos_painel %>%
-  filter(str_detect(orgao, "^COMAER")) %>% 
+  filter(str_detect(orgao, "^IBAMA")) %>% 
   select(id_pedido, data_registro, ano, orgao, 
          assunto_pedido, decisao, especificacao_decisao,
          sub_assunto_pedido) %>% 
@@ -739,95 +641,475 @@ orgao %>%
   labs(
     title = "Acessos negados por assunto e especificação da decisão",
     subtitle = str_glue("{unique(orgao$orgao)}"),
-    x = "Assunto do pedido",
+    fill = "Assunto do pedido",
     y = "Quantidade",
-    fill = "Especificação da decisão"
+    x = "Especificação da decisão"
   ) +
   geom_col() +
   coord_flip()
 ```
 
-##### CMAR - Negativa justificada como "Dados pessoais"
-
 <div class="col2">
 ```{r fig.height=6, fig.width=5}
-wordcloud_cex(pedidos_clean, "Dados pessoais", "detalhamento_solicitacao_clean")
-wordcloud_cex(pedidos_clean, "Dados pessoais", "resposta_clean")
-```
-
-##### CMAR - Negativa justificada como "Pedido incompreensível"
-
-<div class="col2">
-```{r fig.height=6, fig.width=5}
-wordcloud_cex(pedidos_clean, "Pedido incompreensível", "detalhamento_solicitacao_clean")
-wordcloud_cex(pedidos_clean, "Pedido incompreensível", "resposta_clean")
-```
-
-##### COMAER - Negativa justificada como "Pedido genérico"
-
-<div class="col2">
-```{r fig.height=6, fig.width=5}
-wordcloud_cex(pedidos_clean, "Pedido genérico", "detalhamento_solicitacao_clean")
-wordcloud_cex(pedidos_clean, "Pedido genérico", "resposta_clean")
+wordcloud_mma(pedidos_clean, "detalhamento_solicitacao_clean")
+wordcloud_mma(pedidos_clean, "resposta_clean")
 ```
 </div>
-
-##### COMAER - Negativa justificada como "Pedido desproporcional ou desarrazoado"
-
-<div class="col2">
-```{r fig.height=6, fig.width=5}
-wordcloud_cex(pedidos_clean, "Pedido desproporcional ou desarrazoado", "detalhamento_solicitacao_clean")
-wordcloud_cex(pedidos_clean, "Pedido desproporcional ou desarrazoado", "resposta_clean")
-```
-</div>
-
-##### COMAER - Negativa justificada como "Pedido exige tratamento adicional de dados"
-
-<div class="col2">
-```{r fig.height=6, fig.width=5}
-wordcloud_cex(pedidos_clean, "Pedido exige tratamento adicional de dados", "detalhamento_solicitacao_clean")
-wordcloud_cex(pedidos_clean, "Pedido exige tratamento adicional de dados", "resposta_clean")
-```
-</div>
-
-##### COMAER - Negativa justificada como "Informação sigilosa de acordo com legislação específica"
-
-<div class="col2">
-```{r fig.height=6, fig.width=5}
-wordcloud_cex(pedidos_clean, "Informação sigilosa de acordo com legislação específica", "detalhamento_solicitacao_clean")
-wordcloud_cex(pedidos_clean, "Informação sigilosa de acordo com legislação específica", "resposta_clean")
-```
-</div>
-
-##### COMAER - Negativa justificada como "Informação sigilosa classificada conforme a Lei 12.527/2011"
-
-<div class="col2">
-```{r fig.height=6, fig.width=5}
-wordcloud_cex(pedidos_clean, "Informação sigilosa classificada conforme a Lei 12.527/2011", "detalhamento_solicitacao_clean")
-wordcloud_cex(pedidos_clean, "Informação sigilosa classificada conforme a Lei 12.527/2011", "resposta_clean")
-```
-</div>
-
-### Órgãos sócioambientais
-
-```{r}
-orgaos_count_decisao %>% 
-  mutate(orgao = str_wrap(orgao, 40)) %>% 
-  wafflechart_acesso_negado(meio_ambiente)
-```
 
 ### Bancos públicos
 
-```{r}
+<div class="col2">
+```{r fig.height=6, fig.width=5}
 orgaos_count_decisao %>% 
   wafflechart_acesso_negado(bancos)
 ```
+</div>
+
+```{r}
+orgao <- pedidos_painel %>%
+  filter(str_detect(orgao, "^BB . Banco do Brasil")) %>% 
+  select(id_pedido, data_registro, ano, orgao, 
+         assunto_pedido, decisao, especificacao_decisao,
+         sub_assunto_pedido) %>% 
+  mutate(especificacao_decisao = replace_na(especificacao_decisao, "Não especificada"))
+
+orgao %>% 
+  filter(decisao == "Acesso Negado") %>%
+  count(ano, assunto_pedido, decisao, especificacao_decisao) %>% 
+  add_count(assunto_pedido, wt = n) %>% 
+  filter(nn > 10) %>% 
+  ggplot(aes(x = reorder(especificacao_decisao, n),
+             y = n,
+             fill = reorder(assunto_pedido, nn))) +
+  #scale_fill_manual(values = pal) +
+  labs(
+    title = "Acessos negados por assunto e especificação da decisão",
+    subtitle = str_glue("{unique(orgao$orgao)}"),
+    fill = "Assunto do pedido",
+    y = "Quantidade",
+    x = "Especificação da decisão"
+  ) +
+  geom_col() +
+  coord_flip()
+```
+
+```{r}
+wordcloud_banco <- function(df, campo, select_ano) {
+  
+  cor <- if_else(campo == "resposta_clean", cores_aep[2], cores_tb[5])
+  titulo <- if_else(
+    campo == "resposta_clean", 
+    "Frequência de palavras na resposta",
+    "Frequência de palavras no pedido"
+  )
+  
+  layout(matrix(c(1, 2), nrow = 2), heights = c(.5, 6))
+  par(mar = rep(0, 4))
+  plot.new()
+  text(x = 0.5, y = 0.5, titulo)
+  
+  pedidos_clean %>% 
+    filter(id_pedido %in% orgao$id_pedido) %>% 
+    inner_join(orgao) %>% 
+    filter(decisao == "Acesso Negado") %>%
+    filter(ano %in% select_ano) %>% 
+    select(
+      "id_pedido",
+      all_of(campo),
+      "data_registro",
+      "ano",
+      "orgao",
+      "assunto_pedido",
+      "decisao",
+      "especificacao_decisao",
+      "sub_assunto_pedido"
+    ) %>% 
+    unnest_tokens(word, campo) %>% 
+    anti_join(stopwords) %>% 
+    mutate(word = str_extract(word, "[a-z']+"),
+           word = if_else(word == "urltag", "link-url", word)) %>% 
+    filter(word != "ddmmyyyy",
+           word != "art",
+           word != "nup",
+           word != "www",
+           word != "requerida",
+           word != "requerente",
+           # word != "informacao",
+           # word != "informacoes",
+           word != "gov",
+           word != "ora",
+           word != "senhoria",
+           word != "cabe",
+           word != "faca",
+           word != "quot",
+           !str_count(word) %in% c(1, 2)) %>% 
+    count(word, sort = T) %>% 
+    with(wordcloud(word, n, max.words = 150, scale = c(3, .5), 
+            random.order = F,
+            random.color = F,
+             main = title,
+            colors = c(cores_tb[["cinza_claro"]],
+                       cores_aep[["laranja"]],
+                       cor)))
+
+}
+```
+
+##### BB - Banco do Brasil 
+
+##### BB - ano de 2016 (negou até 87% dos pedidos)
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_banco(pedidos_clean, "detalhamento_solicitacao_clean", "2016")
+wordcloud_banco(pedidos_clean, "resposta_clean", "2016")
+```
+</div>
+
+##### BB - demais anos
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_banco(pedidos_clean, "detalhamento_solicitacao_clean", 2017:2021)
+wordcloud_banco(pedidos_clean, "resposta_clean", 2017:2021)
+```
+</div>
+
+#### CEF - Caixa Econômica Federal
+
+```{r}
+orgao <- pedidos_painel %>%
+  filter(str_detect(orgao, "^CEF ")) %>% 
+  select(id_pedido, data_registro, ano, orgao, 
+         assunto_pedido, decisao, especificacao_decisao,
+         sub_assunto_pedido) %>% 
+  mutate(especificacao_decisao = replace_na(especificacao_decisao, "Não especificada"))
+
+orgao %>% 
+  filter(decisao == "Acesso Negado") %>%
+  count(ano, assunto_pedido, decisao, especificacao_decisao) %>% 
+  add_count(assunto_pedido, wt = n) %>% 
+  filter(nn > 10) %>% 
+  ggplot(aes(x = reorder(especificacao_decisao, n),
+             y = n,
+             fill = reorder(assunto_pedido, nn))) +
+  #scale_fill_manual(values = pal) +
+  labs(
+    title = "Acessos negados por assunto e especificação da decisão",
+    subtitle = str_glue("{unique(orgao$orgao)}"),
+    fill = "Assunto do pedido",
+    y = "Quantidade",
+    x = "Especificação da decisão"
+  ) +
+  geom_col() +
+  coord_flip()
+```
+
+##### CEF - todo período disponível
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_banco(pedidos_clean, "detalhamento_solicitacao_clean", 2015:2021)
+wordcloud_banco(pedidos_clean, "resposta_clean", 2015:2021)
+```
+</div>
+
+#### BACEN - Banco Central do Brasil
+
+```{r}
+orgao <- pedidos_painel %>%
+  filter(str_detect(orgao, "^BACEN ")) %>% 
+  select(id_pedido, data_registro, ano, orgao, 
+         assunto_pedido, decisao, especificacao_decisao,
+         sub_assunto_pedido) %>% 
+  mutate(especificacao_decisao = replace_na(especificacao_decisao, "Não especificada"))
+
+orgao %>% 
+  filter(decisao == "Acesso Negado") %>%
+  count(ano, assunto_pedido, decisao, especificacao_decisao) %>% 
+  add_count(assunto_pedido, wt = n) %>% 
+  filter(nn > 10) %>% 
+  ggplot(aes(x = reorder(especificacao_decisao, n),
+             y = n,
+             fill = reorder(assunto_pedido, nn))) +
+  #scale_fill_manual(values = pal) +
+  labs(
+    title = "Acessos negados por assunto e especificação da decisão",
+    subtitle = str_glue("{unique(orgao$orgao)}"),
+    fill = "Assunto do pedido",
+    y = "Quantidade",
+    x = "Especificação da decisão"
+  ) +
+  geom_col() +
+  coord_flip()
+```
+
+##### BACEN - todo período disponível
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_banco(pedidos_clean, "detalhamento_solicitacao_clean", 2015:2021)
+wordcloud_banco(pedidos_clean, "resposta_clean", 2015:2021)
+```
+</div>
+
+#### BNDES - Banco Central do Brasil
+
+```{r}
+orgao <- pedidos_painel %>%
+  filter(str_detect(orgao, "^BNDES ")) %>% 
+  select(id_pedido, data_registro, ano, orgao, 
+         assunto_pedido, decisao, especificacao_decisao,
+         sub_assunto_pedido) %>% 
+  mutate(especificacao_decisao = replace_na(especificacao_decisao, "Não especificada"))
+
+orgao %>% 
+  filter(decisao == "Acesso Negado") %>%
+  count(ano, assunto_pedido, decisao, especificacao_decisao) %>% 
+  add_count(assunto_pedido, wt = n) %>% 
+  filter(nn > 10) %>% 
+  ggplot(aes(x = reorder(especificacao_decisao, n),
+             y = n,
+             fill = reorder(assunto_pedido, nn))) +
+  #scale_fill_manual(values = pal) +
+  labs(
+    title = "Acessos negados por assunto e especificação da decisão",
+    subtitle = str_glue("{unique(orgao$orgao)}"),
+    fill = "Assunto do pedido",
+    y = "Quantidade",
+    x = "Especificação da decisão"
+  ) +
+  geom_col() +
+  coord_flip()
+```
+
+##### BNDES - todo período disponível
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_banco(pedidos_clean, "detalhamento_solicitacao_clean", 2015:2021)
+wordcloud_banco(pedidos_clean, "resposta_clean", 2015:2021)
+```
+</div>
 
 ### Ciência, pesquisa e educação
 
 ```{r fig.width=11, fig.height=7}
 orgaos_count_decisao %>% wafflechart_acesso_negado(ciencia)
 ```
+
+#### FINEP - Financiadora de Estudos e Projetos
+
+```{r}
+orgao <- pedidos_painel %>%
+  filter(str_detect(orgao, "^FINEP ")) %>% 
+  select(id_pedido, data_registro, ano, orgao, 
+         assunto_pedido, decisao, especificacao_decisao,
+         sub_assunto_pedido) %>% 
+  mutate(especificacao_decisao = replace_na(especificacao_decisao, "Não especificada"))
+
+orgao %>% 
+  filter(decisao == "Acesso Negado") %>%
+  count(ano, assunto_pedido, decisao, especificacao_decisao) %>% 
+  add_count(assunto_pedido, wt = n) %>% 
+  filter(nn > 10) %>% 
+  ggplot(aes(x = reorder(especificacao_decisao, n),
+             y = n,
+             fill = reorder(assunto_pedido, nn))) +
+  #scale_fill_manual(values = pal) +
+  labs(
+    title = "Acessos negados por assunto e especificação da decisão",
+    subtitle = str_glue("{unique(orgao$orgao)}"),
+    fill = "Assunto do pedido",
+    y = "Quantidade",
+    x = "Especificação da decisão"
+  ) +
+  geom_col() +
+  coord_flip()
+```
+
+##### FINEP - todo período disponível
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_banco(pedidos_clean, "detalhamento_solicitacao_clean", 2015:2021)
+wordcloud_banco(pedidos_clean, "resposta_clean", 2015:2021)
+```
+</div>
+
+##### FINEP - em 2020 (negou 90% dos pedidos)
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_banco(pedidos_clean, "detalhamento_solicitacao_clean", 2020)
+wordcloud_banco(pedidos_clean, "resposta_clean", 2020)
+```
+</div>
+
+#### INEP - Instituto Nacional de Estudos e Pesquisas Educacionais Anísio Teixeira
+
+```{r}
+orgao <- pedidos_painel %>%
+  filter(str_detect(orgao, "^INEP ")) %>% 
+  select(id_pedido, data_registro, ano, orgao, 
+         assunto_pedido, decisao, especificacao_decisao,
+         sub_assunto_pedido) %>% 
+  mutate(especificacao_decisao = replace_na(especificacao_decisao, "Não especificada"))
+
+orgao %>% 
+  filter(decisao == "Acesso Negado") %>%
+  count(ano, assunto_pedido, decisao, especificacao_decisao) %>% 
+  add_count(assunto_pedido, wt = n) %>% 
+  filter(nn > 10) %>% 
+  ggplot(aes(x = reorder(especificacao_decisao, n),
+             y = n,
+             fill = reorder(assunto_pedido, nn))) +
+  #scale_fill_manual(values = pal) +
+  labs(
+    title = "Acessos negados por assunto e especificação da decisão",
+    subtitle = str_glue("{unique(orgao$orgao)}"),
+    fill = "Assunto do pedido",
+    y = "Quantidade",
+    x = "Especificação da decisão"
+  ) +
+  geom_col() +
+  coord_flip()
+```
+
+##### INEP - todo período disponível
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_banco(pedidos_clean, "detalhamento_solicitacao_clean", 2015:2021)
+wordcloud_banco(pedidos_clean, "resposta_clean", 2015:2021)
+```
+</div>
+
+##### FINEP - em 2018 e 2019 (negou aprox. 30% dos pedidos)
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_banco(pedidos_clean, "detalhamento_solicitacao_clean", 2018:2019)
+wordcloud_banco(pedidos_clean, "resposta_clean", 2018:2019)
+```
+</div>
+
+#### CNPQ - Conselho Nacional de Desenvolvimento Científico e Tecnológico
+
+```{r}
+orgao <- pedidos_painel %>%
+  filter(str_detect(orgao, "^CNPQ ")) %>% 
+  select(id_pedido, data_registro, ano, orgao, 
+         assunto_pedido, decisao, especificacao_decisao,
+         sub_assunto_pedido) %>% 
+  mutate(especificacao_decisao = replace_na(especificacao_decisao, "Não especificada"))
+
+orgao %>% 
+  filter(decisao == "Acesso Negado") %>%
+  count(ano, assunto_pedido, decisao, especificacao_decisao) %>% 
+  add_count(assunto_pedido, wt = n) %>% 
+  filter(nn > 10) %>% 
+  ggplot(aes(x = reorder(especificacao_decisao, n),
+             y = n,
+             fill = reorder(assunto_pedido, nn))) +
+  #scale_fill_manual(values = pal) +
+  labs(
+    title = "Acessos negados por assunto e especificação da decisão",
+    subtitle = str_glue("{unique(orgao$orgao)}"),
+    fill = "Assunto do pedido",
+    y = "Quantidade",
+    x = "Especificação da decisão"
+  ) +
+  geom_col() +
+  coord_flip()
+```
+
+##### CNPQ - 2020 e 2021
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_banco(pedidos_clean, "detalhamento_solicitacao_clean", 2020:2021)
+wordcloud_banco(pedidos_clean, "resposta_clean", 2020:2021)
+```
+</div>
+
+#### CAPES - Cordenação de Aperfeiçoamento de Pessoal de Nível Superior
+
+```{r}
+orgao <- pedidos_painel %>%
+  filter(str_detect(orgao, "^CAPES ")) %>% 
+  select(id_pedido, data_registro, ano, orgao, 
+         assunto_pedido, decisao, especificacao_decisao,
+         sub_assunto_pedido) %>% 
+  mutate(especificacao_decisao = replace_na(especificacao_decisao, "Não especificada"))
+
+orgao %>% 
+  filter(decisao == "Acesso Negado") %>%
+  count(ano, assunto_pedido, decisao, especificacao_decisao) %>% 
+  add_count(assunto_pedido, wt = n) %>% 
+  filter(nn > 10) %>% 
+  ggplot(aes(x = reorder(especificacao_decisao, n),
+             y = n,
+             fill = reorder(assunto_pedido, nn))) +
+  #scale_fill_manual(values = pal) +
+  labs(
+    title = "Acessos negados por assunto e especificação da decisão",
+    subtitle = str_glue("{unique(orgao$orgao)}"),
+    fill = "Assunto do pedido",
+    y = "Quantidade",
+    x = "Especificação da decisão"
+  ) +
+  geom_col() +
+  coord_flip()
+```
+
+##### CAPES - 2020 e 2021
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_banco(pedidos_clean, "detalhamento_solicitacao_clean", 2020:2021)
+wordcloud_banco(pedidos_clean, "resposta_clean", 2020:2021)
+```
+</div>
+
+#### IBGE - Fundação Instituto Brasileiro de Geografia e Estatística
+
+```{r}
+orgao <- pedidos_painel %>%
+  filter(str_detect(orgao, "^IBGE ")) %>% 
+  select(id_pedido, data_registro, ano, orgao, 
+         assunto_pedido, decisao, especificacao_decisao,
+         sub_assunto_pedido) %>% 
+  mutate(especificacao_decisao = replace_na(especificacao_decisao, "Não especificada"))
+
+orgao %>% 
+  filter(decisao == "Acesso Negado") %>%
+  count(ano, assunto_pedido, decisao, especificacao_decisao) %>% 
+  add_count(assunto_pedido, wt = n) %>% 
+  filter(nn > 10) %>% 
+  ggplot(aes(x = reorder(especificacao_decisao, n),
+             y = n,
+             fill = reorder(assunto_pedido, nn))) +
+  #scale_fill_manual(values = pal) +
+  labs(
+    title = "Acessos negados por assunto e especificação da decisão",
+    subtitle = str_glue("{unique(orgao$orgao)}"),
+    fill = "Assunto do pedido",
+    y = "Quantidade",
+    x = "Especificação da decisão"
+  ) +
+  geom_col() +
+  coord_flip()
+```
+
+##### IBGE - 2020 e 2021
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_banco(pedidos_clean, "detalhamento_solicitacao_clean", 2020:2021)
+wordcloud_banco(pedidos_clean, "resposta_clean", 2020:2021)
+```
+</div>
 
 ```{r fig.width=18, fig.height=10}
 orgaos_count_decisao %>% wafflechart_acesso_negado(educacao)
@@ -849,15 +1131,92 @@ orgaos_count_decisao %>% wafflechart_acesso_negado(empresa_publica)
 orgaos_count_decisao %>% wafflechart_acesso_negado(cultura)
 ```
 
+#### ANCINE - Agência Nacional do Cinema
+
+```{r}
+orgao <- pedidos_painel %>%
+  filter(str_detect(orgao, "^ANCINE ")) %>% 
+  select(id_pedido, data_registro, ano, orgao, 
+         assunto_pedido, decisao, especificacao_decisao,
+         sub_assunto_pedido) %>% 
+  mutate(especificacao_decisao = replace_na(especificacao_decisao, "Não especificada"))
+
+orgao %>% 
+  filter(decisao == "Acesso Negado") %>%
+  count(ano, assunto_pedido, decisao, especificacao_decisao) %>% 
+  add_count(assunto_pedido, wt = n) %>% 
+  filter(nn > 10) %>% 
+  ggplot(aes(x = reorder(especificacao_decisao, n),
+             y = n,
+             fill = reorder(assunto_pedido, nn))) +
+  #scale_fill_manual(values = pal) +
+  labs(
+    title = "Acessos negados por assunto e especificação da decisão",
+    subtitle = str_glue("{unique(orgao$orgao)}"),
+    fill = "Assunto do pedido",
+    y = "Quantidade",
+    x = "Especificação da decisão"
+  ) +
+  geom_col() +
+  coord_flip()
+```
+
+##### ANCINE - 2020
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_banco(pedidos_clean, "detalhamento_solicitacao_clean", 2020:2021)
+wordcloud_banco(pedidos_clean, "resposta_clean", 2020:2021)
+```
+</div>
+
 ### Agencias reguladoras
 
 ```{r}
 orgaos_count_decisao %>% wafflechart_acesso_negado(agencias_reguladoras)
 ```
 
-### INSS
+### INSS - Instituto Nacional do Seguro Social
 
 ```{r}
 orgaos_count_decisao %>% wafflechart_acesso_negado("INSS")
 ```
 
+#### ANCINE - Agência Nacional do Cinema
+
+```{r}
+orgao <- pedidos_painel %>%
+  filter(str_detect(orgao, "^INSS ")) %>% 
+  select(id_pedido, data_registro, ano, orgao, 
+         assunto_pedido, decisao, especificacao_decisao,
+         sub_assunto_pedido) %>% 
+  mutate(especificacao_decisao = replace_na(especificacao_decisao, "Não especificada"))
+
+orgao %>% 
+  filter(decisao == "Acesso Negado") %>%
+  count(ano, assunto_pedido, decisao, especificacao_decisao) %>% 
+  add_count(assunto_pedido, wt = n) %>% 
+  filter(nn > 10) %>% 
+  ggplot(aes(x = reorder(especificacao_decisao, n),
+             y = n,
+             fill = reorder(assunto_pedido, nn))) +
+  #scale_fill_manual(values = pal) +
+  labs(
+    title = "Acessos negados por assunto e especificação da decisão",
+    subtitle = str_glue("{unique(orgao$orgao)}"),
+    fill = "Assunto do pedido",
+    y = "Quantidade",
+    x = "Especificação da decisão"
+  ) +
+  geom_col() +
+  coord_flip()
+```
+
+##### INSS - todo período
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_banco(pedidos_clean, "detalhamento_solicitacao_clean", 2015:2021)
+wordcloud_banco(pedidos_clean, "resposta_clean", 2015:2021)
+```
+</div>
