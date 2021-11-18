@@ -757,7 +757,7 @@ wordcloud_banco <- function(df, campo, select_ano) {
 
 ##### BB - Banco do Brasil 
 
-##### BB - ano de 2016 (negou até 87% dos pedidos)
+###### BB - ano de 2016 (negou até 87% dos pedidos)
 
 <div class="col2">
 ```{r fig.height=6, fig.width=5}
@@ -766,7 +766,7 @@ wordcloud_banco(pedidos_clean, "resposta_clean", "2016")
 ```
 </div>
 
-##### BB - demais anos
+###### BB - demais anos
 
 <div class="col2">
 ```{r fig.height=6, fig.width=5}
@@ -805,7 +805,7 @@ orgao %>%
   coord_flip()
 ```
 
-##### CEF - todo período disponível
+###### CEF - todo período disponível
 
 <div class="col2">
 ```{r fig.height=6, fig.width=5}
@@ -844,7 +844,7 @@ orgao %>%
   coord_flip()
 ```
 
-##### BACEN - todo período disponível
+###### BACEN - todo período disponível
 
 <div class="col2">
 ```{r fig.height=6, fig.width=5}
@@ -883,7 +883,7 @@ orgao %>%
   coord_flip()
 ```
 
-##### BNDES - todo período disponível
+###### BNDES - todo período disponível
 
 <div class="col2">
 ```{r fig.height=6, fig.width=5}
@@ -1181,8 +1181,6 @@ orgaos_count_decisao %>% wafflechart_acesso_negado(agencias_reguladoras)
 ```{r}
 orgaos_count_decisao %>% wafflechart_acesso_negado("INSS")
 ```
-
-#### ANCINE - Agência Nacional do Cinema
 
 ```{r}
 orgao <- pedidos_painel %>%
