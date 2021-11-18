@@ -5,7 +5,7 @@ output:
   html_document: 
     code_folding: hide
     toc: yes
-    toc_depth: 4
+    toc_depth: 6
     theme: paper
     df_print: default
 editor_options: 
@@ -385,6 +385,7 @@ pedidos_clean %>%
   filter(word != "ddmmyyyy",
          word != "nup",
          word != "www",
+         word != "quot",
          !str_count(word) %in% c(1, 2)) %>% 
   count(word, sort = T) %>% 
   with(wordcloud(word, n, max.words = 200, scale = c(7, 1), 
@@ -399,55 +400,104 @@ pedidos_clean %>%
 ##### Acesso negado em assunto "Outros em Defesa Nacional"
 
 ```{r}
-wordcloud_gsi <- function(df, assunto) {
+wordcloud_gsi <- function(df, assunto, campo) {
+  
+  cor <- if_else(campo == "resposta_clean", cores_aep[2], cores_tb[5])
+  titulo <- if_else(
+    campo == "resposta_clean", 
+    "Frequência de palavras na resposta",
+    "Frequência de palavras no pedido"
+  )
+  
+  layout(matrix(c(1, 2), nrow = 2), heights = c(.5, 6))
+  par(mar = rep(0, 4))
+  plot.new()
+  text(x = 0.5, y = 0.5, titulo)
   
   pedidos_clean %>% 
     filter(id_pedido %in% orgao$id_pedido) %>% 
     inner_join(orgao) %>% 
     filter(decisao == "Acesso Negado") %>%
     filter(assunto_pedido == assunto) %>% 
-    select(-detalhamento_solicitacao_clean, -resumo_solicitacao_clean) %>% 
-    unnest_tokens(word, resposta_clean) %>% 
+    select(
+      "id_pedido",
+      all_of(campo),
+      "data_registro",
+      "ano",
+      "orgao",
+      "assunto_pedido",
+      "decisao",
+      "especificacao_decisao",
+      "sub_assunto_pedido"
+    ) %>% 
+    unnest_tokens(word, campo) %>% 
     anti_join(stopwords) %>% 
     mutate(word = str_extract(word, "[a-z']+"),
            word = if_else(word == "urltag", "link-url", word)) %>% 
     filter(word != "ddmmyyyy",
+           word != "art",
            word != "nup",
            word != "www",
+           word != "quot",
            !str_count(word) %in% c(1, 2)) %>% 
     count(word, sort = T) %>% 
-    with(wordcloud(word, n, max.words = 200, scale = c(7, 1), 
+    with(wordcloud(word, n, max.words = 150, scale = c(3, .5), 
             random.order = F,
             random.color = F,
+             main = title,
             colors = c(cores_tb[["cinza_claro"]],
-                       cores_aep[2],
-                       cores_tb[5], 
-                       cores_aep[["laranja"]])))
+                       cores_aep[["laranja"]],
+                       cor)))
 
 }
 ```
 
-```{r}
-wordcloud_gsi(pedidos_clean, "Outros em Defesa Nacional")
+<style>
+  .col2 {
+    columns: 2 200px;         /* number of columns and width in pixels*/
+    -webkit-columns: 2 200px; /* chrome, safari */
+    -moz-columns: 2 200px;    /* firefox */
+  }
+  .col3 {
+    columns: 3 100px;
+    -webkit-columns: 3 100px;
+    -moz-columns: 3 100px;
+  }
+</style>
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_gsi(pedidos_clean, "Outros em Defesa Nacional", "detalhamento_solicitacao_clean")
+wordcloud_gsi(pedidos_clean, "Outros em Defesa Nacional", "resposta_clean")
 ```
+</div>
 
 ##### GSI - Acesso negado em assunto "Acesso à informação"
 
-```{r}
-wordcloud_gsi(pedidos_clean, "Acesso à informação")
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_gsi(pedidos_clean, "Acesso à informação", "detalhamento_solicitacao_clean")
+wordcloud_gsi(pedidos_clean, "Acesso à informação", "resposta_clean")
 ```
+</div>
 
 ##### GSI - Acesso negado em assunto "Direitos Humanos"
 
-```{r}
-wordcloud_gsi(pedidos_clean, "Direitos Humanos")
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_gsi(pedidos_clean, "Direitos Humanos", "detalhamento_solicitacao_clean")
+wordcloud_gsi(pedidos_clean, "Direitos Humanos", "resposta_clean")
 ```
+</div>
 
 ##### GSI - Acesso negado em assunto "Direitos Humanos"
 
-```{r}
-wordcloud_gsi(pedidos_clean, "Transparência")
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_gsi(pedidos_clean, "Transparência", "detalhamento_solicitacao_clean")
+wordcloud_gsi(pedidos_clean, "Transparência", "resposta_clean")
 ```
+</div>
 
 ### Órgãos militares
 
@@ -455,6 +505,308 @@ wordcloud_gsi(pedidos_clean, "Transparência")
 orgaos_count_decisao %>%
   wafflechart_acesso_negado(militares)
 ```
+
+#### CEX - Comando do Exército
+
+```{r}
+orgao <- pedidos_painel %>%
+  filter(str_detect(orgao, "^CEX")) %>% 
+  select(id_pedido, data_registro, ano, orgao, 
+         assunto_pedido, decisao, especificacao_decisao,
+         sub_assunto_pedido) %>% 
+  mutate(especificacao_decisao = replace_na(especificacao_decisao, "Não especificada"))
+
+orgao %>% 
+  filter(decisao == "Acesso Negado") %>%
+  count(ano, assunto_pedido, decisao, especificacao_decisao) %>% 
+  add_count(assunto_pedido, wt = n) %>% 
+  filter(nn > 10) %>% 
+  ggplot(aes(x = reorder(especificacao_decisao, n),
+             y = n,
+             fill = reorder(assunto_pedido, nn))) +
+  #scale_fill_manual(values = pal) +
+  labs(
+    title = "Acessos negados por assunto e especificação da decisão",
+    subtitle = str_glue("{unique(orgao$orgao)}"),
+    fill = "Assunto do pedido",
+    y = "Quantidade",
+    x = "Especificação da decisão"
+  ) +
+  geom_col() +
+  coord_flip()
+```
+
+```{r}
+wordcloud_cex <- function(df, decisao_pedido, campo) {
+  
+  cor <- if_else(campo == "resposta_clean", cores_aep[2], cores_tb[5])
+  titulo <- if_else(
+    campo == "resposta_clean", 
+    "Frequência de palavras na resposta",
+    "Frequência de palavras no pedido"
+  )
+  
+  layout(matrix(c(1, 2), nrow = 2), heights = c(.5, 6))
+  par(mar = rep(0, 4))
+  plot.new()
+  text(x = 0.5, y = 0.5, titulo)
+  
+  pedidos_clean %>% 
+    filter(id_pedido %in% orgao$id_pedido) %>% 
+    inner_join(orgao) %>% 
+    filter(decisao == "Acesso Negado") %>%
+    filter(especificacao_decisao == decisao_pedido) %>% 
+    select(
+      "id_pedido",
+      all_of(campo),
+      "data_registro",
+      "ano",
+      "orgao",
+      "assunto_pedido",
+      "decisao",
+      "especificacao_decisao",
+      "sub_assunto_pedido"
+    ) %>% 
+    unnest_tokens(word, campo) %>% 
+    anti_join(stopwords) %>% 
+    mutate(word = str_extract(word, "[a-z']+"),
+           word = if_else(word == "urltag", "link-url", word)) %>% 
+    filter(word != "ddmmyyyy",
+           word != "art",
+           word != "nup",
+           word != "www",
+           word != "quot",
+           !str_count(word) %in% c(1, 2)) %>% 
+    count(word, sort = T) %>% 
+    with(wordcloud(word, n, max.words = 150, scale = c(3, .5), 
+            random.order = F,
+            random.color = F,
+             main = title,
+            colors = c(cores_tb[["cinza_claro"]],
+                       cores_aep[["laranja"]],
+                       cor)))
+
+}
+```
+
+##### CEX - Negativa justificada como "Pedido desproporcional ou desarrazoado"
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_cex(pedidos_clean, "Pedido desproporcional ou desarrazoado", "detalhamento_solicitacao_clean")
+wordcloud_cex(pedidos_clean, "Pedido desproporcional ou desarrazoado", "resposta_clean")
+```
+</div>
+
+##### CEX - Negativa justificada como "Dados pessoais"
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_cex(pedidos_clean, "Dados pessoais", "detalhamento_solicitacao_clean")
+wordcloud_cex(pedidos_clean, "Dados pessoais", "resposta_clean")
+```
+</div>
+
+##### CEX - Negativa justificada como "Pedido genérico"
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_cex(pedidos_clean, "Pedido genérico", "detalhamento_solicitacao_clean")
+wordcloud_cex(pedidos_clean, "Pedido genérico", "resposta_clean")
+```
+</div>
+
+
+#### CMAR - Comando da Marinha
+
+```{r}
+orgao <- pedidos_painel %>%
+  filter(str_detect(orgao, "^CMAR")) %>% 
+  select(id_pedido, data_registro, ano, orgao, 
+         assunto_pedido, decisao, especificacao_decisao,
+         sub_assunto_pedido) %>% 
+  mutate(especificacao_decisao = replace_na(especificacao_decisao, "Não especificada"))
+
+orgao %>% 
+  filter(decisao == "Acesso Negado") %>%
+  count(ano, assunto_pedido, decisao, especificacao_decisao) %>% 
+  add_count(assunto_pedido, wt = n) %>% 
+  filter(nn > 10) %>% 
+  ggplot(aes(x = reorder(especificacao_decisao, n),
+             y = n,
+             fill = reorder(assunto_pedido, nn))) +
+  #scale_fill_manual(values = pal) +
+  labs(
+    title = "Acessos negados por assunto e especificação da decisão",
+    subtitle = str_glue("{unique(orgao$orgao)}"),
+    fill = "Assunto do pedido",
+    y = "Quantidade",
+    x = "Especificação da decisão"
+  ) +
+  geom_col() +
+  coord_flip()
+```
+
+##### CMAR - Negativa justificada como "Dados pessoais"
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_cex(pedidos_clean, "Dados pessoais", "detalhamento_solicitacao_clean")
+wordcloud_cex(pedidos_clean, "Dados pessoais", "resposta_clean")
+```
+
+##### CMAR - Negativa justificada como "Pedido incompreensível"
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_cex(pedidos_clean, "Pedido incompreensível", "detalhamento_solicitacao_clean")
+wordcloud_cex(pedidos_clean, "Pedido incompreensível", "resposta_clean")
+```
+
+##### CMAR - Negativa justificada como "Pedido genérico"
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_cex(pedidos_clean, "Pedido genérico", "detalhamento_solicitacao_clean")
+wordcloud_cex(pedidos_clean, "Pedido genérico", "resposta_clean")
+```
+</div>
+
+##### CMAR - Negativa justificada como "Pedido desproporcional ou desarrazoado"
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_cex(pedidos_clean, "Pedido desproporcional ou desarrazoado", "detalhamento_solicitacao_clean")
+wordcloud_cex(pedidos_clean, "Pedido desproporcional ou desarrazoado", "resposta_clean")
+```
+</div>
+
+##### CMAR - Negativa justificada como "Pedido exige tratamento adicional de dados"
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_cex(pedidos_clean, "Pedido exige tratamento adicional de dados", "detalhamento_solicitacao_clean")
+wordcloud_cex(pedidos_clean, "Pedido exige tratamento adicional de dados", "resposta_clean")
+```
+</div>
+
+##### CMAR - Negativa justificada como "Informação sigilosa de acordo com legislação específica"
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_cex(pedidos_clean, "Informação sigilosa de acordo com legislação específica", "detalhamento_solicitacao_clean")
+wordcloud_cex(pedidos_clean, "Informação sigilosa de acordo com legislação específica", "resposta_clean")
+```
+</div>
+
+##### CMAR - Negativa justificada como "Informação sigilosa classificada conforme a Lei 12.527/2011"
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_cex(pedidos_clean, "Informação sigilosa classificada conforme a Lei 12.527/2011", "detalhamento_solicitacao_clean")
+wordcloud_cex(pedidos_clean, "Informação sigilosa classificada conforme a Lei 12.527/2011", "resposta_clean")
+```
+</div>
+
+##### CMAR - Negativa justificada como "Processo decisório em curso"
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_cex(pedidos_clean, "Processo decisório em curso", "detalhamento_solicitacao_clean")
+wordcloud_cex(pedidos_clean, "Processo decisório em curso", "resposta_clean")
+```
+</div>
+
+#### COMAER - Comando da Aeronáutica
+
+```{r}
+orgao <- pedidos_painel %>%
+  filter(str_detect(orgao, "^COMAER")) %>% 
+  select(id_pedido, data_registro, ano, orgao, 
+         assunto_pedido, decisao, especificacao_decisao,
+         sub_assunto_pedido) %>% 
+  mutate(especificacao_decisao = replace_na(especificacao_decisao, "Não especificada"))
+
+orgao %>% 
+  filter(decisao == "Acesso Negado") %>%
+  count(ano, assunto_pedido, decisao, especificacao_decisao) %>% 
+  add_count(assunto_pedido, wt = n) %>% 
+  filter(nn > 10) %>% 
+  ggplot(aes(x = reorder(especificacao_decisao, n),
+             y = n,
+             fill = reorder(assunto_pedido, nn))) +
+  #scale_fill_manual(values = pal) +
+  labs(
+    title = "Acessos negados por assunto e especificação da decisão",
+    subtitle = str_glue("{unique(orgao$orgao)}"),
+    x = "Assunto do pedido",
+    y = "Quantidade",
+    fill = "Especificação da decisão"
+  ) +
+  geom_col() +
+  coord_flip()
+```
+
+##### CMAR - Negativa justificada como "Dados pessoais"
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_cex(pedidos_clean, "Dados pessoais", "detalhamento_solicitacao_clean")
+wordcloud_cex(pedidos_clean, "Dados pessoais", "resposta_clean")
+```
+
+##### CMAR - Negativa justificada como "Pedido incompreensível"
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_cex(pedidos_clean, "Pedido incompreensível", "detalhamento_solicitacao_clean")
+wordcloud_cex(pedidos_clean, "Pedido incompreensível", "resposta_clean")
+```
+
+##### COMAER - Negativa justificada como "Pedido genérico"
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_cex(pedidos_clean, "Pedido genérico", "detalhamento_solicitacao_clean")
+wordcloud_cex(pedidos_clean, "Pedido genérico", "resposta_clean")
+```
+</div>
+
+##### COMAER - Negativa justificada como "Pedido desproporcional ou desarrazoado"
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_cex(pedidos_clean, "Pedido desproporcional ou desarrazoado", "detalhamento_solicitacao_clean")
+wordcloud_cex(pedidos_clean, "Pedido desproporcional ou desarrazoado", "resposta_clean")
+```
+</div>
+
+##### COMAER - Negativa justificada como "Pedido exige tratamento adicional de dados"
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_cex(pedidos_clean, "Pedido exige tratamento adicional de dados", "detalhamento_solicitacao_clean")
+wordcloud_cex(pedidos_clean, "Pedido exige tratamento adicional de dados", "resposta_clean")
+```
+</div>
+
+##### COMAER - Negativa justificada como "Informação sigilosa de acordo com legislação específica"
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_cex(pedidos_clean, "Informação sigilosa de acordo com legislação específica", "detalhamento_solicitacao_clean")
+wordcloud_cex(pedidos_clean, "Informação sigilosa de acordo com legislação específica", "resposta_clean")
+```
+</div>
+
+##### COMAER - Negativa justificada como "Informação sigilosa classificada conforme a Lei 12.527/2011"
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+wordcloud_cex(pedidos_clean, "Informação sigilosa classificada conforme a Lei 12.527/2011", "detalhamento_solicitacao_clean")
+wordcloud_cex(pedidos_clean, "Informação sigilosa classificada conforme a Lei 12.527/2011", "resposta_clean")
+```
+</div>
 
 ### Órgãos sócioambientais
 
