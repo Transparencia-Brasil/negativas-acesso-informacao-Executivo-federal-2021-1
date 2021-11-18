@@ -543,8 +543,12 @@ top_6_motivos %>%
                 color = reorder(tipo_resposta, n_resposta_motivo)),
             position = position_dodge(width = .9),
             size = 2.5,
+<<<<<<< HEAD
             show.legend = F,
             fontface = "bold",
+=======
+            fontface= "bold",
+>>>>>>> 8a6d85065368cdc38c47d67210cdeb287ee15cc0
             hjust = -.3) +
   scale_fill_manual(values = cores_tipo_resposta) +
   hrbrthemes::scale_x_percent(limits = c(0, .18)) +
