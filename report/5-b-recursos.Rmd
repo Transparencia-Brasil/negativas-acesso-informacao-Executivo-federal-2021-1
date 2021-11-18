@@ -498,6 +498,7 @@ top_6_motivos <- recursos_painel %>%
   filter(rank_motivo <= 6) 
 
 top_6_motivos %>% 
+  filter(tipo_recurso != "Resposta não foi dada no prazo") %>% 
   complete(
     tipo_resposta, 
     tipo_recurso, 
@@ -520,9 +521,44 @@ top_6_motivos %>%
     x = "Total de recursos (%)",
     fill = "Resposta do órgão:"
   )
+
+my_lbl <- function(x) scales::percent(x, accuracy = 0.1, decimal.mark = ",")
+top_6_motivos %>% 
+  filter(tipo_recurso != "Resposta não foi dada no prazo") %>% 
+  complete(
+    tipo_resposta, 
+    tipo_recurso, 
+    fill = list(
+      n_motivo = 0,
+      n_resposta_motivo = 0,
+      n_recursos = 0
+  )) %>% 
+  ggplot(aes(
+    x = n_resposta_motivo / n_recursos,
+    y = reorder(tipo_recurso,  n_resposta_motivo),
+    fill = reorder(tipo_resposta, n_resposta_motivo)
+  )) + 
+  geom_col(position = "dodge") +
+  geom_text(aes(label = my_lbl(n_resposta_motivo / n_recursos),
+                color = reorder(tipo_resposta, n_resposta_motivo)),
+            position = position_dodge(width = .9),
+            size = 2.5,
+            show.legend = F,
+            fontface = "bold",
+            hjust = -.3) +
+  scale_fill_manual(values = cores_tipo_resposta) +
+  hrbrthemes::scale_x_percent(limits = c(0, .18)) +
+  labs(
+    title = "Motivo da abertura do recurso",
+    y = NULL,
+    x = "Total de recursos (%)",
+    fill = "Resposta do órgão:"
+  )
 ```
 
 ```{r}
+my_lbl <- function(x) scales::percent(x, accuracy = 0.1, decimal.mark = ",")
+
 recursos_painel %>% 
   count(ano = year(data_registro),
         tipo_recurso = str_wrap(tipo_recurso, 40),
@@ -530,14 +566,42 @@ recursos_painel %>%
   add_count(ano, wt = n_resposta_motivo, name = "n_recursos") %>%
   add_count(ano, tipo_recurso, wt = n_resposta_motivo, name = "n_motivo") %>% 
   filter(tipo_recurso %in% unique(top_6_motivos$tipo_recurso)) %>% 
-  ggplot(aes(x = ano, y = n_resposta_motivo / n_recursos, 
+  mutate(per = n_resposta_motivo / n_recursos) %>% 
+  ggplot(aes(x = ano, y = per, 
+             color = reorder(tipo_recurso, -n_resposta_motivo),
+             group = reorder(tipo_recurso, -n_resposta_motivo))) + 
+  geom_line(size = 1) +
+  geom_point() +
+  geom_text(aes(label = my_lbl(per)), vjust = -.5, show.legend = F) +
+  scale_color_manual(values = cores_motivo_recurso) +
+  #facet_wrap(~ reorder(tipo_recurso, -n_resposta_motivo)) +
+  hrbrthemes::scale_y_percent(limits = c(0, .43)) +
+  labs(
+    title = "Motivo da abertura do recurso - ano",
+    color = "Motivo:",
+    x = NULL,
+    y = "Total de recursos (%)"
+  ) +
+  theme(
+    legend.text = element_text(size = 8, margin = margin(5, 0, 5, 0, "pt"))
+  )
+
+recursos_painel %>% 
+  count(ano = year(data_registro),
+        tipo_recurso = str_wrap(tipo_recurso, 40),
+        name = "n_resposta_motivo") %>%
+  add_count(ano, wt = n_resposta_motivo, name = "n_recursos") %>%
+  add_count(ano, tipo_recurso, wt = n_resposta_motivo, name = "n_motivo") %>% 
+  filter(tipo_recurso %in% unique(top_6_motivos$tipo_recurso)) %>% 
+  mutate(per = n_resposta_motivo / n_recursos) %>% 
+  ggplot(aes(x = ano, y = per, 
              color = reorder(tipo_recurso, -n_resposta_motivo),
              group = reorder(tipo_recurso, -n_resposta_motivo))) + 
   geom_line(size = 1) +
   geom_point() +
   scale_color_manual(values = cores_motivo_recurso) +
   #facet_wrap(~ reorder(tipo_recurso, -n_resposta_motivo)) +
-  hrbrthemes::scale_y_percent() +
+  hrbrthemes::scale_y_percent(limits = c(0, .45)) +
   labs(
     title = "Motivo da abertura do recurso - ano",
     color = "Motivo:",

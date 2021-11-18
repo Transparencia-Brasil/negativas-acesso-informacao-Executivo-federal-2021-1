@@ -577,14 +577,15 @@ decisao %>%
     xintercept = seq(ymd("2013-01-01"), ymd("2022-01-01"), by = "year"),
     lty = 3
   ) +
+  geom_col() +
   geom_text(
     data = . %>% filter(month(data_registro) == 2),
     aes(label = year(data_registro), y = .002),
     size = 3.5,
     fontface = "bold",
-    hjust = 0.1
+    hjust = 0.1,
+    alpha = .5
   ) +
-  geom_col(alpha = .5) +
   geom_point(aes(y = media_perc), shape = 95, size = 4) +
   geom_text(
     data = . %>% filter(month(data_registro) == 6),
@@ -611,7 +612,7 @@ decisao %>%
   ) +
   geom_label(
     data = . %>% filter(data_registro == ymd("2019-06-01") & decisao2 == "Acesso Parcialmente Concedido"),
-    aes(label = "Média anual\n(mesmo período)", y = .15),
+    aes(label = "Média anual\n(mesmo período)", y = .125),
     fill = "white",
     size = 3,
     label.size = NA
@@ -623,7 +624,6 @@ decisao %>%
     breaks = ymd(c(glue("{2012:2021}-09-01"), glue("{2012:2021}-09-01"))),
     date_labels = "%b"
     ) +
-  theme_minimal() +
   theme(
     legend.position = "none",
     panel.grid.minor = element_blank(),
