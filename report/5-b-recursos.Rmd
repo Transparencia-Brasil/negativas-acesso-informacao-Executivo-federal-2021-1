@@ -543,12 +543,8 @@ top_6_motivos %>%
                 color = reorder(tipo_resposta, n_resposta_motivo)),
             position = position_dodge(width = .9),
             size = 2.5,
-<<<<<<< HEAD
             show.legend = F,
             fontface = "bold",
-=======
-            fontface= "bold",
->>>>>>> 8a6d85065368cdc38c47d67210cdeb287ee15cc0
             hjust = -.3) +
   scale_fill_manual(values = cores_tipo_resposta) +
   hrbrthemes::scale_x_percent(limits = c(0, .18)) +
@@ -576,7 +572,7 @@ recursos_painel %>%
              group = reorder(tipo_recurso, -n_resposta_motivo))) + 
   geom_line(size = 1) +
   geom_point() +
-  geom_text(aes(label = my_lbl(per)), vjust = -.5, show.legend = F) +
+  geom_text(aes(label = my_lbl(per)), size = 2.5, vjust = -.5, show.legend = F) +
   scale_color_manual(values = cores_motivo_recurso) +
   #facet_wrap(~ reorder(tipo_recurso, -n_resposta_motivo)) +
   hrbrthemes::scale_y_percent(limits = c(0, .43)) +
