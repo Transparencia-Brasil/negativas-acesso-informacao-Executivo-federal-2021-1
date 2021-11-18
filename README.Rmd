@@ -85,6 +85,8 @@ glue::glue(
     - [**Base anonimizada**](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/3-acesso-negado-para-cada-orgao.html)
     - [**Base completa (painel CGU)**](https://rdurl0.shinyapps.io/cgu-interact/): gráficos interativos com shiny app.
     - [**Órgão a órgão - heatmaps**](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/3-acesso-negado-heatmaps.html)
+    - [**Ministérios - heatmaps**](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/3-acesso-negado-heatmaps-ministerios.html)
+    - [**Militares - heatmaps**](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/3-acesso-negado-heatmaps-militares.html)
 
 - **Uso da LGPD nas respostas aos pedidos de acesso a informação via LAI**
 
