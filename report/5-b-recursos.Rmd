@@ -159,7 +159,6 @@ count_recursos_total %>%
   scale_x_continuous(breaks = 2012:2021) + 
   guides(colour = guide_legend(reverse = T)) +
   hrbrthemes::scale_y_percent(decimal.mark = ",") +
-  theme_minimal() +
   theme(strip.text = element_text(face = "bold"),
         panel.grid.minor = element_blank()) +
   labs(title = "Pedidos que entraram com recurso",
@@ -179,7 +178,6 @@ count_recursos_total %>%
   ) +
   scale_x_continuous(breaks = 2012:2021) + 
   #guides(fill = guide_legend(reverse = T)) +
-  theme_minimal() +
   theme(strip.text = element_text(face = "bold"),
         panel.grid.minor = element_blank()) +
   labs(title = "Total de pedidos que entraram com recurso",
@@ -200,7 +198,6 @@ count_recursos_total %>%
   scale_x_continuous(breaks = 2012:2021) + 
   guides(colour = guide_legend(reverse = T)) +
   hrbrthemes::scale_y_percent(decimal.mark = ",", accuracy = 0.1, limits = c(0.06, .1)) +
-  theme_minimal() +
   theme(strip.text = element_text(face = "bold"),
         panel.grid.minor = element_blank()) +
   labs(title = "Pedidos que entraram com recurso",
@@ -306,7 +303,6 @@ plot_correlacao_negativas_e_recursos <- function(df, decisao_pedido) {
       y = str_glue("Recursos quando a decisão é {tolower(decisao_pedido)}\n",
                    "(% do total de recursos impetrados ao órgão)")
     ) +
-    theme_minimal() +
     scale_color_manual(values = cores_instancia) +
     scale_fill_manual(values = cores_instancia) +
     theme(legend.position = "none",
@@ -451,6 +447,233 @@ recursos_painel %>%
         panel.background = element_rect(fill = "gray95", color = "transparent"))
 ```
 
+#### Primeira instância
+
+```{r}
+cores_tipo_resposta2 <- cores_tipo_resposta %>% 
+  enframe() %>% 
+  mutate(
+    value = case_when(
+      name == "Deferido" ~ "cyan4",
+      name == "Parcialmente\ndeferido" ~ cores_tb[["azul"]],
+      name == "Perda de objeto\nparcial" ~ cores_tb[["cinza_escuro"]],
+      name == "Perda de objeto" ~ cores_aep[["cinza"]],
+      name == "Não\nconhecimento" ~ cores_aep[["laranja"]],
+      name == "Acolhimento" ~ cores_tb[["cinza_quase_branco"]],
+      TRUE ~ value
+    )
+  ) %>% deframe()
+
+cores_tipo_resposta2 %>% enframe()
+
+recursos_painel %>% 
+  filter(instancia != "Pedido de Revisão", tipo_resposta != "Acolhimento") %>% 
+  mutate(
+    tipo_resposta = str_wrap(tipo_resposta, 15),
+    tipo_resposta = ordered(tipo_resposta, levels = names(cores_tipo_resposta)),
+    instancia = ordered(instancia, names(cores_instancia))
+  ) %>% 
+  group_by(id_pedido) %>%
+  arrange(id_pedido, instancia) %>% 
+  mutate(ord = 1:n()) %>% 
+  ungroup() %>% 
+  select(id_pedido,
+         instancia,
+         data_registro_recurso = data_registro, 
+         tipo_resposta,
+         ord) %>% 
+  count(ano = year(data_registro_recurso), instancia, tipo_resposta,
+        name = "n_recursos_ano_instancia_e_tipo_resposta") %>%
+  complete(ano, 
+           nesting(instancia, tipo_resposta), 
+           fill = list(n_recursos_ano_instancia_e_tipo_resposta = 0)) %>% 
+  add_count(ano, instancia,
+            wt = n_recursos_ano_instancia_e_tipo_resposta,
+            name = "n_recursos_ano_instancia") %>% 
+  filter(
+    instancia == "Primeira Instância", 
+    # tipo_resposta %in% c(
+    #   "Deferido", "Indeferido"
+  ) %>% #distinct(tipo_resposta)
+  mutate(
+    per = n_recursos_ano_instancia_e_tipo_resposta / n_recursos_ano_instancia,
+    tipo_resposta2 = fct_expand(tipo_resposta, "Outra resposta"),
+    tipo_resposta2 = fct_recode(tipo_resposta, `Outra resposta` = "Parcialmente\ndeferido",
+                                               `Outra resposta` = "Perda de objeto\nparcial",
+                                               `Outra resposta` = "Perda de objeto",
+                                               `Outra resposta` = "Não\nconhecimento")
+  ) %>% 
+  ggplot(aes(
+    x = ano,
+    y = per,
+    color = reorder(tipo_resposta, per)
+  )) +
+  geom_hline(yintercept = .5, lty = "dashed", color = "gray60") +
+  geom_line(size = 1) +
+  geom_point(size = 1.3) +
+  geom_text(
+    data = . %>% filter(per >= .01 |
+                        tipo_resposta == "Perda de objeto\nparcial" & per > 0.00015),
+    aes(label = my_lbl(per)), size = 2.5, vjust = -.8
+  ) +
+  scale_x_continuous(breaks = 2012:2021) +
+  scale_color_manual(values = cores_tipo_resposta2[-3], drop = T) +
+  hrbrthemes::scale_y_percent() +
+  #facet_grid(. ~ reorder(tipo_resposta, -per)) +
+  labs(x = "Ano",
+       y = "% de recursos",
+       color = "Tipo de resposta", 
+       title = "Tipo de resposta nos recursos em primeira insância",
+       subtitle = "Como % do total de recursos em primeira instância, por ano") +
+  theme(strip.text = element_text(face = "bold"),
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = "gray95", color = "transparent"))
+```
+
+#### CGU
+
+```{r}
+
+recursos_painel %>% 
+  filter(instancia != "Pedido de Revisão", tipo_resposta != "Acolhimento") %>% 
+  mutate(
+    tipo_resposta = str_wrap(tipo_resposta, 15),
+    tipo_resposta = ordered(tipo_resposta, levels = names(cores_tipo_resposta)),
+    instancia = ordered(instancia, names(cores_instancia))
+  ) %>% 
+  group_by(id_pedido) %>%
+  arrange(id_pedido, instancia) %>% 
+  mutate(ord = 1:n()) %>% 
+  ungroup() %>% 
+  select(id_pedido,
+         instancia,
+         data_registro_recurso = data_registro, 
+         tipo_resposta,
+         ord) %>% 
+  count(ano = year(data_registro_recurso), instancia, tipo_resposta,
+        name = "n_recursos_ano_instancia_e_tipo_resposta") %>%
+  complete(ano, 
+           nesting(instancia, tipo_resposta), 
+           fill = list(n_recursos_ano_instancia_e_tipo_resposta = 0)) %>% 
+  add_count(ano, instancia,
+            wt = n_recursos_ano_instancia_e_tipo_resposta,
+            name = "n_recursos_ano_instancia") %>% 
+  filter(
+    instancia == "CGU", 
+    # tipo_resposta %in% c(
+    #   "Deferido", "Indeferido"
+  ) %>% #distinct(tipo_resposta)
+  mutate(
+    per = n_recursos_ano_instancia_e_tipo_resposta / n_recursos_ano_instancia,
+    tipo_resposta2 = fct_expand(tipo_resposta, "Outra resposta"),
+    tipo_resposta2 = fct_recode(tipo_resposta, `Outra resposta` = "Parcialmente\ndeferido",
+                                               `Outra resposta` = "Perda de objeto\nparcial",
+                                               `Outra resposta` = "Perda de objeto",
+                                               `Outra resposta` = "Não\nconhecimento")
+  ) %>% 
+  filter(
+    tipo_resposta %in% c(
+     "Deferido", "Parcialmente\ndeferido",
+     "Indeferido", "Não\nconhecimento"
+    )) %>% 
+  mutate(tipo_resposta = fct_drop(tipo_resposta, "Perda de objeto\nparcial"),
+         tipo_resposta = fct_drop(tipo_resposta, "Perda de objeto"),
+         tipo_resposta = fct_drop(tipo_resposta, "Acolhimento")) %>% 
+  ggplot(aes(
+    x = ano,
+    y = per,
+    color = reorder(tipo_resposta, per)
+  )) +
+  geom_hline(yintercept = .5, lty = "dashed", color = "gray60") +
+  geom_line(size = 1) +
+  geom_point(size = 1.3) +
+  geom_text(aes(label = my_lbl(per)), size = 2.5, vjust = -.8) +
+  scale_x_continuous(breaks = 2012:2021) +
+  scale_color_manual(values = cores_tipo_resposta2[c(1, 2, 6, 7)], drop = F) +
+  hrbrthemes::scale_y_percent() +
+  #facet_grid(. ~ reorder(tipo_resposta, -per)) +
+  labs(x = "Ano",
+       y = "% de recursos",
+       color = "Tipo de resposta", 
+       title = "Tipo de resposta nos recursos para a CGU",
+       subtitle = "Como % do total de recursos impetrados à CGU, por ano") +
+  theme(strip.text = element_text(face = "bold"),
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = "gray95", color = "transparent"))
+```
+
+### CMRI
+
+```{r}
+
+recursos_painel %>% 
+  filter(instancia != "Pedido de Revisão", tipo_resposta != "Acolhimento") %>% 
+  mutate(
+    tipo_resposta = str_wrap(tipo_resposta, 15),
+    tipo_resposta = ordered(tipo_resposta, levels = names(cores_tipo_resposta)),
+    instancia = ordered(instancia, names(cores_instancia))
+  ) %>% 
+  group_by(id_pedido) %>%
+  arrange(id_pedido, instancia) %>% 
+  mutate(ord = 1:n()) %>% 
+  ungroup() %>% 
+  select(id_pedido,
+         instancia,
+         data_registro_recurso = data_registro, 
+         tipo_resposta,
+         ord) %>% 
+  count(ano = year(data_registro_recurso), instancia, tipo_resposta,
+        name = "n_recursos_ano_instancia_e_tipo_resposta") %>%
+  complete(ano, 
+           nesting(instancia, tipo_resposta), 
+           fill = list(n_recursos_ano_instancia_e_tipo_resposta = 0)) %>% 
+  add_count(ano, instancia,
+            wt = n_recursos_ano_instancia_e_tipo_resposta,
+            name = "n_recursos_ano_instancia") %>% 
+  filter(
+    instancia == "CMRI", 
+    # tipo_resposta %in% c(
+    #   "Deferido", "Indeferido"
+  ) %>% #distinct(tipo_resposta)
+  mutate(
+    per = n_recursos_ano_instancia_e_tipo_resposta / n_recursos_ano_instancia,
+    tipo_resposta2 = fct_expand(tipo_resposta, "Outra resposta"),
+    tipo_resposta2 = fct_recode(tipo_resposta, `Outra resposta` = "Parcialmente\ndeferido",
+                                               `Outra resposta` = "Perda de objeto\nparcial",
+                                               `Outra resposta` = "Perda de objeto",
+                                               `Outra resposta` = "Não\nconhecimento")
+  ) %>% 
+  filter(
+    tipo_resposta %in% c(
+     "Deferido",
+     "Indeferido", "Não\nconhecimento"
+    )) %>%
+  # mutate(tipo_resposta = fct_drop(tipo_resposta, "Perda de objeto\nparcial"),
+  #        tipo_resposta = fct_drop(tipo_resposta, "Perda de objeto"),
+  #        tipo_resposta = fct_drop(tipo_resposta, "Acolhimento")) %>% 
+  ggplot(aes(
+    x = ano,
+    y = per,
+    color = reorder(tipo_resposta, per)
+  )) +
+  geom_hline(yintercept = .5, lty = "dashed", color = "gray60") +
+  geom_line(size = 1) +
+  geom_point(size = 1.3) +
+  geom_text(aes(label = my_lbl(per)), size = 2.5, vjust = -.8) +
+  scale_x_continuous(breaks = 2012:2021) +
+  scale_color_manual(values = cores_tipo_resposta2[c(1, 6, 7)], drop = F) +
+  hrbrthemes::scale_y_percent() +
+  #facet_grid(. ~ reorder(tipo_resposta, -per)) +
+  labs(x = "Ano",
+       y = "% de recursos",
+       color = "Tipo de resposta", 
+       title = "Tipo de resposta nos recurso para CMRI",
+       subtitle = "Como % do total de recursos impetrados à CMRI, por ano") +
+  theme(strip.text = element_text(face = "bold"),
+        panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = "gray95", color = "transparent"))
+```
+
 ## Motivo da abertura do recurso
 
 Lista completa:
@@ -547,6 +770,7 @@ top_6_motivos %>%
             fontface = "bold",
             hjust = -.3) +
   scale_fill_manual(values = cores_tipo_resposta) +
+  scale_color_manual(values = cores_tipo_resposta) +
   hrbrthemes::scale_x_percent(limits = c(0, .18)) +
   labs(
     title = "Motivo da abertura do recurso",
