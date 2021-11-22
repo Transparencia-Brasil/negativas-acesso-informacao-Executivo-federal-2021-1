@@ -222,7 +222,8 @@ bind_rows(painel, cgu) %>%
   scale_color_manual(values = c(cores_aep[["rosa"]], cores_tb[["azul"]])) +
   scale_x_date(date_breaks = "year", date_labels = "%Y") +
   labs(
-    title = "Comparação entre as duas bases de dados disponíveis no FalaBR",
+    title = "CEF - Caixa Econômica Federal",
+    subtitle = "Comparação entre as duas bases de dados disponíveis no FalaBR",
     x = "Mês do registro",
     y = "Quantidade de manifestações",
     color = NULL

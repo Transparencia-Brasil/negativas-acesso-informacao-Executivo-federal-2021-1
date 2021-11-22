@@ -110,12 +110,14 @@ lgpd <- pedidos_cgu %>%
 
 ### Evolução de uso da LGPD em pedidos LAI
 
+O gráfico abaixo mostra a evolução dos pedidos onde alguma menção à LGPD foi detectada tanto no pedido quanto na resposta.
+
 ```{r}
 lgpd %>% 
   filter(year(data_registro) >= 2018) %>% 
   count(data_registro, usa_lgpd) %>% 
   mutate(usa_lgpd = if_else(usa_lgpd, "Sim (quantidade)", "Não")) %>% 
-  ggplot(aes(x = data_registro, y = n, fill = reorder(usa_lgpd, n))) +
+  ggplot(aes(x = data_registro, y = n, fill = reorder(usa_lgpd, -n))) +
   geom_col() +
   geom_text(
     data = . %>%
@@ -124,7 +126,7 @@ lgpd %>%
       mutate(nn - n) %>% 
       filter(`nn - n` > 0),
     aes(
-      y = nn,
+      y = `nn - n`,
       label = `nn - n`,
     ),
     color = cores_aep[["rosa"]],
@@ -136,34 +138,59 @@ lgpd %>%
   ) +
   labs(
     title = "Detecção dos termos relacionados a LGPD",
-    subtitle = "Considerando resumo do pedido, pedido (completo), resposta",
+    subtitle = "Considerando menções no pedido e na resposta",
     x = NULL,
     y = "Quantidade de pedidos",
     fill = "Pedido\nmenciona LGPD"
   ) +
-  scale_fill_manual(values = c(cores_aep[["rosa"]], alpha(cores_aep[["laranja"]], .5))) +
+  scale_fill_manual(values = c(alpha(cores_aep[["laranja"]], .5),
+                               cores_aep[["rosa"]])) +
   scale_x_date(date_breaks = "6 months", date_labels = "%b-%Y") +
   theme(axis.ticks.x = element_line())
 ```
 
-### Onde a LGPD foi mencionada
+O pico de Abril de 2020 pode ser explicado por pedidos que mencionam a LGPD ou no assunto (ao fazer o pedido, o solicitante seleciona a opção "Dados Pessoais - LGPD" no campo "Assunto do pedido") ou no conteúdo do pedido
 
 ```{r}
-lgpd %>% 
+lgpd_counts <- lgpd %>% 
   select(data_registro, where(is.logical)) %>% 
   filter(usa_lgpd) %>% 
   mutate(
-    ano = year(data_registro),
+    data_registro,
     mencao_lgpd = case_when(
       !usa_lgpd_assunto &
         !usa_lgpd_pedido &
-        !usa_lgpd_pedido_resumido ~ str_glue("Solicitante não menciona LGPD em pedido,",
-                                             "\nórgão menciona na resposta"),
+        !usa_lgpd_pedido_resumido ~ str_glue(
+          "Solicitante não menciona LGPD em pedido,",
+          "\nórgão menciona na resposta"
+        ),
       TRUE ~ "Solicitante menciona LGPD no pedido ou assunto do pedido"
     )
   ) %>% 
-  count(ano, mencao_lgpd) %>% 
-  ggplot(aes(x = ano, y = n, color = reorder(mencao_lgpd, -n))) +
+  count(data_registro, mencao_lgpd)
+```
+
+```{r}
+lgpd_counts %>% 
+  ggplot(aes(x = data_registro, y = n, color = reorder(mencao_lgpd, -n))) +
+  geom_line(size = 1.3) +
+  geom_point(size = 2) +
+  scale_color_manual(values = c(cores_tb[["azul"]], cores_aep[["rosa"]])) +
+  labs(title = "Onde a LGPD foi mencionada",
+       color = NULL,
+       x = "Quantidade",
+       y = "Ano"
+       ) +
+  theme(legend.position = "top",
+        legend.direction = "vertical",
+        legend.justification = "left")
+```
+
+```{r}
+lgpd_counts %>% 
+  count(ano = year(data_registro), mencao_lgpd,
+        wt = n, name = "n") %>%
+  ggplot(aes(x = ano, y = n, color = mencao_lgpd)) +
   geom_line(
     data = . %>%
       filter(mencao_lgpd != str_glue("Solicitante não menciona LGPD em pedido,",
@@ -171,34 +198,59 @@ lgpd %>%
     size = 1.3) +
   geom_point(
     data = . %>%
-      filter(mencao_lgpd == str_glue("Solicitante não menciona LGPD em pedido,",
+      filter(mencao_lgpd != str_glue("Solicitante não menciona LGPD em pedido,",
                                      "\nórgão menciona na resposta")),
-    size = 1.3) +
+    size = 3, shape = 17) +
   geom_line(
     data = . %>%
       filter(mencao_lgpd == str_glue("Solicitante não menciona LGPD em pedido,",
                                      "\nórgão menciona na resposta")),
-    size = 1.5) +
+    size = 1.3) +
   geom_point(
     data = . %>%
       filter(mencao_lgpd == str_glue("Solicitante não menciona LGPD em pedido,",
                                      "\nórgão menciona na resposta")),
-    size = 1.5) +
+    size = 2) +
   scale_color_manual(values = c(cores_aep[["rosa"]], cores_aep[["laranja"]])) +
   labs(title = "Onde a LGPD foi mencionada",
        color = NULL,
        x = "Quantidade",
        y = "Ano"
        ) +
-  theme(legend.position = "top",
-        legend.direction = "vertical")
+  theme(
+    legend.position = "top",
+    legend.direction = "vertical",
+    legend.justification = "left"
+  )
+```
+
+```{r}
+lgpd_counts %>% 
+  filter(str_detect(mencao_lgpd, "Solicitante não menciona LGPD em pedido")) %>% 
+  mutate(mencao_lgpd = str_replace(mencao_lgpd, "\\n", " ")) %>% 
+  ggplot(aes(x = data_registro, y = n, fill = mencao_lgpd)) +
+  geom_col() +
+  scale_fill_manual(values = cores_aep[["rosa"]]) +
+  labs(
+    y = "Quantidade de resposta",
+    x = NULL,
+    title = str_glue(
+      "Evolução do uso da LGPD nas respostas dos ",
+      "pedidos de acesso a informação via LAI"
+    ),
+    fill = NULL
+  ) +
+  theme(
+    legend.justification = "left",
+    legend.position = "top"
+  )
 ```
 
 ### Uso da LGPD pelos órgãos para responder uma demanda qualquer via LAI
 
 Quantidade de vezes que órgãos citaram LGPD para responder algum pedido: 
 
-O termo LGPD foi detectado na resposta do pedido, mas o solicitante não menciona o assunto no pedido (o termo não é detectado no pedido).
+**O termo LGPD foi detectado na resposta do pedido, mas o solicitante não menciona o assunto no pedido (o termo não é detectado no pedido).**
 
 ```{r fig.height=4}
 qt_lgpd <- lgpd %>% 
@@ -215,12 +267,14 @@ qt_lgpd %>%
   geom_col(fill = cores_aep[["laranja"]]) +
   geom_text(aes(label = cumsum(n)), vjust = 0) +
   labs(
+    x = "Ano",
+    y = "Quantidade (acumulada)",
     title = "Quantidade acumulada de respostas dadas citando LGPD",
-       subtitle = str_glue("Até o período atual foram {sum(qt_lgpd$n)} ",
-                           "usos da LGPD em respostas aos solicitantes pelos órgãos,\n",
-                           "sem que os solicitantes façam menções à LGPD no pedido"),
-       x = "Ano", y = "Quantidade (acumulada)"
-  )
+    subtitle = str_glue(
+      "Até setembro de 2021 foram {sum(qt_lgpd$n)} ",
+      "usos da LGPD em respostas aos solicitantes pelos órgãos, sem que os \n",
+      "solicitantes façam menções à LGPD no pedido"
+  ))
 ```
 
 ### Assuntos onde o órgão mencionou a LGPD
@@ -239,7 +293,7 @@ lgpd %>%
   geom_col(fill = cores_tb[["azul"]]) +
   geom_text(aes(label = n), hjust = 0) +
   labs(
-    title = "10 principais assuntos em que em que o órgão mencionou LGPD\nna resposta",
+    title = "10 principais assuntos em que em que o órgão mencionou LGPD na resposta",
     y = "Quntidade de pedidos",
     x = NULL
   ) +
@@ -268,6 +322,62 @@ lgpd %>%
   ) +
   scale_fill_manual(values = cores_decisao2) +
   coord_flip()
+```
+
+### Órgãos que mais usaram LGPD em respostas
+
+> O gráfico abaixo mostra os órgãos que mencionaram a LGPD, **considerando somente pedidos em que o solicitante não menciona ou não faz referência à LGPD no pedido**.
+
+```{r}
+lgpd %>% 
+  filter(
+    usa_lgpd_resposta &
+     !usa_lgpd_pedido & 
+     !usa_lgpd_pedido_resumido & 
+     assunto_pedido != "Dados Pessoais - LGPD" 
+  ) %>%
+  count(sigla = str_extract(orgao, "^[:upper:]+(?= )|^GSI-PR"), sort = T) %>% 
+  group_by(n) %>% 
+  nest() %>% 
+  ungroup() %>% 
+  mutate(
+    sigla = map(data, pull, sigla),
+    sigla = paste(sigla),
+    sigla = str_remove_all(sigla, "^c\\(|\\\"|\\)" ),
+    sigla = str_wrap(sigla, 100)
+  ) %>% 
+  filter(n > 10) %>% 
+  ggplot(aes(x = reorder(sigla, n), y = n)) +
+  geom_col(fill = cores_aep[["rosa"]]) +
+  coord_flip() +
+  labs(
+    title = "Quantidade de respostas que mencionam a LGPD, por órgão",
+    subtitle = str_glue(
+      "Solicitante não menciona LGPD em pedido ou assunto do pedido, ",
+      "órgão menciona na resposta"
+    ),
+    x = "Órgão (sigla)",
+    y = "Quantidade de pedidos respondidos"
+  )
+```
+
+
+```{r fig.height=50}
+lgpd %>% 
+  filter(
+    usa_lgpd_resposta &
+     !usa_lgpd_pedido & 
+     !usa_lgpd_pedido_resumido & 
+     assunto_pedido != "Dados Pessoais - LGPD" 
+  ) %>% 
+  count(orgao, data_registro, sort = T) %>%
+  add_count(orgao, wt = n, name = "nn") %>% 
+  group_by(orgao) %>% 
+  slice_max(order_by = nn, n = 20) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = data_registro, y = n)) +
+  geom_col(fill = cores_aep[["rosa"]]) +
+  facet_wrap(~ orgao, ncol = 1)
 ```
 
 ### Wordcloud no pedido quando órgão usa LGPD
@@ -342,10 +452,3 @@ lgpd %>%
           random.color = F,
           colors = c(cores_aep[2], cores_tb[5])))
 ```
-
-### Órgãos que mais usaram LGPD em respostas
-
-```{r}
-
-```
-

@@ -60,8 +60,8 @@ source(here("src/0-paleta-de-cores.R"), encoding = "UTF-8")
 ```{r}
 pedidos_clean <- "dados/load/rds/pedidos-clean.rds" %>% 
   here() %>% 
-  readRDS() %>% 
-  rename(orgao = orgaodestinatario)
+  readRDS()
+
 pedidos_cgu <- pedidos_cgu %>% 
   filter(decisao %notin% c(
     "Pergunta Duplicada/Repetida",

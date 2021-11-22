@@ -58,6 +58,12 @@ Sys.setenv(LANGUAGE = "pt-br")
 
 ```{r color-settings}
 source(here("src/0-paleta-de-cores.R"), encoding = "utf-8")
+theme_set(theme_minimal())
+
+theme_update(
+  panel.grid.minor = element_blank(),
+  panel.background = element_rect(fill = "gray97", color = "transparent")
+)
 ```
 
 ```{r}
@@ -189,7 +195,6 @@ taxas %>%
     fontface = "bold",
     show.legend = F
   ) +
-  theme_minimal() +
   theme(
     legend.position = "bottom",
     legend.text = element_text(size = 10, margin = margin(5, 0, 5, 0, "pt")),
@@ -227,7 +232,6 @@ pedidos_painel %>%
     check_overlap = T
   ) +
   geom_text(aes(label = n), color = "gray30", vjust = 1, fontface = "bold", size = 3) +
-  theme_minimal() +
   labs(
     x = "Ano",
     y = "Quantidade de órgãos",
@@ -317,19 +321,14 @@ top_opacos %>%
     fill = "Sigla do órgão",
     x = NULL, y = NULL
   ) +
-  theme_minimal() +
   scale_x_continuous(breaks = 2012:2021) +
   #scale_fill_ordinal() +
   scale_fill_manual(values = cores) +
   hrbrthemes::scale_y_percent() +
   guides(fill = guide_legend(ncol = 2, title.position = "top", reverse = T)) +
-  theme_minimal() +
   theme(
     legend.position = "bottom",
     legend.text = element_text(size = 9, margin = margin(5, 0, 5, 0, "pt"))
-  ) +
-  theme(
-    legend.position = "bottom"
   )
 
 ```
@@ -376,17 +375,12 @@ top_opacos %>%
     fill = "Sigla do órgão",
     x = NULL, y = NULL
   ) +
-  theme_minimal() +
   scale_x_continuous(breaks = 2012:2021) +
   hrbrthemes::scale_y_percent() +
   guides(fill = guide_legend(ncol = 2, title.position = "top", reverse = T)) +
-  theme_minimal() +
   theme(
     legend.position = "bottom",
-    legend.text = element_text(size = 9, margin = margin(5, 0, 5, 0, "pt"))
-  ) +
-  theme(
-    legend.position = "none",
+    legend.text = element_text(size = 9, margin = margin(5, 0, 5, 0, "pt")),
     panel.grid.minor = element_blank(),
     panel.grid.major.y = element_blank()
   )
@@ -462,19 +456,14 @@ top_opacos2 %>%
     fill = "Sigla do órgão",
     x = NULL, y = NULL
   ) +
-  theme_minimal() +
   scale_x_continuous(breaks = 2012:2021) +
   #scale_fill_ordinal() +
   scale_fill_manual(values = cores) +
   hrbrthemes::scale_y_percent() +
   guides(fill = guide_legend(ncol = 2, title.position = "top", reverse = T)) +
-  theme_minimal() +
   theme(
-    legend.position = "bottom",
+    legend.position = "none",
     legend.text = element_text(size = 9, margin = margin(5, 0, 5, 0, "pt"))
-  ) +
-  theme(
-    legend.position = "none"
   )
 ```
 
@@ -512,7 +501,6 @@ taxas %>%
   facet_wrap(~ decisao, scales = "free", ncol = 1) +
   scale_y_percent() +
   scale_x_continuous(breaks = 2012:2021) +
-  theme_minimal() +
   labs(
     title = "Taxa interna de negativas por órgão",
     subtitle = "Cada ponto é um órgão - média anual",
@@ -538,7 +526,6 @@ taxas %>%
   ggplot(aes(x = ano, y = taxa_decisao_mediana)) +
   geom_line(color = "gray60", size = 1) +
   geom_point(color = cores_aep[["rosa"]], size = 4) +
-  theme_minimal() +
   scale_x_continuous(breaks = 2012:2021) +
   scale_y_percent() +
   labs(
@@ -580,7 +567,6 @@ taxas %>%
   ) +
   scale_x_percent() +
   scale_y_percent() +
-  theme_minimal() +
   theme(
     legend.position = "bottom",
     legend.text = element_text(size = 8, margin = margin(5, 0, 5, 0, "pt")),

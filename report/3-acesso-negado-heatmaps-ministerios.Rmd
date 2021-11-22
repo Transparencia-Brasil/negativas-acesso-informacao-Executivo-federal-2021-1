@@ -62,6 +62,13 @@ Sys.setlocale("LC_TIME", "pt_BR")
 ```{r color-settings}
 # aplica identidade visual da TB/AeP:
 source(here("src/0-paleta-de-cores.R"), encoding = "utf-8")
+
+theme_set(theme_minimal())
+
+theme_update(
+  panel.grid.minor = element_blank(),
+  panel.background = element_rect(fill = "gray97", color = "transparent")
+)
 ```
 
 Análises de pedidos de acesso a informação via LAI considerando a decisão de acesso.
@@ -141,7 +148,6 @@ wafflechart_acesso_negado <- function(df, x,
       na.value = "gray90",
       labels = scales::percent_format()
     ) +
-    theme_minimal() +
     theme(
       panel.grid = element_blank(),
       legend.position = "top",
@@ -160,8 +166,6 @@ wafflechart_acesso_negado <- function(df, x,
 
 }
 ```
-
-### Órgãos militares
 
 ```{r}
 militares <- "^(CEX|CMAR|COMAER)"
@@ -1144,6 +1148,36 @@ wordcloud_ministerios(pedidos_clean, "detalhamento_solicitacao_clean", 2020:2021
 wordcloud_ministerios(pedidos_clean, "resposta_clean", 2020:2021)
 ```
 </div>
+
+```{r}
+pedidos_painel %>% glimpse()
+orgaos_count_decisao %>%
+  filter(str_detect(orgao, "^MS "),
+         decisao == "Acesso Negado",
+         between(data_registro, ymd("2020-01-01"), ymd("2021-12-01"))) %>%
+  transmute(
+    data_registro,
+    decisao,
+    n_mes_decisao_orgao,
+    n_mes_decisao,
+    tx = n_mes_decisao_orgao / n_mes_decisao
+  ) %>%
+  distinct() %>% 
+  ggplot(aes(x = data_registro, y = tx)) +
+  geom_col(fill = cores_aep[["rosa"]]) +
+  geom_point() +
+  hrbrthemes::scale_y_percent() +
+  scale_x_date(date_breaks = "4 months", 
+               date_labels = "%b-%Y",) +
+  labs(
+    x = NULL, 
+    y = "% de acessos negados", 
+    title = "Ministério da Saúde - pedidos de acesso a informação com acesso negado",
+    subtitle = "Como % do total de pedidos registrados no FalaBr\nPeríodo: Jan/2020 até "
+  )
+
+```
+
 
 #### MAPA – Ministério da Agricultura, Pecuária e Abastecimento           
 
