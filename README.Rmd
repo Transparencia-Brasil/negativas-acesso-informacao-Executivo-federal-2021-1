@@ -91,6 +91,8 @@ glue::glue(
 - **Uso da LGPD nas respostas aos pedidos de acesso a informação via LAI**
 
   - [**Base anonimizada**](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/4-controversos-lgpd.html)
+  - [**Base anonimizada - nova versão**](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/4-b-controversos-lgpd.html)
+
 
 - **Recursos**
 
