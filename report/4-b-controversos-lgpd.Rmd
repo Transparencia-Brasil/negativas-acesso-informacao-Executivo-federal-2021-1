@@ -6,6 +6,7 @@ output:
     code_folding: hide
     toc: yes
     toc_depth: 4
+    toc_float: true
     theme: paper
     df_print: default
     highlight: tango
@@ -489,7 +490,7 @@ plot_wordcloud_mencao_lgpd <- function(df, nome_orgao) {
 }
 ```
 
-
+#### MS – Ministério da Saúde
 
 ```{r}
 plot_historico_mencao_lgpd(lgpd, "MS – Ministério da Saúde")
@@ -498,7 +499,7 @@ plot_decisoes_mencao_lgpd(lgpd, "MS – Ministério da Saúde")
 plot_wordcloud_mencao_lgpd(lgpd, "MS – Ministério da Saúde")
 ```
 
-
+#### INCRA – Instituto Nacional de Colonização e Reforma Agrária
 
 ```{r}
 plot_historico_mencao_lgpd(lgpd, "INCRA – Instituto Nacional de Colonização e Reforma Agrária")     
@@ -507,7 +508,7 @@ plot_decisoes_mencao_lgpd(lgpd, "INCRA – Instituto Nacional de Colonização e
 plot_wordcloud_mencao_lgpd(lgpd, "INCRA – Instituto Nacional de Colonização e Reforma Agrária")
 ```
 
-
+#### INSS – Instituto Nacional do Seguro Social
 
 ```{r}
 plot_historico_mencao_lgpd(lgpd, "INSS – Instituto Nacional do Seguro Social")                 
@@ -516,7 +517,7 @@ plot_decisoes_mencao_lgpd(lgpd, "INSS – Instituto Nacional do Seguro Social")
 plot_wordcloud_mencao_lgpd(lgpd, "INSS – Instituto Nacional do Seguro Social")
 ```
 
-
+#### IMBEL – Indústria de Material Bélico do Brasil
 
 ```{r}
 plot_historico_mencao_lgpd(lgpd, "IMBEL – Indústria de Material Bélico do Brasil")
@@ -525,7 +526,7 @@ plot_decisoes_mencao_lgpd(lgpd, "IMBEL – Indústria de Material Bélico do Bra
 plot_wordcloud_mencao_lgpd(lgpd, "IMBEL – Indústria de Material Bélico do Brasil")
 ```
 
-
+#### GSI-PR – Gabinete de Segurança Institucional da Presidência da República
 
 ```{r}
 plot_historico_mencao_lgpd(lgpd, "GSI-PR – Gabinete de Segurança Institucional da Presidência da República")
@@ -534,7 +535,7 @@ plot_decisoes_mencao_lgpd(lgpd, "GSI-PR – Gabinete de Segurança Institucional
 plot_wordcloud_mencao_lgpd(lgpd, "GSI-PR – Gabinete de Segurança Institucional da Presidência da República")
 ```
 
-
+#### ME - Ministério da Economia
 
 ```{r}
 plot_historico_mencao_lgpd(lgpd, "ME - Ministério da Economia")
@@ -543,7 +544,7 @@ plot_decisoes_mencao_lgpd(lgpd, "ME - Ministério da Economia")
 plot_wordcloud_mencao_lgpd(lgpd, "ME - Ministério da Economia")
 ```
 
-
+#### CNPQ – Conselho Nacional de Desenvolvimento Científico e Tecnológico
 
 ```{r}
 plot_historico_mencao_lgpd(lgpd, "CNPQ – Conselho Nacional de Desenvolvimento Científico e Tecnológico")         
@@ -552,7 +553,7 @@ plot_decisoes_mencao_lgpd(lgpd, "CNPQ – Conselho Nacional de Desenvolvimento C
 plot_wordcloud_mencao_lgpd(lgpd, "CNPQ – Conselho Nacional de Desenvolvimento Científico e Tecnológico")
 ```
 
-
+#### INEP – Instituto Nacional de Estudos e Pesquisas Educacionais Anísio Teixeira
 
 ```{r}
 plot_historico_mencao_lgpd(lgpd, "INEP – Instituto Nacional de Estudos e Pesquisas Educacionais Anísio Teixeira")
@@ -561,25 +562,25 @@ plot_decisoes_mencao_lgpd(lgpd, "INEP – Instituto Nacional de Estudos e Pesqui
 plot_wordcloud_mencao_lgpd(lgpd, "INEP – Instituto Nacional de Estudos e Pesquisas Educacionais Anísio Teixeira")
 ```
 
-
+#### MMFDH – Ministério da Mulher, da Família e dos Direitos Humanos
 
 ```{r}
 plot_historico_mencao_lgpd(lgpd, "MMFDH – Ministério da Mulher, da Família e dos Direitos Humanos")
 plot_assuntos_mencao_lgpd(lgpd, "MMFDH – Ministério da Mulher, da Família e dos Direitos Humanos")
 plot_decisoes_mencao_lgpd(lgpd, "MMFDH – Ministério da Mulher, da Família e dos Direitos Humanos")
-plot_wordcloud_mencao_lgpd(lgpd, "IMBEL – Indústria de Material Bélico do Brasil")
+plot_wordcloud_mencao_lgpd(lgpd, "MMFDH – Ministério da Mulher, da Família e dos Direitos Humanos")
 ```
 
-
+#### ANEEL – Agência Nacional de Energia Elétrica
 
 ```{r}
 plot_historico_mencao_lgpd(lgpd, "ANEEL – Agência Nacional de Energia Elétrica")             
 plot_assuntos_mencao_lgpd(lgpd, "ANEEL – Agência Nacional de Energia Elétrica")    
 plot_decisoes_mencao_lgpd(lgpd, "ANEEL – Agência Nacional de Energia Elétrica")
-plot_wordcloud_mencao_lgpd(lgpd, "MMFDH – Ministério da Mulher, da Família e dos Direitos Humanos")
+plot_wordcloud_mencao_lgpd(lgpd, "ANEEL – Agência Nacional de Energia Elétrica")
 ```
 
-
+#### CGU – Controladoria-Geral da União
 
 ```{r}
 plot_historico_mencao_lgpd(lgpd, "CGU – Controladoria-Geral da União")                                
@@ -588,7 +589,7 @@ plot_decisoes_mencao_lgpd(lgpd, "CGU – Controladoria-Geral da União")
 plot_wordcloud_mencao_lgpd(lgpd, "CGU – Controladoria-Geral da União")
 ```
 
-
+#### MCTI – Ministério da Ciência, Tecnologia, Inovações
 
 ```{r}
 plot_historico_mencao_lgpd(lgpd, "MCTI – Ministério da Ciência, Tecnologia, Inovações")
@@ -597,7 +598,7 @@ plot_decisoes_mencao_lgpd(lgpd, "MCTI – Ministério da Ciência, Tecnologia, I
 plot_wordcloud_mencao_lgpd(lgpd, "MCTI – Ministério da Ciência, Tecnologia, Inovações")
 ```
 
-
+#### PETROBRAS – Petróleo Brasileiro S.A.
 
 ```{r}
 plot_historico_mencao_lgpd(lgpd, "PETROBRAS – Petróleo Brasileiro S.A.")
@@ -606,7 +607,7 @@ plot_decisoes_mencao_lgpd(lgpd, "PETROBRAS – Petróleo Brasileiro S.A.")
 plot_wordcloud_mencao_lgpd(lgpd, "PETROBRAS – Petróleo Brasileiro S.A.")
 ```
 
-
+#### MAPA – Ministério da Agricultura, Pecuária e Abastecimento
 
 ```{r}
 plot_historico_mencao_lgpd(lgpd, "MAPA – Ministério da Agricultura, Pecuária e Abastecimento")
@@ -615,7 +616,7 @@ plot_decisoes_mencao_lgpd(lgpd, "MAPA – Ministério da Agricultura, Pecuária 
 plot_wordcloud_mencao_lgpd(lgpd, "MAPA – Ministério da Agricultura, Pecuária e Abastecimento")
 ```
 
-
+#### MD – Ministério da Defesa
 
 ```{r}
 plot_historico_mencao_lgpd(lgpd, "MD – Ministério da Defesa")
@@ -624,7 +625,7 @@ plot_decisoes_mencao_lgpd(lgpd, "MD – Ministério da Defesa")
 plot_wordcloud_mencao_lgpd(lgpd, "MD – Ministério da Defesa")
 ```
 
-
+#### ANVISA – Agência Nacional de Vigilância Sanitária
 
 ```{r}
 plot_historico_mencao_lgpd(lgpd, "ANVISA – Agência Nacional de Vigilância Sanitária")
@@ -633,7 +634,7 @@ plot_decisoes_mencao_lgpd(lgpd, "ANVISA – Agência Nacional de Vigilância San
 plot_wordcloud_mencao_lgpd(lgpd, "ANVISA – Agência Nacional de Vigilância Sanitária")
 ```
 
-
+#### BB – Banco do Brasil S.A.
 
 ```{r}
 plot_historico_mencao_lgpd(lgpd, "BB – Banco do Brasil S.A.")
