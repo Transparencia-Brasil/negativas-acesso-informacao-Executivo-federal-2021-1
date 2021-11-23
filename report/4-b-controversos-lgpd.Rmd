@@ -35,6 +35,8 @@ library(patchwork)
 library(kableExtra)
 library(hrbrthemes)
 library(tidytext)
+library(wordcloud)
+source(here("src/5-funcao-limpando-texto.R"))
 ```
 
 ```{r set-options}
@@ -72,7 +74,11 @@ theme_update(
 pedidos_cgu <- "dados/load/rds/pedidos-cgu.rds" %>% 
   here() %>% 
   readRDS() %>%
-  rename(orgao = orgaodestinatario)
+  rename(orgao = orgaodestinatario) %>% 
+  filter(decisao %notin% c(
+    "Pergunta Duplicada/Repetida",
+    "Não se trata de solicitação de informação"
+  ))
 
 pedidos_clean <- "dados/load/rds/pedidos-clean.rds" %>% 
   here() %>% 
@@ -149,8 +155,6 @@ lgpd %>%
   theme(axis.ticks.x = element_line())
 ```
 
-O pico de Abril de 2020 pode ser explicado por pedidos que mencionam a LGPD ou no assunto (ao fazer o pedido, o solicitante seleciona a opção "Dados Pessoais - LGPD" no campo "Assunto do pedido") ou no conteúdo do pedido
-
 ```{r}
 lgpd_counts <- lgpd %>% 
   select(data_registro, where(is.logical)) %>% 
@@ -170,6 +174,8 @@ lgpd_counts <- lgpd %>%
   count(data_registro, mencao_lgpd)
 ```
 
+O pico de Abril de 2020 pode ser explicado por pedidos que mencionam a LGPD ou no assunto (ao fazer o pedido, o solicitante seleciona a opção "Dados Pessoais - LGPD" no campo "Assunto do pedido") ou no conteúdo do pedido
+
 ```{r}
 lgpd_counts %>% 
   ggplot(aes(x = data_registro, y = n, color = reorder(mencao_lgpd, -n))) +
@@ -186,6 +192,8 @@ lgpd_counts %>%
         legend.justification = "left")
 ```
 
+Analisando ano a ano, agregando os meses, as solicitações respondidas com menções à LGPD, praticamente dobrou em 2021 em relação à 2020.
+
 ```{r}
 lgpd_counts %>% 
   count(ano = year(data_registro), mencao_lgpd,
@@ -200,7 +208,7 @@ lgpd_counts %>%
     data = . %>%
       filter(mencao_lgpd != str_glue("Solicitante não menciona LGPD em pedido,",
                                      "\nórgão menciona na resposta")),
-    size = 3, shape = 17) +
+    size = 2.3, shape = 17) +
   geom_line(
     data = . %>%
       filter(mencao_lgpd == str_glue("Solicitante não menciona LGPD em pedido,",
@@ -211,7 +219,7 @@ lgpd_counts %>%
       filter(mencao_lgpd == str_glue("Solicitante não menciona LGPD em pedido,",
                                      "\nórgão menciona na resposta")),
     size = 2) +
-  scale_color_manual(values = c(cores_aep[["rosa"]], cores_aep[["laranja"]])) +
+  scale_color_manual(values = c(cores_tb[["azul"]], cores_aep[["rosa"]])) +
   labs(title = "Onde a LGPD foi mencionada",
        color = NULL,
        x = "Quantidade",
@@ -337,9 +345,9 @@ lgpd %>%
      assunto_pedido != "Dados Pessoais - LGPD" 
   ) %>%
   count(sigla = str_extract(orgao, "^[:upper:]+(?= )|^GSI-PR"), sort = T) %>% 
-  group_by(n) %>% 
-  nest() %>% 
-  ungroup() %>% 
+  group_by(n) %>%
+  nest() %>%
+  ungroup() %>%
   mutate(
     sigla = map(data, pull, sigla),
     sigla = paste(sigla),
@@ -349,6 +357,7 @@ lgpd %>%
   filter(n > 10) %>% 
   ggplot(aes(x = reorder(sigla, n), y = n)) +
   geom_col(fill = cores_aep[["rosa"]]) +
+  geom_text(aes(label = n), hjust = 0) +
   coord_flip() +
   labs(
     title = "Quantidade de respostas que mencionam a LGPD, por órgão",
@@ -361,94 +370,275 @@ lgpd %>%
   )
 ```
 
+#### MS - Ministério da Saúde
 
-```{r fig.height=50}
-lgpd %>% 
-  filter(
-    usa_lgpd_resposta &
-     !usa_lgpd_pedido & 
-     !usa_lgpd_pedido_resumido & 
-     assunto_pedido != "Dados Pessoais - LGPD" 
-  ) %>% 
-  count(orgao, data_registro, sort = T) %>%
-  add_count(orgao, wt = n, name = "nn") %>% 
-  group_by(orgao) %>% 
-  slice_max(order_by = nn, n = 20) %>% 
-  ungroup() %>% 
-  ggplot(aes(x = data_registro, y = n)) +
-  geom_col(fill = cores_aep[["rosa"]]) +
-  facet_wrap(~ orgao, ncol = 1)
+Ministério da Saúde nega pedidos de acesso a informação em casos relacionados a pandemia.
+
+```{r}
+plot_historico_mencao_lgpd <- function(df, nome_orgao) {
+  df <- df %>%
+    filter(orgao == nome_orgao) %>% 
+    filter(
+      usa_lgpd_resposta &
+       !usa_lgpd_pedido & 
+       !usa_lgpd_pedido_resumido & 
+       assunto_pedido != "Dados Pessoais - LGPD" 
+    )  %>%
+    count(data_registro, orgao) 
+  
+  df %>% 
+    ggplot(aes(x = data_registro, y = n)) +
+    geom_col(fill = cores_aep[["rosa"]]) +
+    scale_x_date(date_labels = "%b-%Y") +
+    labs(
+      title = str_glue("{unique(df$orgao)}"),
+      subtitle = "Menções à LGPD apenas na resposta e ausentes nos pedidos",
+      x = NULL,
+      y = "Quantidade de pedidos respondidos"
+    )
+}
+
+plot_assuntos_mencao_lgpd <- function(df, nome_orgao) {
+  df <- df %>% 
+    filter(orgao == nome_orgao) %>% 
+    filter(
+      usa_lgpd_resposta &
+        !usa_lgpd_pedido & 
+        !usa_lgpd_pedido_resumido &
+        assunto_pedido != "Dados Pessoais - LGPD"
+    ) %>% 
+  count(assunto_pedido = str_wrap(assunto_pedido, 30), orgao, sort = T) %>%
+  filter(row_number() <= 10)
+  
+  df %>% 
+    ggplot(aes(y = n, x = reorder(assunto_pedido, n))) +
+    geom_col(fill = cores_aep[["laranja"]]) +
+    geom_text(aes(label = n), hjust = 0) +
+    coord_flip() +
+    labs(
+      title = str_glue("Principais assuntos - {unique(df$orgao)}"),
+      subtitle = "Assuntos abordados que levaram o órgão a responder com menção a LGPD",
+      x = NULL,
+      y = "Quantidade de pedidos"
+    )
+}
+
+plot_decisoes_mencao_lgpd <- function(df, nome_orgao) {
+  df <- df %>% 
+    filter(orgao == nome_orgao) %>% 
+    filter(
+      usa_lgpd_resposta &
+        !usa_lgpd_pedido & 
+        !usa_lgpd_pedido_resumido &
+        assunto_pedido != "Dados Pessoais - LGPD"
+    ) %>% 
+  count(orgao, data_registro, decisao = str_wrap(decisao, 25), sort = T)
+  
+  cores_decisao <- str_wrap(cores_decisao[-c(2, 5)], 25)
+  
+  df %>% 
+    ggplot(aes(x = data_registro, y = n, color = decisao)) +
+    geom_line(size = .8) +
+    scale_color_manual(values = cores_decisao) +
+    scale_x_date(date_labels = "%b-%Y") +
+    labs(
+      title = str_glue("{unique(df$orgao)}"),
+      subtitle = "Menção à LGPD e decisão sobre acesso",
+      x = NULL,
+      y = "Quantidade"
+    )
+}
+
+plot_wordcloud_mencao_lgpd <- function(df, nome_orgao) {
+  df <- df %>% 
+    filter(orgao == nome_orgao) %>% 
+    filter(
+      usa_lgpd_resposta &
+       !usa_lgpd_pedido & 
+       !usa_lgpd_pedido_resumido & 
+       assunto_pedido != "Dados Pessoais - LGPD" 
+    ) %>% 
+    select(id_pedido, detalhamento_solicitacao_clean) %>% 
+    unnest_tokens(word, detalhamento_solicitacao_clean) %>% 
+    anti_join(stopwords) %>% 
+    mutate(
+        word = str_extract(word, "[a-z']+"),
+        word = if_else(word == "urltag", "link-url", word)
+    ) %>% 
+    filter(!str_count(word) %in% c(1, 2)) %>%
+    count(word, sort = T)
+  
+  df %>% 
+    with(
+      wordcloud(
+        word,
+        n,
+        max.words = 150,
+        random.order = F,
+        random.color = F,
+        main = title,
+        colors = c(
+          cores_tb[["cinza_claro"]],
+          cores_aep[["laranja"]],
+          cores_aep[["rosa"]],
+          cores_tb[["azul"]]
+        )
+      )
+    )
+  
+}
 ```
 
-### Wordcloud no pedido quando órgão usa LGPD
 
-Wordcloud extraída do texto do pedido (campo `detalhamento_solicitacao`)
 
-```{r fig.height=7, fig.width=7}
-library(tidytext)
-library(wordcloud)
-source(here("src/5-funcao-limpando-texto.R"))
-
-lgpd %>% 
-  filter(
-    usa_lgpd_resposta &
-     !usa_lgpd_pedido & 
-     !usa_lgpd_pedido_resumido & 
-     assunto_pedido != "Dados Pessoais - LGPD" 
-  ) %>% 
-  select(id_pedido, detalhamento_solicitacao_clean) %>% 
-  unnest_tokens(word, detalhamento_solicitacao_clean) %>% 
-  anti_join(stopwords) %>% 
-  mutate(word = str_extract(word, "[a-z']+")) %>% 
-  filter(word != "ddmmyyyy") %>% 
-  count(word, sort = T) %>% 
-  with(wordcloud(word, n, max.words = 200, scale = c(7, 1), 
-          random.order = F,
-          random.color = F,
-          colors = c(cores_aep[2], cores_tb[5])))
+```{r}
+plot_historico_mencao_lgpd(lgpd, "MS – Ministério da Saúde")
+plot_assuntos_mencao_lgpd(lgpd, "MS – Ministério da Saúde")
+plot_decisoes_mencao_lgpd(lgpd, "MS – Ministério da Saúde")
+plot_wordcloud_mencao_lgpd(lgpd, "MS – Ministério da Saúde")
 ```
 
-Wordcloud extraída do texto do resumo do pedido (campo `resumo_solicitacao`)
 
-```{r fig.height=7, fig.width=7}
-lgpd %>% 
-  filter(
-    usa_lgpd_resposta &
-     !usa_lgpd_pedido & 
-     !usa_lgpd_pedido_resumido & 
-     assunto_pedido != "Dados Pessoais - LGPD" 
-  ) %>% 
-  select(id_pedido, resumo_solicitacao_clean) %>% 
-  unnest_tokens(word, resumo_solicitacao_clean) %>% 
-  anti_join(stopwords) %>% 
-  mutate(word = str_extract(word, "[a-z']+")) %>% 
-  filter(word != "ddmmyyyy") %>% 
-  count(word, sort = T) %>% 
-  with(wordcloud(word, n, max.words = 200, scale = c(7, 1), 
-          random.order = F,
-          random.color = F,
-          colors = c(cores_aep[2], cores_tb[5])))
+
+```{r}
+plot_historico_mencao_lgpd(lgpd, "INCRA – Instituto Nacional de Colonização e Reforma Agrária")     
+plot_assuntos_mencao_lgpd(lgpd, "INCRA – Instituto Nacional de Colonização e Reforma Agrária") 
+plot_decisoes_mencao_lgpd(lgpd, "INCRA – Instituto Nacional de Colonização e Reforma Agrária")
+plot_wordcloud_mencao_lgpd(lgpd, "INCRA – Instituto Nacional de Colonização e Reforma Agrária")
 ```
 
-Wordcloud extraída da resposta do pedido, onde foi detectada a menção à LGPD
 
-```{r fig.height=7, fig.width=7}
-lgpd %>% 
-  filter(
-    usa_lgpd_resposta &
-     !usa_lgpd_pedido & 
-     !usa_lgpd_pedido_resumido & 
-     assunto_pedido != "Dados Pessoais - LGPD" 
-  ) %>% 
-  select(id_pedido, resposta_clean) %>% 
-  unnest_tokens(word, resposta_clean) %>% 
-  anti_join(stopwords) %>% 
-  mutate(word = str_extract(word, "[a-z']+"),
-         word = if_else(word == "urltag", "URL-link", word)) %>% 
-  filter(word != "ddmmyyyy") %>% 
-  count(word, sort = T) %>% 
-  with(wordcloud(word, n, max.words = 200, scale = c(7, 1), 
-          random.order = F,
-          random.color = F,
-          colors = c(cores_aep[2], cores_tb[5])))
+
+```{r}
+plot_historico_mencao_lgpd(lgpd, "INSS – Instituto Nacional do Seguro Social")                 
+plot_assuntos_mencao_lgpd(lgpd, "INSS – Instituto Nacional do Seguro Social")  
+plot_decisoes_mencao_lgpd(lgpd, "INSS – Instituto Nacional do Seguro Social")  
+plot_wordcloud_mencao_lgpd(lgpd, "INSS – Instituto Nacional do Seguro Social")
 ```
+
+
+
+```{r}
+plot_historico_mencao_lgpd(lgpd, "IMBEL – Indústria de Material Bélico do Brasil")
+plot_assuntos_mencao_lgpd(lgpd, "IMBEL – Indústria de Material Bélico do Brasil")
+plot_decisoes_mencao_lgpd(lgpd, "IMBEL – Indústria de Material Bélico do Brasil")
+plot_wordcloud_mencao_lgpd(lgpd, "IMBEL – Indústria de Material Bélico do Brasil")
+```
+
+
+
+```{r}
+plot_historico_mencao_lgpd(lgpd, "GSI-PR – Gabinete de Segurança Institucional da Presidência da República")
+plot_assuntos_mencao_lgpd(lgpd, "GSI-PR – Gabinete de Segurança Institucional da Presidência da República")
+plot_decisoes_mencao_lgpd(lgpd, "GSI-PR – Gabinete de Segurança Institucional da Presidência da República")
+plot_wordcloud_mencao_lgpd(lgpd, "GSI-PR – Gabinete de Segurança Institucional da Presidência da República")
+```
+
+
+
+```{r}
+plot_historico_mencao_lgpd(lgpd, "ME - Ministério da Economia")
+plot_assuntos_mencao_lgpd(lgpd, "ME - Ministério da Economia")
+plot_decisoes_mencao_lgpd(lgpd, "ME - Ministério da Economia")
+plot_wordcloud_mencao_lgpd(lgpd, "ME - Ministério da Economia")
+```
+
+
+
+```{r}
+plot_historico_mencao_lgpd(lgpd, "CNPQ – Conselho Nacional de Desenvolvimento Científico e Tecnológico")         
+plot_assuntos_mencao_lgpd(lgpd, "CNPQ – Conselho Nacional de Desenvolvimento Científico e Tecnológico")         
+plot_decisoes_mencao_lgpd(lgpd, "CNPQ – Conselho Nacional de Desenvolvimento Científico e Tecnológico")
+plot_wordcloud_mencao_lgpd(lgpd, "CNPQ – Conselho Nacional de Desenvolvimento Científico e Tecnológico")
+```
+
+
+
+```{r}
+plot_historico_mencao_lgpd(lgpd, "INEP – Instituto Nacional de Estudos e Pesquisas Educacionais Anísio Teixeira")
+plot_assuntos_mencao_lgpd(lgpd, "INEP – Instituto Nacional de Estudos e Pesquisas Educacionais Anísio Teixeira")
+plot_decisoes_mencao_lgpd(lgpd, "INEP – Instituto Nacional de Estudos e Pesquisas Educacionais Anísio Teixeira")
+plot_wordcloud_mencao_lgpd(lgpd, "INEP – Instituto Nacional de Estudos e Pesquisas Educacionais Anísio Teixeira")
+```
+
+
+
+```{r}
+plot_historico_mencao_lgpd(lgpd, "MMFDH – Ministério da Mulher, da Família e dos Direitos Humanos")
+plot_assuntos_mencao_lgpd(lgpd, "MMFDH – Ministério da Mulher, da Família e dos Direitos Humanos")
+plot_decisoes_mencao_lgpd(lgpd, "MMFDH – Ministério da Mulher, da Família e dos Direitos Humanos")
+plot_wordcloud_mencao_lgpd(lgpd, "IMBEL – Indústria de Material Bélico do Brasil")
+```
+
+
+
+```{r}
+plot_historico_mencao_lgpd(lgpd, "ANEEL – Agência Nacional de Energia Elétrica")             
+plot_assuntos_mencao_lgpd(lgpd, "ANEEL – Agência Nacional de Energia Elétrica")    
+plot_decisoes_mencao_lgpd(lgpd, "ANEEL – Agência Nacional de Energia Elétrica")
+plot_wordcloud_mencao_lgpd(lgpd, "MMFDH – Ministério da Mulher, da Família e dos Direitos Humanos")
+```
+
+
+
+```{r}
+plot_historico_mencao_lgpd(lgpd, "CGU – Controladoria-Geral da União")                                
+plot_assuntos_mencao_lgpd(lgpd, "CGU – Controladoria-Geral da União")     
+plot_decisoes_mencao_lgpd(lgpd, "CGU – Controladoria-Geral da União")
+plot_wordcloud_mencao_lgpd(lgpd, "CGU – Controladoria-Geral da União")
+```
+
+
+
+```{r}
+plot_historico_mencao_lgpd(lgpd, "MCTI – Ministério da Ciência, Tecnologia, Inovações")
+plot_assuntos_mencao_lgpd(lgpd, "MCTI – Ministério da Ciência, Tecnologia, Inovações")
+plot_decisoes_mencao_lgpd(lgpd, "MCTI – Ministério da Ciência, Tecnologia, Inovações")
+plot_wordcloud_mencao_lgpd(lgpd, "MCTI – Ministério da Ciência, Tecnologia, Inovações")
+```
+
+
+
+```{r}
+plot_historico_mencao_lgpd(lgpd, "PETROBRAS – Petróleo Brasileiro S.A.")
+plot_assuntos_mencao_lgpd(lgpd, "PETROBRAS – Petróleo Brasileiro S.A.")
+plot_decisoes_mencao_lgpd(lgpd, "PETROBRAS – Petróleo Brasileiro S.A.")
+plot_wordcloud_mencao_lgpd(lgpd, "PETROBRAS – Petróleo Brasileiro S.A.")
+```
+
+
+
+```{r}
+plot_historico_mencao_lgpd(lgpd, "MAPA – Ministério da Agricultura, Pecuária e Abastecimento")
+plot_assuntos_mencao_lgpd(lgpd, "MAPA – Ministério da Agricultura, Pecuária e Abastecimento")
+plot_decisoes_mencao_lgpd(lgpd, "MAPA – Ministério da Agricultura, Pecuária e Abastecimento")
+plot_wordcloud_mencao_lgpd(lgpd, "MAPA – Ministério da Agricultura, Pecuária e Abastecimento")
+```
+
+
+
+```{r}
+plot_historico_mencao_lgpd(lgpd, "MD – Ministério da Defesa")
+plot_assuntos_mencao_lgpd(lgpd, "MD – Ministério da Defesa")
+plot_decisoes_mencao_lgpd(lgpd, "MD – Ministério da Defesa")
+plot_wordcloud_mencao_lgpd(lgpd, "MD – Ministério da Defesa")
+```
+
+
+
+```{r}
+plot_historico_mencao_lgpd(lgpd, "ANVISA – Agência Nacional de Vigilância Sanitária")
+plot_assuntos_mencao_lgpd(lgpd, "ANVISA – Agência Nacional de Vigilância Sanitária")
+plot_decisoes_mencao_lgpd(lgpd, "ANVISA – Agência Nacional de Vigilância Sanitária")
+plot_wordcloud_mencao_lgpd(lgpd, "ANVISA – Agência Nacional de Vigilância Sanitária")
+```
+
+
+
+```{r}
+plot_historico_mencao_lgpd(lgpd, "BB – Banco do Brasil S.A.")
+plot_assuntos_mencao_lgpd(lgpd, "BB – Banco do Brasil S.A.")
+plot_decisoes_mencao_lgpd(lgpd, "BB – Banco do Brasil S.A.")
+plot_wordcloud_mencao_lgpd(lgpd, "BB – Banco do Brasil S.A.")
+```
+

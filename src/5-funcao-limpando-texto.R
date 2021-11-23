@@ -94,7 +94,20 @@ stopwords_lai <- tibble(
     "ii",
     "iii",
     "iv",
-    "sobre"
+    "sobre",
+    "ddmmyyyy",
+    "art",
+    "nup",
+    "www",
+    "requerida",
+    "requerente",
+    "gostaria",
+    "gov",
+    "ora",
+    "senhoria",
+    "cabe",
+    "faca",
+    "quot"
   ),
   lexicon = "lai"
 )
