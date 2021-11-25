@@ -60,6 +60,7 @@ limpando_texto <- function(x) {
     str_replace_all(my_rgx(lista_de_regex, "rgx_lai"),
                     my_repl(lista_de_regex, "rgx_lai")) %>% 
     str_replace_all("(?<=\\d) +(?=\\d)", "") %>% 
+    str_remove("quot$") %>% 
     str_replace_all("lai( lai)*", "LAI") %>% 
     str_replace_all("lgpd( lgpd)*", "LGPD") %>% 
     str_replace_all("^processos$", "processo") %>% 
