@@ -500,9 +500,11 @@ lgpd %>%
 
 #### Ano a ano
 
-```{r}
+```{r fig.height=7}
 cores_decisao_aux <- cores_decisao[-c(2, 5)]
 cores_decisao_aux[["Informação Inexistente"]] <- cores_aep[["marrom"]]
+
+names(cores_decisao_aux) <- str_wrap(names(cores_decisao_aux), 25)
 
 lgpd %>% 
   filter(
@@ -513,21 +515,27 @@ lgpd %>%
   ) %>% 
   count(ano = year(data_registro), decisao, sort = T) %>% 
   complete(decisao, ano, fill = list(n = 0)) %>% 
+  mutate(decisao = str_wrap(decisao, 25)) %>% 
+  filter(ano > 2018) %>% 
   ggplot(aes(x = reorder(ano, n), y = n, fill = decisao)) +
   geom_col(position = "dodge") +
   geom_text(aes(label = if_else(n > 0, n, NA_real_)),
             position = position_dodge(width = .9), vjust = 0) +
   scale_fill_manual(values = cores_decisao_aux) +
+  ylim(c(0, 600)) +
   facet_wrap(ano ~ ., scales = "free_x", ncol = 1) +
   labs(
     title = "Decisões quando órgão menciona LGPD",
     y = "Quantidade de pedidos",
-    x = "Decisão"
+    x = "Decisão",
+    fill = "Decisão:"
   ) +
-  theme(axis.text.x = element_blank(),
-        strip.text = element_text(hjust = 0, face = "bold"))
+  theme(
+    axis.text.x = element_blank(),
+    strip.text = element_text(hjust = 0, face = "bold", size = 14),
+    legend.text = element_text(size = 8, margin = margin(5, 0, 5, 0, "pt"))
+  )
 ```
-
 
 ```{r}
 lgpd %>% 
@@ -538,6 +546,7 @@ lgpd %>%
      assunto_pedido != "Dados Pessoais - LGPD" 
   ) %>% 
   count(data_registro, decisao, sort = T) %>% 
+  mutate(decisao = str_wrap(decisao, 25)) %>% 
   ggplot(aes(x = data_registro, y = n, color = decisao)) +
   geom_line(size = 1) +
   scale_color_manual(values = cores_decisao_aux) +
@@ -569,9 +578,6 @@ lgpd %>%
     y = "Quantidade de pedidos\ncom acesso negado"
   )
 ```
-
-
-
 
 ### Órgãos que mais usaram LGPD em respostas
 
@@ -881,3 +887,30 @@ plot_decisoes_mencao_lgpd(lgpd, "BB – Banco do Brasil S.A.")
 plot_wordcloud_mencao_lgpd(lgpd, "BB – Banco do Brasil S.A.")
 ```
 
+### Acesso Negado
+
+Quais foram os órgãos que mais emitiram respostas que mencionam a LGPD e foram classificadas como “Acesso Negado”, por ano?
+
+```{r}
+lgpd %>%
+  select(
+    id_pedido, orgao, data_registro,
+    decisao, where(is.logical), assunto_pedido
+  ) %>% 
+  add_count(orgao, name = "n_orgao") %>% 
+  add_count(orgao, decisao, name = "n_orgao_decisao") %>%
+  add_count(decisao, name = "n_decisao") %>%
+  filter(
+    usa_lgpd_resposta &
+     !usa_lgpd_pedido & 
+     !usa_lgpd_pedido_resumido & 
+     assunto_pedido != "Dados Pessoais - LGPD" 
+  ) %>% 
+  filter(decisao == "Acesso Negado") %>% 
+  select(
+    data_registro, orgao, decisao, assunto_pedido, 
+    starts_with("usa"), starts_with("n")
+  ) %>% 
+  distinct() %>% 
+  glimpse()
+```
