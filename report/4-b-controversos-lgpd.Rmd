@@ -207,14 +207,13 @@ recs$`Pedido de Revisão` <- recs$`Pedido de Revisão` %>%
   select(-usa_lgpd)
 
 
-lbl_x <- c("Detectou\nLGPD", "Assunto", "Resumo do\npedido", 
+lbl_x <- c("Assunto", "Resumo do\npedido", 
            "Pedido", "Resposta", "Reclamação", "Resposta\nreclamação",
            "Recurso 1ª", "Resposta\nrecurso 1ª", "Recurso 2ª", 
            "Resposta\nrecurso 2ª", "CGU", "Resposta\nCGU 3ª",
            "CMRI", "Resposta\nCMRI")
 
 cores_detecta_lgpd <- c(
-  "Instância inexistente" = cores_aep[["cinza"]],
   "Termo LGPD não detectado" = cores_aep[["laranja"]],
   "Termo LGPD detectado" = cores_aep[["rosa"]]
 )
@@ -247,25 +246,31 @@ recs %>%
     names_to = "onde",
     values_to = "usa"
   ) %>% 
+  filter(!is.na(usa), onde != "usa_lgpd") %>% 
   mutate(onde = ordered(onde, levels = ord_interacao),
          usa = case_when(
            usa ~ "Termo LGPD detectado",
-           !usa ~ "Termo LGPD não detectado",
-           TRUE ~ "Instância inexistente"
+           !usa ~ "Termo LGPD não detectado"
   )) %>% 
-  ggplot(aes(x = onde, y = combinacao, fill = usa)) +
-  geom_tile(color = "gray80") +
-  scale_x_discrete(labels = lbl_x, position = "top", expand = c(0, 0)) +
+  ggplot(aes(
+    x = onde,
+    y = reorder(combinacao, n),
+    fill = usa,
+    group = reorder(combinacao, n)
+  )) +
+  geom_line() +
+  geom_point(color = "transparent", shape = 21, size = 4) +
+  scale_x_discrete(labels = lbl_x, position = "top") +
   scale_fill_manual(values = cores_detecta_lgpd) +
   labs(
     title = "Mapeamento do pedido do início ao fim",
-    subtitle = "Células coloridas são as interações de um pedido,\n cinza a interação não existe",
+    subtitle = "Cada ponto é uma interação registrada, o texto da interação foi analizado detectando ou não termos associados a LGPD",
     fill = NULL,
     x = NULL,
     y = NULL
   ) +
   theme(
-    legend.position = "bottom",
+    legend.position = "top",
     legend.direction = "horizontal",
     legend.justification = "left",
     axis.ticks.x = element_blank(),
