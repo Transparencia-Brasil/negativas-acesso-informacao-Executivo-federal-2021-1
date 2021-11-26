@@ -26,20 +26,6 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r libs}
-library(tidyverse)
-library(lubridate)
-library(glue)
-library(here)
-library(ggtext)
-library(patchwork)
-library(kableExtra)
-library(hrbrthemes)
-library(tidytext)
-library(wordcloud)
-source(here("src/5-funcao-limpando-texto.R"))
-```
-
 ```{r set-options}
 set.seed(1014)
 
@@ -55,8 +41,20 @@ options(
 
 Sys.setenv(LANGUAGE = "pt-br")
 Sys.setlocale("LC_TIME", "pt_BR")
+```
 
-# helper
+```{r libs}
+library(tidyverse)
+library(lubridate)
+library(glue)
+library(here)
+library(ggtext)
+library(patchwork)
+library(kableExtra)
+library(hrbrthemes)
+library(tidytext)
+library(wordcloud)
+source(here("src/5-funcao-limpando-texto.R"))
 `%notin%` <- function(x, y) !(x %in% y)
 ```
 
@@ -81,22 +79,47 @@ pedidos_cgu <- "dados/load/rds/pedidos-cgu.rds" %>%
     "Não se trata de solicitação de informação"
   ))
 
+recursos_cgu <- "dados/load/rds/recursos-cgu.rds" %>% 
+  here() %>% 
+  readRDS() %>%
+  rename(orgao = orgaodestinatario) %>% 
+  distinct() %>% 
+  group_by(id_pedido) %>% 
+  filter(row_number() == 1) %>% 
+  ungroup()
+
+recursos_cgu %>% count(id_pedido, sort = T)
+
 pedidos_clean <- "dados/load/rds/pedidos-clean.rds" %>% 
   here() %>% 
   readRDS() 
 
 recursos_clean <- "dados/load/rds/recursos-clean.rds" %>% 
   here() %>% 
-  readRDS() 
+  readRDS() %>% 
+  distinct() %>% 
+  group_by(id_pedido) %>% 
+  filter(row_number() == 1) %>% 
+  ungroup()
 ```
 
-```{r}
+```{r  fig.height=8, fig.width=10}
 pedidos_clean <- pedidos_clean %>% 
   mutate(
     usa_lgpd_pedido_resumido = str_detect(resumo_solicitacao_clean, "LGPD"),
     usa_lgpd_pedido = str_detect(detalhamento_solicitacao_clean, "LGPD"),
     usa_lgpd_resposta = str_detect(resposta_clean, "LGPD")
   )
+
+recursos_clean <- recursos_clean %>% 
+  mutate(
+    usa_lgpd_recurso = str_detect(desc_recurso_clean, "LGPD"),
+    usa_lgpd_resposta_recurso = str_detect(resposta_recurso_clean, "LGPD"),
+    usa_lgpd = usa_lgpd_recurso | usa_lgpd_resposta_recurso
+  )
+
+
+
 
 lgpd <- pedidos_cgu %>% 
   select(
@@ -108,11 +131,147 @@ lgpd <- pedidos_cgu %>%
   mutate(
     usa_lgpd_assunto = assunto_pedido == "Dados Pessoais - LGPD",
     usa_lgpd_pedido_resumido = replace_na(usa_lgpd_pedido_resumido, FALSE),
-    usa_lgpd = !(!usa_lgpd_pedido_resumido & 
-                  !usa_lgpd_pedido &
-                  !usa_lgpd_resposta & 
-                  !usa_lgpd_assunto)
-    )
+    usa_lgpd = !(
+      !usa_lgpd_pedido_resumido & 
+      !usa_lgpd_pedido &
+      !usa_lgpd_resposta & 
+      !usa_lgpd_assunto
+  ))
+
+ord_interacao <- ordered(c(
+   "usa_lgpd",
+   "usa_lgpd_assunto",
+   "usa_lgpd_pedido_resumido",
+   "usa_lgpd_pedido",
+   "usa_lgpd_resposta",
+   "usa_lgpd_recurso_primeira_instancia",
+   "usa_lgpd_resposta_recurso_primeira_instancia",
+   "usa_lgpd_recurso_segunda_instancia",
+   "usa_lgpd_resposta_recurso_segunda_instancia",
+   "usa_lgpd_recurso_cgu",
+   "usa_lgpd_resposta_recurso_cgu",
+   "usa_lgpd_recurso_cmri",
+   "usa_lgpd_resposta_recurso_cmri",
+   "usa_lgpd_revisao",
+   "usa_lgpd_resposta_revisao"
+))
+
+recursos_clean_instancias <- recursos_clean %>% 
+  select(starts_with("id"), where(is.logical)) %>% 
+  left_join(
+    recursos_cgu %>% 
+      select(id_pedido, id_recurso, instancia)
+  ) %>% 
+  select(-id_recurso)
+
+recs <- recursos_clean_instancias %>% 
+  mutate(instancia = if_else(instancia == "Terceira Instância", "CGU", instancia)) %>% 
+  group_by(instancia) %>% 
+  nest() %>% 
+  ungroup() %>% 
+  deframe()
+
+recs$`Primeira Instância` <- recs$`Primeira Instância` %>% 
+  rename(
+    usa_lgpd_recurso_primeira_instancia = usa_lgpd_recurso,
+    usa_lgpd_resposta_recurso_primeira_instancia = usa_lgpd_resposta_recurso
+  ) %>%
+  select(-usa_lgpd)
+
+recs$`Segunda Instância` <- recs$`Segunda Instância` %>% 
+  rename(
+    usa_lgpd_recurso_segunda_instancia = usa_lgpd_recurso,
+    usa_lgpd_resposta_recurso_segunda_instancia = usa_lgpd_resposta_recurso
+  ) %>%
+  select(-usa_lgpd)
+
+recs$`CGU` <- recs$`CGU` %>% 
+  rename(
+    usa_lgpd_recurso_cgu = usa_lgpd_recurso,
+    usa_lgpd_resposta_recurso_cgu = usa_lgpd_resposta_recurso
+  ) %>%
+  select(-usa_lgpd)
+
+recs$`CMRI` <- recs$`CMRI` %>% 
+  rename(
+    usa_lgpd_recurso_cmri = usa_lgpd_recurso,
+    usa_lgpd_resposta_recurso_cmri = usa_lgpd_resposta_recurso
+  ) %>%
+  select(-usa_lgpd)
+
+recs$`Pedido de Revisão` <- recs$`Pedido de Revisão` %>% 
+  rename(
+    usa_lgpd_revisao = usa_lgpd_recurso,
+    usa_lgpd_resposta_revisao = usa_lgpd_resposta_recurso
+  ) %>%
+  select(-usa_lgpd)
+
+
+lbl_x <- c("Detectou\nLGPD", "Assunto", "Resumo do\npedido", 
+           "Pedido", "Resposta", "Reclamação", "Resposta\nreclamação",
+           "Recurso 1ª", "Resposta\nrecurso 1ª", "Recurso 2ª", 
+           "Resposta\nrecurso 2ª", "CGU", "Resposta\nCGU 3ª",
+           "CMRI", "Resposta\nCMRI")
+
+cores_detecta_lgpd <- c(
+  "Instância inexistente" = cores_aep[["cinza"]],
+  "Termo LGPD não detectado" = cores_aep[["laranja"]],
+  "Termo LGPD detectado" = cores_aep[["rosa"]]
+)
+
+recs %>%  
+  reduce(full_join) %>% 
+  left_join(lgpd, .) %>% 
+  select(id_pedido, where(is.logical)) %>% 
+  count(
+    usa_lgpd,
+    usa_lgpd_assunto,
+    usa_lgpd_pedido_resumido,
+    usa_lgpd_pedido,
+    usa_lgpd_resposta,
+    usa_lgpd_recurso_primeira_instancia,
+    usa_lgpd_resposta_recurso_primeira_instancia,
+    usa_lgpd_recurso_segunda_instancia,
+    usa_lgpd_resposta_recurso_segunda_instancia,
+    usa_lgpd_recurso_cgu,
+    usa_lgpd_resposta_recurso_cgu,
+    usa_lgpd_recurso_cmri,
+    usa_lgpd_resposta_recurso_cmri,
+    usa_lgpd_revisao,
+    usa_lgpd_resposta_revisao,
+    sort = T
+  ) %>% 
+  mutate(combinacao = str_glue("Combinação {row_number()}")) %>% 
+  pivot_longer(
+    -c(n, combinacao),
+    names_to = "onde",
+    values_to = "usa"
+  ) %>% 
+  mutate(onde = ordered(onde, levels = ord_interacao),
+         usa = case_when(
+           usa ~ "Termo LGPD detectado",
+           !usa ~ "Termo LGPD não detectado",
+           TRUE ~ "Instância inexistente"
+  )) %>% 
+  ggplot(aes(x = onde, y = combinacao, fill = usa)) +
+  geom_tile(color = "gray80") +
+  scale_x_discrete(labels = lbl_x, position = "top", expand = c(0, 0)) +
+  scale_fill_manual(values = cores_detecta_lgpd) +
+  labs(
+    title = "Mapeamento do pedido do início ao fim",
+    subtitle = "Células coloridas são as interações de um pedido,\n cinza a interação não existe",
+    fill = NULL,
+    x = NULL,
+    y = NULL
+  ) +
+  theme(
+    legend.position = "bottom",
+    legend.direction = "horizontal",
+    legend.justification = "left",
+    axis.ticks.x = element_blank(),
+    axis.text.y = element_blank()
+  )
+
 ```
 
 ### Evolução de uso da LGPD em pedidos LAI
@@ -302,7 +461,7 @@ lgpd %>%
   geom_col(fill = cores_tb[["azul"]]) +
   geom_text(aes(label = n), hjust = 0) +
   labs(
-    title = "10 principais assuntos em que em que o órgão mencionou LGPD na resposta",
+    title = "10 principais assuntos em que em que o órgão mencionou LGPD\nna resposta",
     y = "Quntidade de pedidos",
     x = NULL
   ) +
@@ -370,10 +529,6 @@ lgpd %>%
     y = "Quantidade de pedidos respondidos"
   )
 ```
-
-#### MS - Ministério da Saúde
-
-Ministério da Saúde nega pedidos de acesso a informação em casos relacionados a pandemia.
 
 ```{r}
 plot_historico_mencao_lgpd <- function(df, nome_orgao) {
@@ -490,7 +645,9 @@ plot_wordcloud_mencao_lgpd <- function(df, nome_orgao) {
 }
 ```
 
-#### MS – Ministério da Saúde
+#### MS - Ministério da Saúde
+
+Ministério da Saúde nega pedidos de acesso a informação em casos relacionados a pandemia.
 
 ```{r}
 plot_historico_mencao_lgpd(lgpd, "MS – Ministério da Saúde")
