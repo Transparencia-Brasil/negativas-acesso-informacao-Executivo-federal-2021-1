@@ -475,6 +475,8 @@ lgpd %>%
 
 ### Decisões quando órgão menciona LGPD
 
+#### Geral
+
 ```{r}
 lgpd %>% 
   filter(
@@ -484,7 +486,6 @@ lgpd %>%
      assunto_pedido != "Dados Pessoais - LGPD" 
   ) %>% 
   count(decisao, sort = T) %>%
-  slice_max(n = 10, order_by = n) %>% 
   ggplot(aes(x = reorder(decisao, n), y = n)) +
   geom_col(aes(fill = decisao), show.legend = F) +
   geom_text(aes(label = n), hjust = 0) +
@@ -496,6 +497,81 @@ lgpd %>%
   scale_fill_manual(values = cores_decisao2) +
   coord_flip()
 ```
+
+#### Ano a ano
+
+```{r}
+cores_decisao_aux <- cores_decisao[-c(2, 5)]
+cores_decisao_aux[["Informação Inexistente"]] <- cores_aep[["marrom"]]
+
+lgpd %>% 
+  filter(
+    usa_lgpd_resposta &
+     !usa_lgpd_pedido & 
+     !usa_lgpd_pedido_resumido & 
+     assunto_pedido != "Dados Pessoais - LGPD" 
+  ) %>% 
+  count(ano = year(data_registro), decisao, sort = T) %>% 
+  complete(decisao, ano, fill = list(n = 0)) %>% 
+  ggplot(aes(x = reorder(ano, n), y = n, fill = decisao)) +
+  geom_col(position = "dodge") +
+  geom_text(aes(label = if_else(n > 0, n, NA_real_)),
+            position = position_dodge(width = .9), vjust = 0) +
+  scale_fill_manual(values = cores_decisao_aux) +
+  facet_wrap(ano ~ ., scales = "free_x", ncol = 1) +
+  labs(
+    title = "Decisões quando órgão menciona LGPD",
+    y = "Quantidade de pedidos",
+    x = "Decisão"
+  ) +
+  theme(axis.text.x = element_blank(),
+        strip.text = element_text(hjust = 0, face = "bold"))
+```
+
+
+```{r}
+lgpd %>% 
+  filter(
+    usa_lgpd_resposta &
+     !usa_lgpd_pedido & 
+     !usa_lgpd_pedido_resumido & 
+     assunto_pedido != "Dados Pessoais - LGPD" 
+  ) %>% 
+  count(data_registro, decisao, sort = T) %>% 
+  ggplot(aes(x = data_registro, y = n, color = decisao)) +
+  geom_line(size = 1) +
+  scale_color_manual(values = cores_decisao_aux) +
+  labs(
+    title = "Evolução das decisões quando órgão menciona LGPD nas resposta",
+    subtitle = "Solicitante não menciona LGPD no pedido",
+    x = NULL,
+    y = "Quantidade de pedidos"
+  )
+```
+
+```{r}
+lgpd %>% 
+  filter(
+    usa_lgpd_resposta &
+     !usa_lgpd_pedido & 
+     !usa_lgpd_pedido_resumido & 
+     assunto_pedido != "Dados Pessoais - LGPD" 
+  ) %>% 
+  count(data_registro, decisao, sort = T) %>% 
+  filter(decisao == "Acesso Negado") %>% 
+  ggplot(aes(x = data_registro, y = n)) +
+  geom_col(fill = cores_aep[["rosa"]]) +
+  geom_text(aes(label = n), vjust = 0) +
+  labs(
+    title = "Evolução das decisões de acesso negado quando órgão menciona LGPD nas resposta",
+    subtitle = "Solicitante não menciona LGPD no pedido",
+    x = NULL,
+    y = "Quantidade de pedidos\ncom acesso negado"
+  )
+```
+
+
+
 
 ### Órgãos que mais usaram LGPD em respostas
 
