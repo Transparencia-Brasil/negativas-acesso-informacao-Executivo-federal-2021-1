@@ -260,11 +260,21 @@ recs %>%
   )) +
   geom_line() +
   geom_point(color = "transparent", shape = 21, size = 4) +
+  geom_text(
+    data = . %>% filter(onde == "usa_lgpd_assunto"),
+    aes(label = n),
+    hjust = 1,
+    check_overlap = T
+  ) +
   scale_x_discrete(labels = lbl_x, position = "top") +
   scale_fill_manual(values = cores_detecta_lgpd) +
   labs(
     title = "Mapeamento do pedido do início ao fim",
-    subtitle = "Cada ponto é uma interação registrada, o texto da interação foi analizado detectando ou não termos associados a LGPD",
+    subtitle = str_glue(
+      "Cada ponto é uma interação registrada,",
+      "o texto da interação foi analizado detectando",
+      "ou não termos associados a LGPD"
+    ),
     fill = NULL,
     x = NULL,
     y = NULL
@@ -276,7 +286,6 @@ recs %>%
     axis.ticks.x = element_blank(),
     axis.text.y = element_blank()
   )
-
 ```
 
 ### Evolução de uso da LGPD em pedidos LAI
@@ -490,7 +499,7 @@ lgpd %>%
   geom_col(aes(fill = decisao), show.legend = F) +
   geom_text(aes(label = n), hjust = 0) +
   labs(
-    title = "Decisão mais frequente quando órgão menciona LGPD na resposta",
+    title = "Decisão mais frequente quando órgão menciona LGPD\nna resposta",
     y = "Quntidade de pedidos",
     x = NULL
   ) +
@@ -551,7 +560,7 @@ lgpd %>%
   geom_line(size = 1) +
   scale_color_manual(values = cores_decisao_aux) +
   labs(
-    title = "Evolução das decisões quando órgão menciona LGPD nas resposta",
+    title = "Evolução das decisões quando órgão menciona LGPD nas respostas",
     subtitle = "Solicitante não menciona LGPD no pedido",
     x = NULL,
     y = "Quantidade de pedidos"
@@ -572,7 +581,7 @@ lgpd %>%
   geom_col(fill = cores_aep[["rosa"]]) +
   geom_text(aes(label = n), vjust = 0) +
   labs(
-    title = "Evolução das decisões de acesso negado quando órgão menciona LGPD nas resposta",
+    title = "Evolução das decisões de acesso negado quando órgão menciona LGPD nas respostas",
     subtitle = "Solicitante não menciona LGPD no pedido",
     x = NULL,
     y = "Quantidade de pedidos\ncom acesso negado"
@@ -908,14 +917,16 @@ lgpd_negativas <- lgpd %>%
   ) %>% 
   filter(decisao == "Acesso Negado")
 
-
 lgpd_negativas  %>% 
   select(
     data_registro, orgao, decisao, assunto_pedido, 
     starts_with("usa"), starts_with("n")
   ) %>% 
   distinct() %>% 
-  count(orgao, sort = TRUE) %>% 
+  count(
+    orgao = str_extract(orgao, "^[:upper:]+(?= )|^[:upper:]+-PR|^FUNRei|^MTur|UFCAT$"), 
+    sort = TRUE
+  ) %>%
   slice_max(n = 15, order_by = n) %>% 
   ggplot(aes(x = reorder(orgao, n), y = n)) +
   geom_col(fill = cores_aep[["rosa"]]) +
@@ -930,7 +941,7 @@ lgpd_negativas  %>%
   )
 ```
 
-Lista completa
+Lista completa:
 
 ```{r}
 tbla <- lgpd_negativas %>% 
@@ -942,7 +953,44 @@ tbla <- lgpd_negativas %>%
   count(orgao, sort = TRUE)
 
 tbla %>% 
-  reactable::reactable()
+  rename(
+    "Órgão" = orgao,
+    "Quantidade de pedidos com acesso negado" = n
+  ) %>% 
+  reactable::reactable(
+    defaultPageSize = 20,
+    resizable = TRUE,
+    filterable = TRUE,
+    searchable = TRUE,
+  )
 ```
 
+#### Acesso Negado por assunto e órgão
+
+```{r fig.height=15}
+
+lgpd_negativas  %>% 
+  select(
+    data_registro, orgao, decisao, assunto_pedido, 
+    starts_with("usa"), starts_with("n")
+  ) %>% 
+  distinct() %>%
+  #filter(orgao == "MS – Ministério da Saúde") %>% 
+  count(orgao, assunto_pedido) %>%
+  mutate(
+    orgao = str_extract(orgao, "^[:upper:]+(?= )|^[:upper:]+-PR|^FUNRei|^MTur|UFCAT$")
+  ) %>% 
+  slice_max(n = 15, order_by = n) %>% 
+  ggplot(aes(x = reorder(assunto_pedido, n), y = n)) +
+  geom_col(fill = cores_aep[["rosa"]]) +
+  coord_flip() +
+  geom_text(aes(label = n), color = cores_tb[["cinza_quase_branco"]], hjust = 1) +
+  facet_wrap(reorder(orgao, -n, sum) ~ ., scales = "free_y", ncol = 2) +
+  labs(
+    title = "Acesso negado por assunto e órgão",
+    subtitle = "Quando órgão menciona LGPD",
+    x = NULL,
+    y = "Quantidade"
+  )
+```
 
