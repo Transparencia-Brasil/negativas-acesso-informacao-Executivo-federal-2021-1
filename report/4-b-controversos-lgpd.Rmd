@@ -892,7 +892,7 @@ plot_wordcloud_mencao_lgpd(lgpd, "BB – Banco do Brasil S.A.")
 Quais foram os órgãos que mais emitiram respostas que mencionam a LGPD e foram classificadas como “Acesso Negado”, por ano?
 
 ```{r}
-lgpd %>%
+lgpd_negativas <- lgpd %>%
   select(
     id_pedido, orgao, data_registro,
     decisao, where(is.logical), assunto_pedido
@@ -906,11 +906,43 @@ lgpd %>%
      !usa_lgpd_pedido_resumido & 
      assunto_pedido != "Dados Pessoais - LGPD" 
   ) %>% 
-  filter(decisao == "Acesso Negado") %>% 
+  filter(decisao == "Acesso Negado")
+
+
+lgpd_negativas  %>% 
   select(
     data_registro, orgao, decisao, assunto_pedido, 
     starts_with("usa"), starts_with("n")
   ) %>% 
   distinct() %>% 
-  glimpse()
+  count(orgao, sort = TRUE) %>% 
+  slice_max(n = 15, order_by = n) %>% 
+  ggplot(aes(x = reorder(orgao, n), y = n)) +
+  geom_col(fill = cores_aep[["rosa"]]) +
+  geom_text(aes(label = n), hjust = 1, 
+            color = cores_tb[["cinza_quase_branco"]]) +
+  coord_flip() +
+  labs(
+    title = "Acessos negados mencionando a LGPD na resposta",
+    subtitle = "Solicitante não menciona LGPD no pedido",
+    x = NULL,
+    y = "Quantidade"
+  )
 ```
+
+Lista completa
+
+```{r}
+tbla <- lgpd_negativas %>% 
+  select(
+    data_registro, orgao, decisao, assunto_pedido, 
+    starts_with("usa"), starts_with("n")
+  ) %>% 
+  distinct() %>% 
+  count(orgao, sort = TRUE)
+
+tbla %>% 
+  reactable::reactable()
+```
+
+
