@@ -118,9 +118,6 @@ recursos_clean <- recursos_clean %>%
     usa_lgpd = usa_lgpd_recurso | usa_lgpd_resposta_recurso
   )
 
-
-
-
 lgpd <- pedidos_cgu %>% 
   select(
     id_pedido, orgao, data_registro,
@@ -289,6 +286,8 @@ recs %>%
 ```
 
 ### Evolução de uso da LGPD em pedidos LAI
+
+
 
 O gráfico abaixo mostra a evolução dos pedidos onde alguma menção à LGPD foi detectada tanto no pedido quanto na resposta.
 
@@ -991,6 +990,53 @@ lgpd_negativas  %>%
     y = "Quantidade"
   )
 ```
+
+Top 10:
+
+```{r fig.height=7}
+lgpd_negativas %>% 
+  select(
+    data_registro, orgao, decisao, assunto_pedido, 
+    starts_with("usa"), starts_with("n")
+  ) %>% 
+  distinct() %>% 
+  count(
+    ano = year(data_registro),
+    orgao = orgao,#str_extract(orgao, "^[:upper:]+(?= )|^[:upper:]+-PR|^FUNRei|^MTur|UFCAT$"), 
+    sort = TRUE
+  ) %>%
+  add_count(orgao, wt = n, name = "rank") %>% 
+  group_by(orgao, rank) %>% 
+  nest() %>% 
+  ungroup() %>% 
+  slice_max(n = 10, order_by = rank) %>% 
+  unnest(data) %>% 
+  complete(orgao, ano, fill = list(n = 0)) %>% 
+  mutate(orgao = str_wrap(orgao, 50)) %>% 
+  ggplot(aes(x = reorder(ano, -ano), y = n)) +
+  coord_flip() +
+  geom_col(fill = cores_aep[["rosa"]]) +
+  geom_text(
+    aes(label = if_else(n > 0, n, NA_real_)),
+    hjust = 1,
+    color = cores_tb[["cinza_quase_branco"]]
+  ) +
+  geom_text(
+    aes(label = if_else(n > 0, NA_real_, n)),
+    hjust = 0,
+    color = cores_tb[["cinza_escuro"]]
+  ) +
+  facet_wrap( ~ reorder(orgao, -n), ncol = 2, scales = "free_y") +
+  scale_y_continuous(expand = c(0, 0)) +
+  labs(
+    title = "Acessos negados por órgão",
+    subtitle = "Casos onde órgão citou a LGPD na resposta",
+    x = NULL,
+    y = "Quantidade de pedidos onde órgão respondeu mencionando LGPD"
+  ) +
+  theme(strip.text = element_text(hjust = 0))
+```
+
 
 Lista completa:
 
