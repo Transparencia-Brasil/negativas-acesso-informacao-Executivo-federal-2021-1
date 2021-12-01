@@ -88,8 +88,6 @@ recursos_cgu <- "dados/load/rds/recursos-cgu.rds" %>%
   filter(row_number() == 1) %>% 
   ungroup()
 
-recursos_cgu %>% count(id_pedido, sort = T)
-
 pedidos_clean <- "dados/load/rds/pedidos-clean.rds" %>% 
   here() %>% 
   readRDS() 
@@ -287,13 +285,13 @@ recs %>%
 
 ### Evolução de uso da LGPD em pedidos LAI
 
-
+#### Histórico geral
 
 O gráfico abaixo mostra a evolução dos pedidos onde alguma menção à LGPD foi detectada tanto no pedido quanto na resposta.
 
 ```{r}
 lgpd %>% 
-  filter(year(data_registro) >= 2018) %>% 
+  filter(data_registro >= ymd("2017-06-01")) %>% 
   count(data_registro, usa_lgpd) %>% 
   mutate(usa_lgpd = if_else(usa_lgpd, "Sim (quantidade)", "Não")) %>% 
   ggplot(aes(x = data_registro, y = n, fill = reorder(usa_lgpd, -n))) +
@@ -327,6 +325,8 @@ lgpd %>%
   scale_x_date(date_breaks = "6 months", date_labels = "%b-%Y") +
   theme(axis.ticks.x = element_line())
 ```
+
+#### Solicitantes e órgãos mencionam LGPD
 
 ```{r}
 lgpd_counts <- lgpd %>% 
@@ -368,6 +368,8 @@ lgpd_counts %>%
   )
 ```
 
+#### Solicitantes e órgãos mencionam LGPD - ano a ano
+
 Analisando ano a ano, agregando os meses, as solicitações respondidas com menções à LGPD, praticamente dobrou em 2021 em relação à 2020.
 
 ```{r}
@@ -408,13 +410,15 @@ lgpd_counts %>%
   )
 ```
 
+#### Órgãos que mencionaram LGPD na resposta
+
 ```{r}
 lgpd_counts %>% 
   filter(str_detect(mencao_lgpd, "Solicitante não menciona LGPD em pedido")) %>% 
   mutate(mencao_lgpd = str_replace(mencao_lgpd, "\\n", " ")) %>% 
   ggplot(aes(x = data_registro, y = n, fill = mencao_lgpd)) +
   geom_col() +
-  geom_text(aes(label = n)) +
+  geom_text(aes(label = n), size = 3, vjust = -0.2, fontface = "bold", check_overlap = T) +
   scale_fill_manual(values = cores_aep[["rosa"]]) +
   labs(
     y = "Quantidade de resposta",
@@ -436,6 +440,8 @@ lgpd_counts %>%
 Quantidade de vezes que órgãos citaram LGPD para responder algum pedido: 
 
 **O termo LGPD foi detectado na resposta do pedido, mas o solicitante não menciona o assunto no pedido (o termo não é detectado no pedido).**
+
+#### Valores acumulados
 
 ```{r fig.height=4}
 qt_lgpd <- lgpd %>% 
@@ -462,7 +468,7 @@ qt_lgpd %>%
   ))
 ```
 
-### Assuntos onde o órgão mencionou a LGPD
+#### Assuntos onde o órgão mencionou a LGPD - Todos os órgãos
 
 ```{r}
 lgpd %>% 
@@ -476,7 +482,7 @@ lgpd %>%
   slice_max(n = 10, order_by = n) %>% 
   ggplot(aes(x = reorder(assunto_pedido, n), y = n)) +
   geom_col(fill = cores_tb[["azul"]]) +
-  geom_text(aes(label = n), hjust = 0) +
+  geom_text(aes(label = n), hjust = 1) +
   labs(
     title = "10 principais assuntos em que em que o órgão mencionou LGPD\nna resposta",
     y = "Quntidade de pedidos",
@@ -512,45 +518,7 @@ lgpd %>%
 
 #### Ano a ano
 
-```{r fig.height=7}
-cores_decisao_aux <- cores_decisao[-c(2, 5)]
-cores_decisao_aux[["Informação Inexistente"]] <- cores_aep[["marrom"]]
-
-names(cores_decisao_aux) <- str_wrap(names(cores_decisao_aux), 25)
-
-lgpd %>% 
-  filter(
-    usa_lgpd_resposta &
-     !usa_lgpd_pedido & 
-     !usa_lgpd_pedido_resumido & 
-     assunto_pedido != "Dados Pessoais - LGPD" 
-  ) %>% 
-  count(ano = year(data_registro), decisao, sort = T) %>% 
-  complete(decisao, ano, fill = list(n = 0)) %>% 
-  mutate(decisao = str_wrap(decisao, 25)) %>% 
-  filter(ano > 2018) %>% 
-  ggplot(aes(x = reorder(ano, n), y = n, fill = decisao)) +
-  geom_col(position = "dodge") +
-  geom_text(aes(label = if_else(n > 0, n, NA_real_)),
-            position = position_dodge(width = .9), vjust = 0) +
-  scale_fill_manual(values = cores_decisao_aux) +
-  ylim(c(0, 600)) +
-  facet_wrap(ano ~ ., scales = "free_x", ncol = 1) +
-  labs(
-    title = "Decisões quando órgão menciona LGPD",
-    y = "Quantidade de pedidos",
-    x = "Decisão",
-    fill = "Decisão:"
-  ) +
-  theme(
-    axis.text.x = element_blank(),
-    strip.text = element_text(hjust = 0, face = "bold", size = 14),
-    legend.text = element_text(size = 8, margin = margin(5, 0, 5, 0, "pt"))
-  )
-```
-
-```{r}
-
+```{r fig.height=6, fig.width=7}
 cores_decisao_aux <- cores_decisao[-c(2, 5)]
 cores_decisao_aux[["Informação Inexistente"]] <- cores_aep[["marrom"]]
 
@@ -600,7 +568,7 @@ lgpd %>%
 
 ```
 
-```{r}
+```{r fig.height=6, fig.width=7}
 lgpd %>% 
   filter(
     usa_lgpd_resposta &
@@ -617,11 +585,107 @@ lgpd %>%
     title = "Evolução das decisões quando órgão menciona LGPD nas respostas",
     subtitle = "Solicitante não menciona LGPD no pedido",
     x = NULL,
-    y = "Quantidade de pedidos"
+    y = "Quantidade de pedidos",
+    color = NULL
+  ) +
+  theme(
+    legend.position = "bottom",
+    legend.direction = "vertical",
+    legend.justification = "left",
   )
 ```
 
-#### Acesso negado
+#### Acesso negado - Percentual mencionando LGPD em relação ao total (valores absolutos)
+
+```{r}
+lgpd %>% 
+  filter(decisao == "Acesso Negado", data_registro > ymd("2017-06-01")) %>% 
+  mutate(
+    onde = usa_lgpd_resposta &
+     !usa_lgpd_pedido & 
+     !usa_lgpd_pedido_resumido & 
+     assunto_pedido != "Dados Pessoais - LGPD"
+  ) %>%
+  count(data_registro, onde) %>% 
+  ggplot(aes(x = data_registro, y = n, fill = onde)) +
+  geom_col() +
+  geom_text(
+    aes(label = if_else(onde, n, NA_integer_)),
+    color = cores_aep[["rosa"]],
+    vjust = -.5,
+    hjust = 0,
+    size = 2.5,
+    fontface = "bold",
+    angle = 45
+  ) +
+  geom_text(
+    aes(label = if_else(!onde, n, NA_integer_)),
+    color = cores_tb[["cinza_escuro"]],
+    vjust = -.5,
+    hjust = 0,
+    size = 2.5,
+    fontface = "bold",
+    angle = 45
+  ) +
+  scale_fill_manual(
+    values = c(alpha(cores_aep[["rosa"]], .2), cores_aep[["rosa"]]),
+    labels = c("Não menciona LGPD ou LGPD é mencionada pelo próprio solicitante",
+               "Órgão menciona LGPD na resposta, solicitante não menciona")
+  ) +
+  scale_y_continuous(expand = c(0.02, 0)) +
+  scale_x_date(date_breaks = "6 months", date_labels = "%b-%Y") +
+  theme(
+    axis.ticks.x = element_line(),
+    legend.position = "top",
+    legend.direction = "vertical",
+    legend.justification = "left"
+  ) +
+  labs(
+    title = "Acessos negados e menção à LGPD",
+    x = NULL,
+    y = "Quantidade de pedidos",
+    fill = NULL
+  )
+```
+
+#### Acesso negado - Percentual mencionando LGPD em relação ao total (valores %)
+
+```{r}
+my_lbl <- function(x) scales::percent(x, decimal.mark = ",", accuracy = 0.1)
+lgpd %>% 
+  filter(decisao == "Acesso Negado", data_registro > ymd("2017-06-01")) %>% 
+  mutate(
+    onde = usa_lgpd_resposta &
+     !usa_lgpd_pedido & 
+     !usa_lgpd_pedido_resumido & 
+     assunto_pedido != "Dados Pessoais - LGPD"
+  ) %>%
+  count(data_registro, onde) %>% 
+  add_count(data_registro, wt = n) %>% 
+  mutate(perc = (n / nn)) %>% 
+  filter(onde) %>% 
+  ggplot(aes(x = data_registro, y = perc)) +
+  geom_line(size = 1, color = alpha("gray40", .5)) +
+  geom_point(size = 2.5, color = cores_aep[["rosa"]]) +
+  hrbrthemes::scale_y_percent(limits = c(0,.1)) +
+  geom_text(
+    aes(label = my_lbl(perc)),
+    color = cores_aep[["rosa"]],
+    size = 2.7,
+    vjust = -1,
+    hjust = 0,
+    angle = 45,
+    fontface = "bold"
+  ) +
+  scale_x_date(date_breaks = "4 months", date_labels = "%b/%Y") +
+  labs(
+    title = "Proporção das negativas de acesso a informação via LAI com base na LGPD",
+    x = NULL, y = NULL
+  ) +
+  theme(axis.ticks.x = element_line())
+```
+
+#### Acesso negado - Total por mês/ano
 
 ```{r}
 lgpd %>% 
@@ -648,6 +712,8 @@ lgpd %>%
     y = "Quantidade de pedidos\ncom acesso negado"
   )
 ```
+
+#### Acesso negado - por órgão
 
 Quais foram os órgãos que mais emitiram respostas que mencionam a LGPD e foram classificadas como “Acesso Negado”, por ano?
 
@@ -692,7 +758,7 @@ lgpd_negativas  %>%
   )
 ```
 
-Top 10:
+#### Acesso negado por órgão (10 mais) e ano
 
 ```{r fig.height=7}
 lgpd_negativas %>% 
@@ -738,7 +804,6 @@ lgpd_negativas %>%
   theme(strip.text = element_text(hjust = 0))
 ```
 
-
 Lista completa:
 
 ```{r}
@@ -766,7 +831,6 @@ tbla %>%
 #### Acesso Negado por assunto e órgão
 
 ```{r fig.height=15}
-
 lgpd_negativas  %>% 
   select(
     data_registro, orgao, decisao, assunto_pedido, 
