@@ -1,0 +1,647 @@
+---
+title: 'Negativas de acesso a informação no governo Federal'
+subtitle: 'Acessos negados pelos órgãos do executivo Federal mencionando a LGPD'
+output:
+  html_document: 
+    code_folding: hide
+    toc: yes
+    toc_depth: 5
+    toc_float: false
+    theme: paper
+    df_print: default
+    highlight: tango
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = T,
+  comment = "#>",
+  message = F,
+  warning = F,
+  echo = T,
+  fig.width = 8,
+  fig.height = 5
+)
+```
+
+```{r set-options}
+set.seed(1014)
+
+knitr::knit_hooks$set(inline = function(x) prettyNum(x, big.mark = ".", decimal.mark = ","))
+
+options(
+  digits = 1,
+  scipen = 999,
+  OutDec = ",",
+  knitr.kable.NA = "",
+  radian.auto_match = FALSE
+)
+
+Sys.setenv(LANGUAGE = "pt-br")
+Sys.setlocale("LC_TIME", "pt_BR")
+```
+
+```{css, echo=FALSE}
+h1, h2, h3, h4, h5, h6{
+  line-height: 100px; 
+}
+```
+
+```{r libs}
+library(tidyverse)
+library(lubridate)
+library(here)
+`%notin%` <- function(x, y) !(x %in% y)
+```
+
+```{r color-settings}
+source(here("src/0-paleta-de-cores.R"), encoding = "UTF-8")
+
+theme_set(theme_minimal())
+
+theme_update(
+  panel.grid.minor = element_blank(),
+  panel.background = element_rect(fill = "gray97", color = "transparent")
+)
+```
+
+```{r}
+pedidos_cgu <- "dados/load/rds/pedidos-cgu.rds" %>% 
+  here() %>% 
+  readRDS() %>%
+  rename(orgao = orgaodestinatario) %>% 
+  filter(decisao %notin% c(
+    "Pergunta Duplicada/Repetida",
+    "Não se trata de solicitação de informação"
+  ))
+
+recursos_cgu <- "dados/load/rds/recursos-cgu.rds" %>% 
+  here() %>% 
+  readRDS() %>%
+  rename(orgao = orgaodestinatario) %>% 
+  distinct() %>% 
+  group_by(id_pedido) %>% 
+  filter(row_number() == 1) %>% 
+  ungroup()
+
+pedidos_clean <- "dados/load/rds/pedidos-clean.rds" %>% 
+  here() %>% 
+  readRDS() 
+
+recursos_clean <- "dados/load/rds/recursos-clean.rds" %>% 
+  here() %>% 
+  readRDS() %>% 
+  distinct() %>% 
+  group_by(id_pedido) %>% 
+  filter(row_number() == 1) %>% 
+  ungroup()
+```
+
+```{r  fig.height=8, fig.width=10}
+pedidos_clean <- pedidos_clean %>% 
+  mutate(
+    usa_lgpd_pedido_resumido = str_detect(resumo_solicitacao_clean, "LGPD"),
+    usa_lgpd_pedido = str_detect(detalhamento_solicitacao_clean, "LGPD"),
+    usa_lgpd_resposta = str_detect(resposta_clean, "LGPD")
+  )
+
+recursos_clean <- recursos_clean %>% 
+  mutate(
+    usa_lgpd_recurso = str_detect(desc_recurso_clean, "LGPD"),
+    usa_lgpd_resposta_recurso = str_detect(resposta_recurso_clean, "LGPD"),
+    usa_lgpd = usa_lgpd_recurso | usa_lgpd_resposta_recurso
+  )
+
+lgpd <- pedidos_cgu %>% 
+  select(
+    id_pedido, orgao, data_registro,
+    resumo_solicitacao, detalhamento_solicitacao, 
+    resposta, decisao, assunto_pedido
+  ) %>% 
+  left_join(pedidos_clean) %>%
+  mutate(
+    usa_lgpd_assunto = assunto_pedido == "Dados Pessoais - LGPD",
+    usa_lgpd_pedido_resumido = replace_na(usa_lgpd_pedido_resumido, FALSE),
+    usa_lgpd = !(
+      !usa_lgpd_pedido_resumido & 
+      !usa_lgpd_pedido &
+      !usa_lgpd_resposta & 
+      !usa_lgpd_assunto
+  ))
+```
+
+### Decisões quando órgão menciona LGPD
+
+#### Geral
+
+```{r}
+lgpd %>% 
+  filter(
+    usa_lgpd_resposta &
+     !usa_lgpd_pedido & 
+     !usa_lgpd_pedido_resumido & 
+     assunto_pedido != "Dados Pessoais - LGPD" 
+  ) %>% 
+  count(decisao, sort = T) %>%
+  ggplot(aes(x = reorder(decisao, n), y = n)) +
+  geom_col(aes(fill = decisao), show.legend = F) +
+  geom_text(aes(label = n), hjust = 0) +
+  labs(
+    title = "Decisão mais frequente quando órgão menciona LGPD\nna resposta",
+    y = "Quntidade de pedidos",
+    x = NULL
+  ) +
+  scale_fill_manual(values = cores_decisao2) +
+  coord_flip()
+```
+
+#### Ano a ano
+
+```{r fig.height=6, fig.width=7}
+cores_decisao_aux <- cores_decisao[-c(2, 5)]
+cores_decisao_aux[["Informação Inexistente"]] <- cores_aep[["marrom"]]
+
+lgpd %>% 
+  filter(
+    usa_lgpd_resposta &
+     !usa_lgpd_pedido & 
+     !usa_lgpd_pedido_resumido & 
+     assunto_pedido != "Dados Pessoais - LGPD" 
+  ) %>% 
+  count(ano = year(data_registro), decisao, sort = T) %>% 
+  complete(decisao, ano, fill = list(n = 0)) %>% 
+  #mutate(decisao = str_wrap(decisao, 25)) %>% 
+  #filter(ano > 2018) %>% 
+  ggplot(aes(x = reorder(ano, n), y = n, fill = decisao)) +
+  geom_col(position = "dodge") +
+  geom_text(
+    aes(label = if_else(n > 20, n, NA_real_)),
+    color = cores_tb[["cinza_quase_branco"]],
+    position = position_dodge(width = .9),
+    vjust = 1
+  ) +
+  geom_text(
+    aes(label = if_else(n > 0 & n < 20, n, NA_real_)),
+    position = position_dodge(width = .9),
+    vjust = 0
+  ) +
+  scale_fill_manual(values = cores_decisao_aux) +
+  ylim(c(0, 600)) +
+  facet_wrap(ano ~ ., scales = "free_x", ncol = 5, strip.position = "bottom") +
+  labs(
+    title = NULL,
+    y = "Quantidade de pedidos",
+    x = NULL,
+    fill = NULL
+  ) +
+  #guides(color = guide_legend(ncol = 1, title.position = "top")) +
+  theme(
+    axis.text.x = element_blank(),
+    strip.text = element_text(hjust = 0.5, face = "bold", size = 12),
+    legend.text = element_text(size = 8, margin = margin(5, 0, 5, 0, "pt")),
+    legend.position = "bottom",
+    legend.direction = "vertical",
+    legend.justification = "left",
+    panel.spacing = unit(0, "lines")
+  )
+
+```
+
+### Acesso negado
+
+```{r fig.height=6, fig.width=7}
+lgpd %>% 
+  filter(
+    usa_lgpd_resposta &
+     !usa_lgpd_pedido & 
+     !usa_lgpd_pedido_resumido & 
+     assunto_pedido != "Dados Pessoais - LGPD" 
+  ) %>% 
+  count(data_registro, decisao, sort = T) %>% 
+  mutate(decisao = str_wrap(decisao, 25)) %>% 
+  ggplot(aes(x = data_registro, y = n, color = decisao)) +
+  geom_line(size = 1) +
+  scale_color_manual(values = cores_decisao_aux) +
+  labs(
+    title = "Evolução das decisões quando órgão menciona LGPD nas respostas",
+    subtitle = "Solicitante não menciona LGPD no pedido",
+    x = NULL,
+    y = "Quantidade de pedidos",
+    color = NULL
+  ) +
+  theme(
+    legend.position = "bottom",
+    legend.direction = "vertical",
+    legend.justification = "left",
+  )
+```
+
+#### Acesso negado - Percentual mencionando LGPD em relação ao total (valores absolutos)
+
+```{r}
+lgpd %>% 
+  filter(decisao == "Acesso Negado", data_registro > ymd("2017-06-01")) %>% 
+  mutate(
+    onde = usa_lgpd_resposta &
+     !usa_lgpd_pedido & 
+     !usa_lgpd_pedido_resumido & 
+     assunto_pedido != "Dados Pessoais - LGPD"
+  ) %>%
+  count(data_registro, onde) %>%
+  ggplot(aes(x = data_registro, y = n, fill = onde)) +
+  geom_col() +
+  geom_text(
+    aes(label = if_else(onde, n, NA_integer_)),
+    color = cores_aep[["rosa"]],
+    vjust = -.5,
+    hjust = 0,
+    size = 2.5,
+    fontface = "bold",
+    angle = 45
+  ) +
+  geom_text(
+    aes(label = if_else(!onde, n, NA_integer_)),
+    color = cores_tb[["cinza_escuro"]],
+    vjust = -.5,
+    hjust = 0,
+    size = 2.5,
+    fontface = "bold",
+    angle = 45
+  ) +
+  scale_fill_manual(
+    values = c(alpha(cores_aep[["rosa"]], .2), cores_aep[["rosa"]]),
+    labels = c("Não menciona LGPD ou LGPD é mencionada pelo próprio solicitante",
+               "Órgão menciona LGPD na resposta, solicitante não menciona")
+  ) +
+  scale_y_continuous(expand = c(0.02, 0)) +
+  scale_x_date(date_breaks = "6 months", date_labels = "%b-%Y") +
+  theme(
+    axis.ticks.x = element_line(),
+    legend.position = "top",
+    legend.direction = "vertical",
+    legend.justification = "left"
+  ) +
+  labs(
+    title = "Acessos negados e menção à LGPD",
+    x = NULL,
+    y = "Quantidade de pedidos",
+    fill = NULL
+  )
+```
+
+```{r}
+lgpd %>% 
+  filter(decisao == "Acesso Negado", data_registro > ymd("2017-06-01")) %>% 
+  mutate(
+    onde = usa_lgpd_resposta &
+     !usa_lgpd_pedido & 
+     !usa_lgpd_pedido_resumido & 
+     assunto_pedido != "Dados Pessoais - LGPD"
+  ) %>%
+  count(data_registro, onde) %>% 
+  filter(onde) %>%
+  ggplot(aes(x = data_registro, y = n, fill = onde)) +
+  geom_col() +
+  geom_text(
+    aes(label = n),
+    color = cores_aep[["rosa"]],
+    vjust = -.5,
+    hjust = 0,
+    size = 2.5,
+    fontface = "bold",
+    angle = 45
+  ) +
+  scale_fill_manual(
+    values = cores_aep[["rosa"]],
+    labels = c("Órgão menciona LGPD na resposta, solicitante não menciona")
+  ) +
+  scale_y_continuous(expand = c(0.02, 0)) +
+  scale_x_date(date_breaks = "6 months", date_labels = "%b-%Y") +
+  theme(
+    axis.ticks.x = element_line(),
+    legend.position = "top",
+    legend.direction = "vertical",
+    legend.justification = "left"
+  ) +
+  labs(
+    title = "Acessos negados e menção à LGPD",
+    x = NULL,
+    y = "Quantidade de pedidos",
+    fill = NULL
+  )
+```
+
+#### Acesso negado - Percentual mencionando LGPD em relação ao total (valores %)
+
+```{r}
+my_lbl <- function(x) scales::percent(x, decimal.mark = ",", accuracy = 0.1)
+lgpd %>% 
+  filter(decisao == "Acesso Negado", data_registro > ymd("2017-06-01")) %>% 
+  mutate(
+    onde = usa_lgpd_resposta &
+     !usa_lgpd_pedido & 
+     !usa_lgpd_pedido_resumido & 
+     assunto_pedido != "Dados Pessoais - LGPD"
+  ) %>%
+  count(data_registro, onde) %>% 
+  add_count(data_registro, wt = n) %>% 
+  mutate(perc = (n / nn)) %>% 
+  filter(onde) %>%
+  ggplot(aes(x = data_registro, y = perc)) +
+  geom_line(size = 1, color = alpha("gray40", .5)) +
+  geom_point(size = 2.5, color = cores_aep[["rosa"]]) +
+  hrbrthemes::scale_y_percent(limits = c(0,.1)) +
+  geom_text(
+    aes(label = my_lbl(perc)),
+    color = cores_aep[["rosa"]],
+    size = 2.7,
+    vjust = -1,
+    hjust = 0,
+    angle = 45,
+    fontface = "bold"
+  ) +
+  scale_x_date(date_breaks = "4 months", date_labels = "%b/%Y") +
+  labs(
+    title = "Proporção das negativas de acesso a informação via LAI com base na LGPD",
+    x = NULL, y = NULL
+  ) +
+  theme(axis.ticks.x = element_line())
+```
+
+#### Acesso negado - por órgão (todos)
+
+Quais foram os órgãos que mais emitiram respostas que mencionam a LGPD e foram classificadas como “Acesso Negado”, por ano?
+
+```{r fig.height=12}
+rgx_sigla <- "^[:upper:]+(?= )|^[:upper:]+-PR|^FUNRei|^MTur|UFCAT$"
+lgpd %>% 
+  filter(decisao == "Acesso Negado",
+         data_registro > ymd("2017-06-01")) %>% 
+  mutate(
+    onde = usa_lgpd_resposta &
+     !usa_lgpd_pedido & 
+     !usa_lgpd_pedido_resumido & 
+     assunto_pedido != "Dados Pessoais - LGPD"
+  ) %>%
+  count(orgao, onde) %>% 
+  filter(onde) %>% 
+  mutate(orgao = str_extract(orgao, rgx_sigla)) %>%
+  ggplot(aes(x = reorder(orgao, n), y = n)) +
+  geom_col(fill = cores_aep[["rosa"]]) +
+  geom_text(
+    aes(label = n), 
+    hjust = 0,
+    color = cores_tb[["cinza_escuro"]]
+  ) +
+  scale_y_continuous(expand = c(0,0)) +
+  labs(
+    title = "Acessos negados mencinando a LGPD na resposta",
+    subtitle = "Solicitante não menciona LGPD no pedido",
+    x = "Quantidade",
+    y = NULL
+  ) +
+  coord_flip()
+```
+
+#### Acesso negado - por órgão (10 primeiros)
+
+```{r}
+lgpd %>% 
+  filter(decisao == "Acesso Negado",
+         data_registro > ymd("2017-06-01")) %>% 
+  mutate(
+    onde = usa_lgpd_resposta &
+     !usa_lgpd_pedido & 
+     !usa_lgpd_pedido_resumido & 
+     assunto_pedido != "Dados Pessoais - LGPD"
+  ) %>%
+  count(orgao, onde) %>% 
+  filter(onde) %>% 
+  mutate(orgao = str_extract(orgao, rgx_sigla)) %>%
+  slice_max(n = 10, order_by = n) %>% 
+  ggplot(aes(x = reorder(orgao, n), y = n)) +
+  geom_col(fill = cores_aep[["rosa"]]) +
+  geom_text(
+    aes(label = n), 
+    hjust = 1,
+    color = cores_tb[["cinza_quase_branco"]]
+  ) +
+  scale_y_continuous(expand = c(0, 0)) +
+  labs(
+    title = "Acessos negados mencinando a LGPD na resposta",
+    subtitle = "Solicitante não menciona LGPD no pedido",
+    x = "Quantidade",
+    y = NULL
+  ) +
+  coord_flip()
+```
+
+#### Acesso negado por órgão e ano (10 primeiros)
+
+```{r fig.height=7}
+lgpd %>% 
+  filter(decisao == "Acesso Negado",
+         data_registro > ymd("2017-06-01")) %>% 
+  mutate(
+    onde = usa_lgpd_resposta &
+     !usa_lgpd_pedido & 
+     !usa_lgpd_pedido_resumido & 
+     assunto_pedido != "Dados Pessoais - LGPD"
+  ) %>%
+  filter(onde) %>% 
+  count(orgao, ano = year(data_registro)) %>%
+  add_count(orgao, wt = n, sort = T) %>% 
+  group_by(orgao, nn) %>% 
+  nest() %>% 
+  ungroup() %>% 
+  slice_max(n = 10, order_by = nn) %>% 
+  unnest(data) %>% 
+  complete(ano, orgao, fill = list(n = 0)) %>% 
+  mutate(orgao = str_wrap(orgao, 50)) %>% 
+  ggplot(aes(x = reorder(ano, -ano), y = n)) +
+  geom_col(fill = cores_aep[["rosa"]]) +
+  coord_flip() +
+  geom_text(
+    aes(label = if_else(n == 0, NA_real_, n)),
+    hjust = 1,
+    color = cores_tb[["cinza_quase_branco"]]
+  ) +
+  geom_text(
+    aes(label = if_else(n == 0, n, NA_real_)),
+    hjust = 0,
+    color = cores_tb[["cinza_escuro"]]
+  ) +
+  facet_wrap( ~ reorder(orgao, -n), ncol = 2, scales = "free_y") +
+  scale_y_continuous(expand = c(0, 0), limits = c(0,48)) +
+  labs(
+    title = "Acessos negados por órgão",
+    subtitle = "Casos onde órgão citou a LGPD na resposta",
+    x = NULL,
+    y = "Quantidade de pedidos onde órgão respondeu mencionando LGPD"
+  ) +
+  theme(strip.text = element_text(hjust = 0, face = "bold"))
+```
+
+#### Acesso negado, % por órgão e ano (10 primeiros) 
+
+```{r fig.height=7}
+rgx_sigla <- "^[:upper:]+(?= )|^[:upper:]+-PR|^FUNRei|^MTur|UFCAT$"
+lgpd %>% 
+  filter(decisao == "Acesso Negado", data_registro > ymd("2017-06-01")) %>% 
+  mutate(
+    onde = usa_lgpd_resposta &
+     !usa_lgpd_pedido & 
+     !usa_lgpd_pedido_resumido & 
+     assunto_pedido != "Dados Pessoais - LGPD"
+  ) %>%
+  count(ano = year(data_registro), orgao, onde) %>% 
+  add_count(ano, orgao, wt = n) %>% 
+  mutate(
+    perc = (n / nn),
+    orgao = str_extract(orgao, rgx_sigla)
+  ) %>% 
+  filter(onde) %>% 
+  add_count(orgao, wt = n) %>% 
+  group_by(orgao, nnn) %>% 
+  nest() %>% 
+  ungroup() %>% 
+  slice_max(n = 10, order_by = nnn) %>% 
+  unnest(data) %>% 
+  ggplot(aes(y = perc, x = reorder(ano, -n))) +
+  geom_col(fill = cores_aep[["rosa"]]) +
+  geom_text(
+    aes(label = my_lbl(perc)),
+    hjust = 0,
+    color = cores_tb[["cinza_escuro"]],
+    size = 2.8
+  ) +
+  coord_flip() +
+  hrbrthemes::scale_y_percent(limits = c(0, .55)) +
+  facet_wrap(~ reorder(orgao, -perc, sum), ncol = 2) +
+  theme(strip.text = element_text(face = "bold", hjust = 0)) +
+  labs(
+    title = "Acessos negados pelos órgãos mencionando LGPD",
+    subtitle = "Como % do total de acessos negados de cada órgão no ano",
+    x = NULL, y = NULL
+  )
+```
+
+#### Acesso negado por órgão  - Lista completa:
+
+```{r}
+esic_url <- "http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DetalhePedido/DetalhePedido.aspx?nup="
+
+lgpd %>% 
+  filter(decisao == "Acesso Negado",
+         data_registro > ymd("2017-06-01")) %>% 
+  mutate(
+    onde = usa_lgpd_resposta &
+     !usa_lgpd_pedido & 
+     !usa_lgpd_pedido_resumido & 
+     assunto_pedido != "Dados Pessoais - LGPD"
+  ) %>%
+  filter(onde) %>% 
+  left_join(select(pedidos_cgu, id_pedido, protocolo_pedido)) %>% 
+  transmute(
+    Protocolo = str_glue('<a href="{esic_url}{protocolo_pedido}">{protocolo_pedido}</a>'),
+    Órgão = orgao,
+    `Data registro` = data_registro,
+    Assunto = assunto_pedido,
+    Decisão = decisao,
+    `Resumo pedido` = resumo_solicitacao
+  ) %>% 
+  DT::datatable(
+    caption = str_glue(
+      'Acessos negados mencionando a LGPD',
+      ' (clique no nº de protocolo para acessar o pedido no E-sic)'
+    ),
+    options = list(pageLength = 5, dom = 'tip'),
+    filter = 'top',
+    escape = FALSE
+  )
+```
+
+#### Acesso Negado por assunto e órgão considerando os assuntos mais abordado
+
+```{r fig.height=11}
+rgx_sigla <- "^[:upper:]+(?= )|^[:upper:]+-PR|^FUNRei|^MTur|UFCAT$"
+lgpd %>% 
+  filter(
+    decisao == "Acesso Negado",
+    data_registro > ymd("2017-06-01")
+  ) %>% 
+  mutate(
+    onde = usa_lgpd_resposta &
+     !usa_lgpd_pedido & 
+     !usa_lgpd_pedido_resumido & 
+     assunto_pedido != "Dados Pessoais - LGPD"
+  ) %>%
+  filter(onde) %>% 
+  count(orgao, assunto_pedido, sort = T) %>% 
+  mutate(orgao = str_extract(orgao, rgx_sigla)) %>% 
+  slice_max(n = 15, order_by = n) %>% 
+  ggplot(aes(x = reorder(assunto_pedido, n), y = n)) +
+  geom_col(fill = cores_aep[["rosa"]]) +
+  coord_flip() +
+  geom_text(aes(label = n), color = cores_tb[["cinza_quase_branco"]], hjust = 1) +
+  facet_wrap(reorder(orgao, -n, sum) ~ ., scales = "free_y", ncol = 2) +
+  labs(
+    title = "Acesso negado por assunto e órgão",
+    subtitle = "Quando órgão menciona LGPD",
+    x = NULL,
+    y = "Quantidade"
+  )
+```
+
+#### Acesso Negado por assunto e órgão - 10 órgãos que mais citaram LGPD nas negativas
+
+```{r fig.height=15}
+library(tidytext)
+lgpd %>% 
+  filter(
+    decisao == "Acesso Negado",
+    data_registro > ymd("2017-06-01")
+  ) %>% 
+  mutate(
+    onde = usa_lgpd_resposta &
+     !usa_lgpd_pedido & 
+     !usa_lgpd_pedido_resumido & 
+     assunto_pedido != "Dados Pessoais - LGPD"
+  ) %>%
+  filter(onde) %>% 
+  count(orgao, assunto_pedido, sort = T) %>% 
+  mutate(orgao = str_extract(orgao, rgx_sigla)) %>% 
+  add_count(orgao, wt = n) %>% 
+  group_by(orgao, nn) %>% 
+  nest() %>% 
+  ungroup() %>% 
+  slice_max(n = 10, order_by = nn) %>% 
+  unnest(data) %>% 
+  ggplot(aes(x = n, y = reorder_within(assunto_pedido, n, orgao))) +
+  geom_col(fill = cores_aep[["rosa"]]) +
+  geom_text(
+    aes(label = if_else(n < 2, NA_integer_, n)),
+    hjust = 1.2,
+    color = cores_tb[["cinza_quase_branco"]],
+    size = 3
+  ) +
+  geom_text(
+    aes(label = if_else(n < 2, n, NA_integer_)),
+    hjust = -.5,
+    size = 3
+  ) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_reordered() +
+  facet_wrap(~ reorder(orgao, -n), scale = "free_y", ncol = 2) +
+  labs(
+    title = "Assuntos dos órgãos que mais mencionaram a LGPD nas negativas",
+    x = "Quantidade de pedidos negados mencionando LGPD",
+    y = NULL
+  ) +
+  theme(
+    strip.text = element_text(face = "bold", hjust = 0)
+  )
+```
+
