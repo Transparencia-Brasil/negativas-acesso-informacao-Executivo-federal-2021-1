@@ -92,7 +92,7 @@ Foram utilizadas duas bases de dados para as análises deste repositório:
     -   [**Visão
         geral**](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/4-b-controversos-lgpd-aspectos-gerais.html)
     -   [**Acesso
-        Negado**](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/4-b-controversos-lgpdacesso-negado.html)
+        Negado**](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/4-b-controversos-lgpd-acesso-negado.html)
 
 -   **Recursos**
 
