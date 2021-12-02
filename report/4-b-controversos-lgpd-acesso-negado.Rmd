@@ -430,7 +430,7 @@ lgpd %>%
     hjust = 1,
     color = cores_tb[["cinza_quase_branco"]]
   ) +
-  scale_y_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 55)) +
   labs(
     title = "Acessos negados mencinando a LGPD na resposta",
     subtitle = "Solicitante não menciona LGPD no pedido",
