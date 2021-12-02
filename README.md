@@ -85,10 +85,14 @@ Foram utilizadas duas bases de dados para as análises deste repositório:
 -   **Uso da LGPD nas respostas aos pedidos de acesso a informação via
     LAI**
 
-    -   [**Base
-        anonimizada**](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/4-controversos-lgpd.html)
     -   [**Base anonimizada - nova
         versão**](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/4-b-controversos-lgpd.html)
+    -   [**Mapeamento das
+        interações**](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/4-b-controversos-lgpd-mapeamento-pedidos.html)
+    -   [**Visão
+        geral**](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/4-b-controversos-lgpd-aspectos-gerais.html)
+    -   [**Acesso
+        Negado**](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/4-b-controversos-lgpdacesso-negado.html)
 
 -   **Recursos**
 
