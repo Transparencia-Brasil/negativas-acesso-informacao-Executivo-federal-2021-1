@@ -486,6 +486,51 @@ lgpd %>%
   theme(strip.text = element_text(hjust = 0, face = "bold"))
 ```
 
+#### Acesso negado, % por órgão (10 primeiros) 
+
+```{r fig.height=7}
+rgx_sigla <- "^[:upper:]+(?= )|^[:upper:]+-PR|^FUNRei|^MTur|UFCAT$"
+lgpd %>% 
+  filter(decisao == "Acesso Negado", data_registro > ymd("2017-06-01")) %>% 
+  mutate(
+    onde = usa_lgpd_resposta &
+     !usa_lgpd_pedido & 
+     !usa_lgpd_pedido_resumido & 
+     assunto_pedido != "Dados Pessoais - LGPD"
+  ) %>%
+  count(orgao, onde) %>% 
+  add_count(orgao, wt = n) %>% 
+  mutate(
+    perc = (n / nn),
+    orgao = str_wrap(orgao, 50) 
+  ) %>% 
+  filter(onde) %>% 
+  add_count(orgao, wt = n) %>% 
+  group_by(orgao, nnn) %>% 
+  nest() %>% 
+  ungroup() %>% 
+  slice_max(n = 10, order_by = nnn) %>% 
+  unnest(data) %>% 
+  complete(orgao, onde, fill = list(perc = 0)) %>% 
+  ggplot(aes(y = perc, x = reorder(orgao, perc))) +
+  geom_col(fill = cores_aep[["rosa"]]) +
+  geom_text(
+    aes(label = my_lbl(perc)),
+    hjust = 0,
+    color = cores_tb[["cinza_escuro"]],
+    size = 2.8
+  ) +
+  coord_flip() +
+  hrbrthemes::scale_y_percent(limits = c(0, .55)) +
+  theme(strip.text = element_text(face = "bold", hjust = 0)) +
+  labs(
+    title = "Acessos negados pelos órgãos mencionando LGPD",
+    subtitle = "Como % do total de acessos negados de cada órgão",
+    x = NULL,
+    y = NULL
+  )
+```
+
 #### Acesso negado, % por órgão e ano (10 primeiros) 
 
 ```{r fig.height=7}
@@ -502,7 +547,7 @@ lgpd %>%
   add_count(ano, orgao, wt = n) %>% 
   mutate(
     perc = (n / nn),
-    orgao = str_extract(orgao, rgx_sigla)
+    orgao = str_wrap(orgao, 50) 
   ) %>% 
   filter(onde) %>% 
   add_count(orgao, wt = n) %>% 
@@ -511,6 +556,7 @@ lgpd %>%
   ungroup() %>% 
   slice_max(n = 10, order_by = nnn) %>% 
   unnest(data) %>% 
+  complete(orgao, ano, onde, fill = list(perc = 0)) %>% 
   ggplot(aes(y = perc, x = reorder(ano, -n))) +
   geom_col(fill = cores_aep[["rosa"]]) +
   geom_text(
@@ -521,7 +567,7 @@ lgpd %>%
   ) +
   coord_flip() +
   hrbrthemes::scale_y_percent(limits = c(0, .55)) +
-  facet_wrap(~ reorder(orgao, -perc, sum), ncol = 2) +
+  facet_wrap(~ reorder(orgao, -perc, sum), ncol = 2, scales = "free") +
   theme(strip.text = element_text(face = "bold", hjust = 0)) +
   labs(
     title = "Acessos negados pelos órgãos mencionando LGPD",
