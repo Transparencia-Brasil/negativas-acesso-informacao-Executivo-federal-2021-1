@@ -405,12 +405,14 @@ lgpd %>%
   coord_flip()
 ```
 
-#### Acesso negado - por órgão (10 primeiros)
+#### Acesso negado - por órgão (10 primeiros) 
 
 ```{r}
 lgpd %>% 
-  filter(decisao == "Acesso Negado",
-         data_registro > ymd("2017-06-01")) %>% 
+  filter(
+    decisao == "Acesso Negado",
+    data_registro > ymd("2017-06-01")
+  ) %>% 
   mutate(
     onde = usa_lgpd_resposta &
      !usa_lgpd_pedido & 
@@ -565,7 +567,7 @@ lgpd %>%
 
 #### Acesso Negado por assunto e órgão considerando os assuntos mais abordado
 
-```{r fig.height=11}
+```{r fig.height=8}
 rgx_sigla <- "^[:upper:]+(?= )|^[:upper:]+-PR|^FUNRei|^MTur|UFCAT$"
 lgpd %>% 
   filter(
@@ -597,7 +599,7 @@ lgpd %>%
 
 #### Acesso Negado por assunto e órgão - 10 órgãos que mais citaram LGPD nas negativas
 
-```{r fig.height=15}
+```{r fig.height=10}
 library(tidytext)
 lgpd %>% 
   filter(
