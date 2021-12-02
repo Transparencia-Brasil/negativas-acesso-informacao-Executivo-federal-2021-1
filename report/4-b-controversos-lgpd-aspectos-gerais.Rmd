@@ -437,3 +437,45 @@ lgpd %>%
     legend.justification = "left",
   )
 ```
+
+### Primeiras menções a LGPD
+
+```{r}
+d <- lgpd %>%
+  filter(usa_lgpd) %>% 
+  filter(data_registro != min(data_registro)) %>%
+  filter(data_registro != min(data_registro)) %>%
+  filter(data_registro != min(data_registro)) %>% 
+  filter(data_registro != min(data_registro)) %>%
+  filter(data_registro == min(data_registro)) %>% 
+  pull(id_pedido)
+
+pedidos_cgu %>%
+  filter(id_pedido %in% d) %>% 
+  mutate(str_glue("http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DetalhePedido/DetalhePedido.aspx?nup={protocolo_pedido}"))
+
+esic_url <- "http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DetalhePedido/DetalhePedido.aspx?nup="
+
+pedidos_cgu %>%
+  filter(id_pedido %in% d) %>% 
+  transmute(
+    Protocolo = str_glue(
+      '<a href="{esic_url}{protocolo_pedido}">{protocolo_pedido}</a>'
+    ),
+    Órgão = orgao,
+    `Data registro` = ts_registro,
+    Assunto = assunto_pedido,
+    Decisão = decisao,
+    `Resumo pedido` = resumo_solicitacao
+  ) %>% 
+  DT::datatable(
+    caption = str_glue(
+      'Primeiras menções a LGPD',
+      ' (clique no nº de protocolo para acessar o pedido no E-sic)'
+    ),
+    options = list(pageLength = 9, dom = 'tip'),
+    filter = 'top',
+    escape = FALSE
+  )
+```
+

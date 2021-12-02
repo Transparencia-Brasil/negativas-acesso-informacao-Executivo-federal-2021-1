@@ -440,7 +440,7 @@ lgpd %>%
   coord_flip()
 ```
 
-#### Acesso negado por órgão e ano (10 primeiros)
+#### Acesso negado - por órgão e ano (10 primeiros)
 
 ```{r fig.height=7}
 lgpd %>% 
@@ -486,7 +486,7 @@ lgpd %>%
   theme(strip.text = element_text(hjust = 0, face = "bold"))
 ```
 
-#### Acesso negado, % por órgão (10 primeiros) 
+#### Acesso negado - % por órgão (10 primeiros) 
 
 ```{r fig.height=7}
 rgx_sigla <- "^[:upper:]+(?= )|^[:upper:]+-PR|^FUNRei|^MTur|UFCAT$"
@@ -521,7 +521,7 @@ lgpd %>%
     size = 2.8
   ) +
   coord_flip() +
-  hrbrthemes::scale_y_percent(limits = c(0, .55)) +
+  hrbrthemes::scale_y_percent(limits = c(0, .2)) +
   theme(strip.text = element_text(face = "bold", hjust = 0)) +
   labs(
     title = "Acessos negados pelos órgãos mencionando LGPD",
@@ -531,7 +531,7 @@ lgpd %>%
   )
 ```
 
-#### Acesso negado, % por órgão e ano (10 primeiros) 
+#### Acesso negado - % por órgão e ano (10 primeiros) 
 
 ```{r fig.height=7}
 rgx_sigla <- "^[:upper:]+(?= )|^[:upper:]+-PR|^FUNRei|^MTur|UFCAT$"
@@ -576,7 +576,7 @@ lgpd %>%
   )
 ```
 
-#### Acesso negado por órgão  - Lista completa:
+#### Acesso negado - por órgão - lista completa:
 
 ```{r}
 esic_url <- "http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DetalhePedido/DetalhePedido.aspx?nup="
