@@ -176,6 +176,7 @@ lgpd %>%
     x = NULL
   ) +
   scale_fill_manual(values = cores_decisao2) +
+  scale_y_continuous(limits = c(0,950)) +
   coord_flip()
 ```
 
@@ -227,6 +228,10 @@ lgpd %>%
     legend.direction = "vertical",
     legend.justification = "left",
     panel.spacing = unit(0, "lines")
+  ) +
+  labs(
+    title = "Respostas mencionando LGPD, por ano e decisão",
+    subtitle = "Solicitante não menciona LGPD em assunto ou pedido"
   )
 
 ```
@@ -713,5 +718,37 @@ lgpd %>%
   theme(
     strip.text = element_text(face = "bold", hjust = 0)
   )
+```
+
+#### Acesso negado - antes e depois da LGPD entrar em vigor
+
+```{r}
+lgpd %>% 
+  filter(
+    decisao == "Acesso Negado",
+    data_registro > ymd("2017-06-01")
+  ) %>% 
+  mutate(
+    onde = usa_lgpd_resposta &
+     !usa_lgpd_pedido & 
+     !usa_lgpd_pedido_resumido & 
+     assunto_pedido != "Dados Pessoais - LGPD"
+  ) %>%
+  filter(onde) %>% 
+  left_join(select(pedidos_cgu, id_pedido, ts_resposta, data_resposta)) %>% 
+  mutate(
+    ts_resposta = dmy(ts_resposta),
+    vigencia_lgpd = ts_resposta >= ymd("2020-11-18")
+  ) %>%
+  count(vigencia_lgpd, data_resposta) %>%
+  group_by(vigencia_lgpd) %>% 
+  summarise(media = mean(n), .groups = "drop") %>% 
+  transmute(
+    `Vigência da LGPD` = if_else(vigencia_lgpd, "Depois de 18/11/2020",
+                                 "Antes de 18/11/2020"),
+    `Média mensal de respostas mencionando LGPD` = media,
+    `Taxa de crescimento` = my_lbl((media / lag(media)) - 1)
+  ) %>% 
+  kableExtra::kbl() %>% kableExtra::kable_paper()
 ```
 

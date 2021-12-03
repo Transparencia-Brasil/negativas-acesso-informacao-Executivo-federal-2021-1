@@ -584,3 +584,44 @@ lgpd %>%
   )
 ```
 
+### Lista de pedidos que usam a LGPD
+
+```{r}
+d <- lgpd %>%
+  filter(usa_lgpd) %>%
+  arrange(data_registro) %>% 
+  pull(id_pedido)
+
+esic_url <- "http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DetalhePedido/DetalhePedido.aspx?nup="
+
+pedidos_cgu %>%
+  filter(id_pedido %in% d) %>% 
+  left_join(lgpd) %>% 
+  transmute(
+    `Onde a LGPD apareceu` = case_when(
+      !usa_lgpd_assunto &
+        !usa_lgpd_pedido &
+        !usa_lgpd_pedido_resumido ~ str_glue(
+          "Somente na resposta do órgão"
+        ),
+      TRUE ~ "Pedido ou assunto do pedido"
+    ) %>% factor(),
+    Protocolo = str_glue(
+      '<a href="{esic_url}{protocolo_pedido}">{protocolo_pedido}</a>'
+    ),
+    Órgão = orgao,
+   `Data registro` = dmy(ts_registro),
+    Assunto = assunto_pedido,
+    Decisão = decisao,
+   `Resumo pedido` = resumo_solicitacao
+  ) %>% 
+  DT::datatable(
+    caption = str_glue(
+      'Primeiras menções a LGPD',
+      ' (clique no nº de protocolo para acessar o pedido no E-sic)'
+    ),
+    options = list(pageLength = 20, dom = 'tip'),
+    filter = 'top',
+    escape = FALSE
+  )
+```
