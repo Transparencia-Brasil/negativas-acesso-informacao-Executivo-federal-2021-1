@@ -14,6 +14,12 @@ editor_options:
   chunk_output_type: console
 ---
 
+```{css, echo=FALSE}
+h1, h2, h3, h4, h5, h6{
+  line-height: 100px; 
+}
+```
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
   collapse = T,
@@ -95,18 +101,40 @@ recursos_clean <- "dados/load/rds/recursos-clean.rds" %>%
 
 ```{r  fig.height=8, fig.width=10}
 pedidos_clean <- pedidos_clean %>% 
+  left_join(select(pedidos_cgu, id_pedido, data_registro)) %>%
   mutate(
-    usa_lgpd_pedido_resumido = str_detect(resumo_solicitacao_clean, "LGPD"),
-    usa_lgpd_pedido = str_detect(detalhamento_solicitacao_clean, "LGPD"),
-    usa_lgpd_resposta = str_detect(resposta_clean, "LGPD")
-  )
+    usa_lgpd_pedido_resumido = if_else(
+      year(data_registro) > 2017,
+      str_detect(resumo_solicitacao_clean, "LGPD"),
+      FALSE
+    ),
+    usa_lgpd_pedido = if_else(
+      year(data_registro) > 2017,
+      str_detect(detalhamento_solicitacao_clean, "LGPD"),
+      FALSE
+    ),
+    usa_lgpd_resposta = if_else(
+      year(data_registro) > 2017,
+      str_detect(resposta_clean, "LGPD"),
+      FALSE
+    )
+  ) %>% select(-data_registro)
 
 recursos_clean <- recursos_clean %>% 
+  left_join(select(recursos_cgu, id_pedido, id_recurso, data_registro)) %>%
   mutate(
-    usa_lgpd_recurso = str_detect(desc_recurso_clean, "LGPD"),
-    usa_lgpd_resposta_recurso = str_detect(resposta_recurso_clean, "LGPD"),
+    usa_lgpd_recurso = if_else(
+      year(data_registro) > 2017,
+      str_detect(desc_recurso_clean, "LGPD"),
+      FALSE
+    ),
+    usa_lgpd_resposta_recurso = if_else(
+      year(data_registro) > 2017,
+      str_detect(resposta_recurso_clean, "LGPD"),
+      FALSE
+    ),
     usa_lgpd = usa_lgpd_recurso | usa_lgpd_resposta_recurso
-  )
+  ) %>% select(-data_registro)
 
 lgpd <- pedidos_cgu %>% 
   select(
@@ -126,7 +154,144 @@ lgpd <- pedidos_cgu %>%
   ))
 ```
 
+#### Detectando termos relacionados a LGPD
+
+Foi realizada uma busca no pedido, no resumo do pedido, na resposta, nos recursos e nas respostas dos recursos. A busca foi feita com a regex:
+
+- `"lei geral de protecao de dados|lei de protecao de dados pessoais|lgpd|13709|13 709"`
+
+Também foi detectado na base de dados a nomenclatura **Dados pessoais - LGPD** no campo de assunto do pedido.
+
+```{r fig.height=4}
+lgpd %>% 
+  filter(data_registro >= ymd("2018-01-01")) %>% 
+  count(usa_lgpd) %>% 
+  mutate(
+    usa_lgpd = if_else(
+      usa_lgpd,
+      "Termo LGPD\ndetectado", 
+      "Termo LGPD\nnão detectado"
+  )) %>% 
+  ggplot(aes(x = usa_lgpd, y = n, fill = usa_lgpd)) +
+  geom_col(show.legend = F) +
+  geom_text(
+    aes(
+      label = if_else(
+        usa_lgpd == "Termo LGPD\ndetectado",
+        n,
+        NA_integer_)
+    ),
+    hjust = -0.2
+  ) +
+  geom_text(
+    aes(
+      label = if_else(
+        usa_lgpd != "Termo LGPD\ndetectado",
+        n,
+        NA_integer_)
+    ),
+    hjust = 1.2
+  ) +
+  scale_fill_manual(
+    values = c(cores_aep[["laranja"]], cores_aep[["rosa"]])
+  ) +
+  coord_flip() +
+  labs(
+    title = "Menções à LGPD nos pedidos de Acesso a Informação via LAI",
+    subtitle = "A partir de 2018",
+    x = NULL,
+    y = "Quantidade de pedidos de acesso a informação"
+  )
+```
+
+```{r}
+lgpd_counts <- lgpd %>% 
+  select(data_registro, where(is.logical)) %>% 
+  filter(usa_lgpd) %>% 
+  mutate(
+    data_registro,
+    mencao_lgpd = case_when(
+      !usa_lgpd_assunto &
+        !usa_lgpd_pedido &
+        !usa_lgpd_pedido_resumido ~ str_glue(
+          "Solicitante não menciona LGPD em pedido,",
+          " órgão menciona na resposta"
+        ),
+      TRUE ~ "Solicitante menciona LGPD no pedido ou assunto do pedido"
+    )
+  ) %>% 
+  count(data_registro, mencao_lgpd)
+```
+
+```{r}
+my_lbl <- function(x) scales::percent(x, accuracy = 0.1, decimal.mark = ",")
+lgpd_counts %>% 
+  count(mencao_lgpd, wt = n) %>%
+  mutate(
+    prop = n / sum(n),
+    ypos = cumsum(prop) - 0.5 * prop
+  ) %>% 
+  mutate(mencao_lgpd = str_replace(mencao_lgpd, "\\\n", " ")) %>% 
+  ggplot(aes(x = "", y = prop, fill = mencao_lgpd)) +
+  geom_col(width = 1, color = cores_tb[["cinza_quase_branco"]]) +
+  coord_polar("y", start = 0) +
+  geom_text(
+    aes(y = ypos, label = str_glue("{n} pedidos\n{my_lbl(prop)}")),
+    size = 4
+  ) +
+  labs(
+    title = "Onde os termos relacionados a LGPD foram citados",
+    fill = NULL,
+    x = NULL,
+    y = NULL
+  ) +
+  scale_fill_manual(values = c(cores_aep[["rosa"]], cores_tb[["azul"]])) +
+  theme(
+    legend.position = "top",
+    legend.justification = "left",
+    legend.direction = "vertical",
+    axis.text = element_blank(),
+    panel.grid = element_blank()
+  )
+
+```
+
+
 ### Evolução de uso da LGPD em pedidos LAI
+
+#### Primeiras menções a LGPD
+
+```{r}
+d <- lgpd %>%
+  filter(usa_lgpd) %>%
+  arrange(data_registro) %>% 
+  filter(row_number() < 11) %>% 
+  pull(id_pedido)
+
+esic_url <- "http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DetalhePedido/DetalhePedido.aspx?nup="
+
+pedidos_cgu %>%
+  filter(id_pedido %in% d) %>% 
+  transmute(
+    Protocolo = str_glue(
+      '<a href="{esic_url}{protocolo_pedido}">{protocolo_pedido}</a>'
+    ),
+    Órgão = orgao,
+   `Data registro` = dmy(ts_registro),
+    Assunto = assunto_pedido,
+    Decisão = decisao,
+   `Resumo pedido` = resumo_solicitacao
+  ) %>% 
+  DT::datatable(
+    caption = str_glue(
+      'Primeiras menções a LGPD',
+      ' (clique no nº de protocolo para acessar o pedido no E-sic)'
+    ),
+    options = list(pageLength = 9, dom = 'tip'),
+    filter = 'top',
+    escape = FALSE
+  )
+```
 
 #### Histórico geral
 
@@ -134,7 +299,7 @@ O gráfico abaixo mostra a evolução dos pedidos onde alguma menção à LGPD f
 
 ```{r}
 lgpd %>% 
-  filter(data_registro >= ymd("2017-06-01")) %>% 
+  filter(data_registro >= ymd("2018-01-01")) %>% 
   count(data_registro, usa_lgpd) %>% 
   mutate(usa_lgpd = if_else(usa_lgpd, "Sim (quantidade)", "Não")) %>% 
   ggplot(aes(x = data_registro, y = n, fill = reorder(usa_lgpd, -n))) +
@@ -170,25 +335,6 @@ lgpd %>%
 ```
 
 #### Solicitantes e órgãos mencionam LGPD
-
-```{r}
-lgpd_counts <- lgpd %>% 
-  select(data_registro, where(is.logical)) %>% 
-  filter(usa_lgpd) %>% 
-  mutate(
-    data_registro,
-    mencao_lgpd = case_when(
-      !usa_lgpd_assunto &
-        !usa_lgpd_pedido &
-        !usa_lgpd_pedido_resumido ~ str_glue(
-          "Solicitante não menciona LGPD em pedido,",
-          "\nórgão menciona na resposta"
-        ),
-      TRUE ~ "Solicitante menciona LGPD no pedido ou assunto do pedido"
-    )
-  ) %>% 
-  count(data_registro, mencao_lgpd)
-```
 
 O pico de Abril de 2020 pode ser explicado por pedidos que mencionam a LGPD ou no assunto (ao fazer o pedido, o solicitante seleciona a opção "Dados Pessoais - LGPD" no campo "Assunto do pedido") ou no conteúdo do pedido
 
@@ -435,47 +581,6 @@ lgpd %>%
     legend.position = "bottom",
     legend.direction = "vertical",
     legend.justification = "left",
-  )
-```
-
-### Primeiras menções a LGPD
-
-```{r}
-d <- lgpd %>%
-  filter(usa_lgpd) %>% 
-  filter(data_registro != min(data_registro)) %>%
-  filter(data_registro != min(data_registro)) %>%
-  filter(data_registro != min(data_registro)) %>% 
-  filter(data_registro != min(data_registro)) %>%
-  filter(data_registro == min(data_registro)) %>% 
-  pull(id_pedido)
-
-pedidos_cgu %>%
-  filter(id_pedido %in% d) %>% 
-  mutate(str_glue("http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DetalhePedido/DetalhePedido.aspx?nup={protocolo_pedido}"))
-
-esic_url <- "http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DetalhePedido/DetalhePedido.aspx?nup="
-
-pedidos_cgu %>%
-  filter(id_pedido %in% d) %>% 
-  transmute(
-    Protocolo = str_glue(
-      '<a href="{esic_url}{protocolo_pedido}">{protocolo_pedido}</a>'
-    ),
-    Órgão = orgao,
-    `Data registro` = ts_registro,
-    Assunto = assunto_pedido,
-    Decisão = decisao,
-    `Resumo pedido` = resumo_solicitacao
-  ) %>% 
-  DT::datatable(
-    caption = str_glue(
-      'Primeiras menções a LGPD',
-      ' (clique no nº de protocolo para acessar o pedido no E-sic)'
-    ),
-    options = list(pageLength = 9, dom = 'tip'),
-    filter = 'top',
-    escape = FALSE
   )
 ```
 

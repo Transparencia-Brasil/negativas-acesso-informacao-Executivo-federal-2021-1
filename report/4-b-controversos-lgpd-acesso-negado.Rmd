@@ -101,18 +101,40 @@ recursos_clean <- "dados/load/rds/recursos-clean.rds" %>%
 
 ```{r  fig.height=8, fig.width=10}
 pedidos_clean <- pedidos_clean %>% 
+  left_join(select(pedidos_cgu, id_pedido, data_registro)) %>%
   mutate(
-    usa_lgpd_pedido_resumido = str_detect(resumo_solicitacao_clean, "LGPD"),
-    usa_lgpd_pedido = str_detect(detalhamento_solicitacao_clean, "LGPD"),
-    usa_lgpd_resposta = str_detect(resposta_clean, "LGPD")
-  )
+    usa_lgpd_pedido_resumido = if_else(
+      year(data_registro) > 2017,
+      str_detect(resumo_solicitacao_clean, "LGPD"),
+      FALSE
+    ),
+    usa_lgpd_pedido = if_else(
+      year(data_registro) > 2017,
+      str_detect(detalhamento_solicitacao_clean, "LGPD"),
+      FALSE
+    ),
+    usa_lgpd_resposta = if_else(
+      year(data_registro) > 2017,
+      str_detect(resposta_clean, "LGPD"),
+      FALSE
+    )
+  ) %>% select(-data_registro)
 
 recursos_clean <- recursos_clean %>% 
+  left_join(select(recursos_cgu, id_pedido, id_recurso, data_registro)) %>%
   mutate(
-    usa_lgpd_recurso = str_detect(desc_recurso_clean, "LGPD"),
-    usa_lgpd_resposta_recurso = str_detect(resposta_recurso_clean, "LGPD"),
+    usa_lgpd_recurso = if_else(
+      year(data_registro) > 2017,
+      str_detect(desc_recurso_clean, "LGPD"),
+      FALSE
+    ),
+    usa_lgpd_resposta_recurso = if_else(
+      year(data_registro) > 2017,
+      str_detect(resposta_recurso_clean, "LGPD"),
+      FALSE
+    ),
     usa_lgpd = usa_lgpd_recurso | usa_lgpd_resposta_recurso
-  )
+  ) %>% select(-data_registro)
 
 lgpd <- pedidos_cgu %>% 
   select(
