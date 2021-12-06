@@ -510,6 +510,72 @@ lgpd %>%
   coord_flip()
 ```
 
+```{r}
+rgx_sigla <- "^[:upper:]+(?= )|^[:upper:]+-PR|^FUNRei|^MTur|UFCAT$"
+
+lgpd %>% 
+  left_join(
+    select(pedidos_cgu, id_pedido, ts_resposta, data_resposta)
+  ) %>% 
+  mutate(
+    ts_resposta = dmy(ts_resposta),
+    vigencia_lgpd = ts_resposta >= ymd("2020-11-18")
+  ) %>% 
+  filter(
+    decisao == "Acesso Negado",
+    #vigencia_lgpd
+  ) %>% 
+  mutate(
+    onde = usa_lgpd_resposta &
+     !usa_lgpd_pedido & 
+     !usa_lgpd_pedido_resumido & 
+     assunto_pedido != "Dados Pessoais - LGPD"
+  ) %>%
+  count(orgao, vigencia_lgpd, onde) %>% 
+  filter(onde) %>% 
+  mutate(orgao = str_extract(orgao, rgx_sigla)) %>%
+  #add_count(orgao, wt = n) %>% 
+  complete(orgao, vigencia_lgpd, fill = list(onde = TRUE, n = 0)) %>%
+  add_count(orgao, wt = n) %>% 
+  arrange(orgao, vigencia_lgpd) %>% 
+  mutate(
+    perc = n / nn,
+    rank = if_else(vigencia_lgpd, perc, lead(perc))
+  ) %>%
+  slice_max(n = 20, order_by = nn) %>%
+  mutate(vigencia_lgpd = if_else(vigencia_lgpd, "Depois", "Antes")) %>% 
+  ggplot(aes(
+    x = reorder(orgao, -rank),
+    y = perc,
+    fill = vigencia_lgpd
+  )) +
+  geom_col() +
+  coord_flip() +
+  scale_x_discrete(expand = c(0, 0)) + 
+  scale_fill_manual(values = c(
+    cores_aep[["rosa"]], cores_aep[["laranja"]]
+  )) +
+  scale_color_manual(values = c(
+    cores_tb[["cinza_quase_branco"]], cores_tb[["cinza_escuro"]]
+  )) +
+  geom_text(
+    aes(
+      label = if_else(perc != 0, my_lbl(perc), NA_character_),
+      color = vigencia_lgpd
+      ), 
+    position = position_stack(vjust = .5)
+  ) +
+  hrbrthemes::scale_y_percent(expand = c(0, 0)) +
+  labs(
+    title = "Proporção de negativas de acesso a informação mencionando LGPD",
+    subtitle = "Antes e depois da vigência da lei em 18/11/2020",
+    fill = "% de negativas e vigência\nda LGPD em 18/11/2020",
+    color = "% de negativas e vigência\nda LGPD em 18/11/2020",
+    x = "Órgão (sigla)",
+    y = NULL
+  )
+```
+
 #### Acesso negado - por órgão e ano (10 primeiros)
 
 ```{r fig.height=7}
@@ -684,7 +750,7 @@ lgpd %>%
   slice_max(n = 10, order_by = nnn) %>% 
   unnest(data) %>% 
   complete(orgao, ano, onde, fill = list(perc = 0)) %>% 
-  ggplot(aes(y = perc, x = reorder(ano, -n))) +
+  ggplot(aes(y = perc, x = reorder(ano, -ano))) +
   geom_col(fill = cores_aep[["rosa"]]) +
   geom_text(
     aes(label = my_lbl(perc)),
