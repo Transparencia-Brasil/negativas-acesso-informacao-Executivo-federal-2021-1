@@ -193,8 +193,8 @@ lgpd_nested <- lgpd %>%
     orgao_sigla = str_extract(orgao, rgx_sigla)
   ) %>% 
   select(
-    id_pedido, orgao, orgao_sigla, data_registro, 
-    vigencia_lgpd, decisao, contains("clean"), n_pedidos
+    id_pedido, orgao, orgao_sigla, data_registro, assunto_pedido,
+    vigencia_lgpd, decisao, resumo_solicitacao, contains("clean"), n_pedidos
   )
 ```
 
@@ -261,6 +261,34 @@ plot_wordcloud_mencao_lgpd <- function(df, campo, nome_orgao, em_vigencia) {
 }
 ```
 
+```{r}
+esic_url <- "http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DetalhePedido/DetalhePedido.aspx?nup="
+
+tabela_com_links <- function(df) {
+  df %>% 
+  left_join(select(pedidos_cgu, id_pedido, protocolo_pedido, ts_registro)) %>% 
+  transmute(
+    Protocolo = str_glue(
+      '<a href="{esic_url}{protocolo_pedido}">{protocolo_pedido}</a>'
+    ),
+    `Órgão (sigla)` = orgao_sigla,
+    `Data registro` = dmy(ts_registro),
+    Assunto = assunto_pedido,
+    `Resumo pedido` = resumo_solicitacao
+  ) %>% 
+  DT::datatable(
+    caption = str_glue(
+      'Acessos negados mencionando a LGPD ',
+      '(clique no nº de protocolo para acessar o pedido no E-sic)'
+    ),
+    options = list(pageLength = 5, dom = 'tip'),
+    filter = 'top',
+    escape = FALSE
+  ) 
+}
+```
+
+
 ### GSI-PR – Gabinete de Segurança Institucional da Presidência da República
 
 O GSI fez as negaticas baseada na LGPD após a viggência da legislação;
@@ -285,6 +313,14 @@ lgpd_nested %>%
 ```
 </div>
 
+#### Lista completa
+
+```{r}
+lgpd_nested %>%
+  filter(orgao_sigla == "GSI-PR") %>% 
+  tabela_com_links()
+```
+
 ### MS – Ministério da Saúde
 
 #### Todo período
@@ -297,7 +333,7 @@ lgpd_nested %>%
     campo = "detalhamento_solicitacao_clean",
     nome_orgao = "MS",
     em_vigencia = F
-  )
+  ) 
   
 lgpd_nested %>%
   filter(orgao_sigla == "MS") %>% 
@@ -308,6 +344,14 @@ lgpd_nested %>%
   )
 ```
 </div>
+
+#### Lista completa - todo período
+
+```{r}
+lgpd_nested %>%
+  filter(orgao_sigla == "MS") %>% 
+  tabela_com_links()
+```
 
 #### Após a vigência da LGPD
 
@@ -330,6 +374,15 @@ lgpd_nested %>%
   )
 ```
 </div>
+
+#### Lista completa - após a vigência da LGPD
+
+```{r}
+lgpd_nested %>%
+  filter(orgao_sigla == "MS") %>%
+  filter(vigencia_lgpd) %>% 
+  tabela_com_links()
+```
 
 ### ME - Ministério da Economia
 
@@ -355,6 +408,14 @@ lgpd_nested %>%
 ```
 </div>
 
+#### Lista completa - todo período
+
+```{r}
+lgpd_nested %>%
+  filter(orgao_sigla == "ME") %>% 
+  tabela_com_links()
+```
+
 #### Após a vigência da LGPD
 
 <div class="col2">
@@ -376,6 +437,15 @@ lgpd_nested %>%
   )
 ```
 </div>
+
+#### Lista completa - após a vigência da LGPD
+
+```{r}
+lgpd_nested %>%
+  filter(orgao_sigla == "ME") %>%
+  filter(vigencia_lgpd) %>% 
+  tabela_com_links()
+```
 
 ### INSS – Instituto Nacional do Seguro Social
 
@@ -400,6 +470,14 @@ lgpd_nested %>%
   )
 ```
 </div>
+
+#### Lista completa - todo período
+
+```{r}
+lgpd_nested %>%
+  filter(orgao_sigla == "INSS") %>% 
+  tabela_com_links()
+```
 
 #### Após a vigência da LGPD
 
@@ -447,6 +525,14 @@ lgpd_nested %>%
 ```
 </div>
 
+#### Lista completa - todo período
+
+```{r}
+lgpd_nested %>%
+  filter(orgao_sigla == "INCRA") %>% 
+  tabela_com_links()
+```
+
 ### CNPQ – Conselho Nacional de Desenvolvimento Científico e Tecnológico
 
 #### Todo período
@@ -471,6 +557,14 @@ lgpd_nested %>%
 ```
 </div>
 
+#### Lista completa - todo período
+
+```{r}
+lgpd_nested %>%
+  filter(orgao_sigla == "CNPQ") %>% 
+  tabela_com_links()
+```
+
 #### Após a vigência da LGPD
 
 <div class="col2">
@@ -492,6 +586,15 @@ lgpd_nested %>%
   )
 ```
 </div>
+
+#### Lista completa - após a vigência da LGPD
+
+```{r}
+lgpd_nested %>%
+  filter(orgao_sigla == "CNPQ") %>%
+  filter(vigencia_lgpd) %>% 
+  tabela_com_links()
+```
 
 ### BB – Banco do Brasil S.A.
 
@@ -517,6 +620,14 @@ lgpd_nested %>%
 ```
 </div>
 
+#### Lista completa - todo período
+
+```{r}
+lgpd_nested %>%
+  filter(orgao_sigla == "BB") %>% 
+  tabela_com_links()
+```
+
 #### Após a vigência da LGPD
 
 <div class="col2">
@@ -538,6 +649,15 @@ lgpd_nested %>%
   )
 ```
 </div>
+
+#### Lista completa - após a vigência da LGPD
+
+```{r}
+lgpd_nested %>%
+  filter(orgao_sigla == "BB") %>%
+  filter(vigencia_lgpd) %>% 
+  tabela_com_links()
+```
 
 ### INEP – Instituto Nacional de Estudos e Pesquisas Educacionais Anísio Teixeira
 
@@ -563,6 +683,14 @@ lgpd_nested %>%
 ```
 </div>
 
+#### Lista completa - todo período
+
+```{r}
+lgpd_nested %>%
+  filter(orgao_sigla == "INEP") %>% 
+  tabela_com_links()
+```
+
 #### Após a vigência da LGPD
 
 <div class="col2">
@@ -584,6 +712,15 @@ lgpd_nested %>%
   )
 ```
 </div>
+
+#### Lista completa - após a vigência da LGPD
+
+```{r}
+lgpd_nested %>%
+  filter(orgao_sigla == "INEP") %>%
+  filter(vigencia_lgpd) %>% 
+  tabela_com_links()
+```
 
 ### ANEEL – Agência Nacional de Energia Elétrica
 
@@ -609,6 +746,14 @@ lgpd_nested %>%
 ```
 </div>
 
+#### Lista completa - todo período
+
+```{r}
+lgpd_nested %>%
+  filter(orgao_sigla == "ANEEL") %>% 
+  tabela_com_links()
+```
+
 #### Após a vigência da LGPD
 
 <div class="col2">
@@ -630,6 +775,15 @@ lgpd_nested %>%
   )
 ```
 </div>
+
+#### Lista completa - após a vigência da LGPD
+
+```{r}
+lgpd_nested %>%
+  filter(orgao_sigla == "ANEEL") %>%
+  filter(vigencia_lgpd) %>% 
+  tabela_com_links()
+```
 
 ### MD – Ministério da Defesa
 
@@ -655,6 +809,14 @@ lgpd_nested %>%
 ```
 </div>
 
+#### Lista completa - todo período
+
+```{r}
+lgpd_nested %>%
+  filter(orgao_sigla == "MD") %>% 
+  tabela_com_links()
+```
+
 #### Após a vigência da LGPD
 
 <div class="col2">
@@ -676,3 +838,12 @@ lgpd_nested %>%
   )
 ```
 </div>
+
+#### Lista completa - após a vigência da LGPD
+
+```{r}
+lgpd_nested %>%
+  filter(orgao_sigla == "MD") %>%
+  filter(vigencia_lgpd) %>% 
+  tabela_com_links()
+```
