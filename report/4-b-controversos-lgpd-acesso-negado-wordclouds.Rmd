@@ -185,11 +185,11 @@ lgpd_nested <- lgpd %>%
   add_count(orgao, onde, name = "n_pedidos") %>%
   filter(onde) %>%
   left_join(
-    select(pedidos_cgu, id_pedido, ts_resposta, data_resposta)
+    select(pedidos_cgu, id_pedido, ts_resposta, ts_registro, data_resposta)
   ) %>% 
   mutate(
     ts_resposta = dmy(ts_resposta),
-    vigencia_lgpd = ts_resposta >= ymd("2020-11-18"),
+    vigencia_lgpd = ts_resposta >= ymd("2020-09-18"),
     orgao_sigla = str_extract(orgao, rgx_sigla)
   ) %>% 
   select(
@@ -266,26 +266,39 @@ esic_url <- "http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DetalhePedido/
 
 tabela_com_links <- function(df) {
   df %>% 
-  left_join(select(pedidos_cgu, id_pedido, protocolo_pedido, ts_registro)) %>% 
+  left_join(select(pedidos_cgu, id_pedido, protocolo_pedido, ts_registro, ts_resposta)) %>% 
   transmute(
     Protocolo = str_glue(
       '<a href="{esic_url}{protocolo_pedido}">{protocolo_pedido}</a>'
     ),
     `Órgão (sigla)` = orgao_sigla,
-    `Data registro` = dmy(ts_registro),
+    dummy = dmy(ts_registro),
+    dummy2 = dmy(ts_registro),
+    `Data registro` = ts_registro,
+    `Data resposta` = ts_resposta,
     Assunto = assunto_pedido,
     `Resumo pedido` = resumo_solicitacao
   ) %>% 
-  DT::datatable(
+  datatable(
     caption = str_glue(
       'Acessos negados mencionando a LGPD ',
       '(clique no nº de protocolo para acessar o pedido no E-sic)'
     ),
-    options = list(pageLength = 5, dom = 'tip'),
+    options = list(
+      pageLength = 5,
+      dom = 'tip',
+      columnDefs = list(
+        list(targets = 5,orderData = 3),
+        list(targets = 3, visible = FALSE),
+        list(targets = 6,orderData = 4),
+        list(targets = 4, visible = FALSE)
+      )
+    ),
     filter = 'top',
     escape = FALSE
   ) 
 }
+library(DT)
 ```
 
 

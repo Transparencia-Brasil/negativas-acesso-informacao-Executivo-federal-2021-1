@@ -178,7 +178,7 @@ lgpd %>%
     x = NULL
   ) +
   scale_fill_manual(values = cores_decisao2) +
-  scale_y_continuous(limits = c(0,950)) +
+  scale_y_continuous(limits = c(0, 950)) +
   coord_flip()
 ```
 
@@ -468,7 +468,7 @@ lgpd %>%
   coord_flip()
 ```
 
-#### Acesso negado - por órgão (10 primeiros) - após 18/11/2020
+#### Acesso negado - por órgão (10 primeiros) - após 18/09/2020
 
 ```{r}
 lgpd %>% 
@@ -477,7 +477,7 @@ lgpd %>%
   ) %>% 
   mutate(
     ts_resposta = dmy(ts_resposta),
-    vigencia_lgpd = ts_resposta >= ymd("2020-11-18")
+    vigencia_lgpd = ts_resposta >= ymd("2020-09-18")
   ) %>% 
   filter(
     decisao == "Acesso Negado",
@@ -503,7 +503,7 @@ lgpd %>%
   scale_y_continuous(expand = c(0, 0), limits = c(0, 55)) +
   labs(
     title = "Acessos negados mencinando a LGPD na resposta - após a vigência da lei",
-    subtitle = "Considerando pedidos com data de registro da resposta após 18/11/2020.\nSolicitante não menciona LGPD no pedido",
+    subtitle = "Considerando pedidos com data de registro da resposta após 18/09/2020.\nSolicitante não menciona LGPD no pedido",
     x = "Quantidade",
     y = NULL
   ) +
@@ -519,7 +519,7 @@ lgpd %>%
   ) %>% 
   mutate(
     ts_resposta = dmy(ts_resposta),
-    vigencia_lgpd = ts_resposta >= ymd("2020-11-18")
+    vigencia_lgpd = ts_resposta >= ymd("2020-09-18")
   ) %>% 
   filter(
     decisao == "Acesso Negado",
@@ -568,9 +568,9 @@ lgpd %>%
   hrbrthemes::scale_y_percent(expand = c(0, 0)) +
   labs(
     title = "Proporção de negativas de acesso a informação mencionando LGPD",
-    subtitle = "Antes e depois da vigência da lei em 18/11/2020",
-    fill = "% de negativas e vigência\nda LGPD em 18/11/2020",
-    color = "% de negativas e vigência\nda LGPD em 18/11/2020",
+    subtitle = "Antes e depois da vigência da lei em 18/09/2020",
+    fill = "% de negativas e vigência\nda LGPD em 18/09/2020",
+    color = "% de negativas e vigência\nda LGPD em 18/09/2020",
     x = "Órgão (sigla)",
     y = NULL
   )
@@ -668,7 +668,7 @@ lgpd %>%
   )
 ```
 
-#### Acesso negado - % por órgão (10 primeiros) - após 18/11/2020
+#### Acesso negado - % por órgão (10 primeiros) - após 18/09/2020
 
 ```{r fig.height=7, fig.width=9}
 rgx_sigla <- "^[:upper:]+(?= )|^[:upper:]+-PR|^FUNRei|^MTur|UFCAT$"
@@ -679,7 +679,7 @@ lgpd %>%
   ) %>% 
   mutate(
     ts_resposta = dmy(ts_resposta),
-    vigencia_lgpd = ts_resposta >= ymd("2020-11-18")
+    vigencia_lgpd = ts_resposta >= ymd("2020-09-18")
   ) %>% 
   filter(
     decisao == "Acesso Negado",
@@ -718,7 +718,7 @@ lgpd %>%
   theme(strip.text = element_text(face = "bold", hjust = 0)) +
   labs(
     title = "Acessos negados mencinando a LGPD na resposta - após a vigência da lei",
-    subtitle = "Considerando pedidos com data de registro da resposta após 18/11/2020.\nSolicitante não menciona LGPD no pedido.\nComo % do total de acessos negados de cada órgão",
+    subtitle = "Considerando pedidos com data de registro da resposta após 18/09/2020.\nSolicitante não menciona LGPD no pedido.\nComo % do total de acessos negados de cada órgão",
     x = NULL,
     y = NULL
   )
@@ -904,14 +904,14 @@ lgpd %>%
   left_join(select(pedidos_cgu, id_pedido, ts_resposta, data_resposta)) %>% 
   mutate(
     ts_resposta = dmy(ts_resposta),
-    vigencia_lgpd = ts_resposta >= ymd("2020-11-18")
+    vigencia_lgpd = ts_resposta >= ymd("2020-09-18")
   ) %>%
   count(vigencia_lgpd, data_resposta) %>%
   group_by(vigencia_lgpd) %>% 
   summarise(media = mean(n), .groups = "drop") %>% 
   transmute(
-    `Vigência da LGPD` = if_else(vigencia_lgpd, "Depois de 18/11/2020",
-                                 "Antes de 18/11/2020"),
+    `Vigência da LGPD` = if_else(vigencia_lgpd, "Depois de 18/09/2020",
+                                 "Antes de 18/09/2020"),
     `Média mensal de respostas mencionando LGPD` = media,
     `Taxa de crescimento` = my_lbl((media / lag(media)) - 1)
   ) %>% 
