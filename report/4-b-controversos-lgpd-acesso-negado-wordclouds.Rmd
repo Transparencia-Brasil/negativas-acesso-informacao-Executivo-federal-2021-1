@@ -1,0 +1,678 @@
+---
+title: 'Negativas de acesso a informação no governo Federal'
+subtitle: 'Acessos negados pelos órgãos do executivo Federal mencionando a LGPD'
+output:
+  html_document: 
+    code_folding: hide
+    toc: yes
+    toc_depth: 5
+    toc_float: true
+    theme: paper
+    df_print: default
+    highlight: tango
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = T,
+  comment = "#>",
+  message = F,
+  warning = F,
+  echo = T,
+  fig.width = 8,
+  fig.height = 5
+)
+```
+
+```{r set-options}
+set.seed(1014)
+
+knitr::knit_hooks$set(inline = function(x) prettyNum(x, big.mark = ".", decimal.mark = ","))
+
+options(
+  digits = 1,
+  scipen = 999,
+  OutDec = ",",
+  knitr.kable.NA = "",
+  radian.auto_match = FALSE
+)
+
+Sys.setenv(LANGUAGE = "pt-br")
+Sys.setlocale("LC_TIME", "pt_BR")
+```
+
+```{css, echo=FALSE}
+h1, h2, h3, h4, h5, h6{
+  line-height: 100px; 
+}
+
+.col2 {
+  columns: 2 200px;         /* number of columns and width in pixels*/
+  -webkit-columns: 2 200px; /* chrome, safari */
+  -moz-columns: 2 200px;    /* firefox */
+}
+
+.col3 {
+  columns: 3 100px;
+  -webkit-columns: 3 100px;
+  -moz-columns: 3 100px;
+}
+```
+
+```{r libs}
+library(tidyverse)
+library(lubridate)
+library(here)
+`%notin%` <- function(x, y) !(x %in% y)
+```
+
+```{r color-settings}
+source(here("src/0-paleta-de-cores.R"), encoding = "UTF-8")
+
+theme_set(theme_minimal())
+
+theme_update(
+  panel.grid.minor = element_blank(),
+  panel.background = element_rect(fill = "gray97", color = "transparent")
+)
+
+my_lbl <- function(x) scales::percent(x, decimal.mark = ",", accuracy = 0.1)
+```
+
+```{r}
+pedidos_cgu <- "dados/load/rds/pedidos-cgu.rds" %>% 
+  here() %>% 
+  readRDS() %>%
+  rename(orgao = orgaodestinatario) %>% 
+  filter(decisao %notin% c(
+    "Pergunta Duplicada/Repetida",
+    "Não se trata de solicitação de informação"
+  ))
+
+recursos_cgu <- "dados/load/rds/recursos-cgu.rds" %>% 
+  here() %>% 
+  readRDS() %>%
+  rename(orgao = orgaodestinatario) %>% 
+  distinct() %>% 
+  group_by(id_pedido) %>% 
+  filter(row_number() == 1) %>% 
+  ungroup()
+
+pedidos_clean <- "dados/load/rds/pedidos-clean.rds" %>% 
+  here() %>% 
+  readRDS() 
+
+recursos_clean <- "dados/load/rds/recursos-clean.rds" %>% 
+  here() %>% 
+  readRDS() %>% 
+  distinct() %>% 
+  group_by(id_pedido) %>% 
+  filter(row_number() == 1) %>% 
+  ungroup()
+```
+
+```{r  fig.height=8, fig.width=10}
+pedidos_clean <- pedidos_clean %>% 
+  left_join(select(pedidos_cgu, id_pedido, data_registro)) %>%
+  mutate(
+    usa_lgpd_pedido_resumido = if_else(
+      year(data_registro) > 2017,
+      str_detect(resumo_solicitacao_clean, "LGPD"),
+      FALSE
+    ),
+    usa_lgpd_pedido = if_else(
+      year(data_registro) > 2017,
+      str_detect(detalhamento_solicitacao_clean, "LGPD"),
+      FALSE
+    ),
+    usa_lgpd_resposta = if_else(
+      year(data_registro) > 2017,
+      str_detect(resposta_clean, "LGPD"),
+      FALSE
+    )
+  ) %>% select(-data_registro)
+
+recursos_clean <- recursos_clean %>% 
+  left_join(select(recursos_cgu, id_pedido, id_recurso, data_registro)) %>%
+  mutate(
+    usa_lgpd_recurso = if_else(
+      year(data_registro) > 2017,
+      str_detect(desc_recurso_clean, "LGPD"),
+      FALSE
+    ),
+    usa_lgpd_resposta_recurso = if_else(
+      year(data_registro) > 2017,
+      str_detect(resposta_recurso_clean, "LGPD"),
+      FALSE
+    ),
+    usa_lgpd = usa_lgpd_recurso | usa_lgpd_resposta_recurso
+  ) %>% select(-data_registro)
+
+lgpd <- pedidos_cgu %>% 
+  select(
+    id_pedido, orgao, data_registro,
+    resumo_solicitacao, detalhamento_solicitacao, 
+    resposta, decisao, assunto_pedido
+  ) %>% 
+  left_join(pedidos_clean) %>%
+  mutate(
+    usa_lgpd_assunto = assunto_pedido == "Dados Pessoais - LGPD",
+    usa_lgpd_pedido_resumido = replace_na(usa_lgpd_pedido_resumido, FALSE),
+    usa_lgpd = !(
+      !usa_lgpd_pedido_resumido & 
+      !usa_lgpd_pedido &
+      !usa_lgpd_resposta & 
+      !usa_lgpd_assunto
+  ))
+```
+
+```{r}
+library(tidytext)
+library(wordcloud)
+source(here("./src/5-funcao-limpando-texto.R"), encoding = "utf-8")
+rgx_sigla <- "^[:upper:]+(?= )|^[:upper:]+-PR|^FUNRei|^MTur|UFCAT$"
+
+lgpd_nested <- lgpd %>% 
+  filter(decisao == "Acesso Negado", data_registro > ymd("2017-06-01")) %>% 
+  mutate(
+    onde = usa_lgpd_resposta &
+     !usa_lgpd_pedido & 
+     !usa_lgpd_pedido_resumido & 
+     assunto_pedido != "Dados Pessoais - LGPD"
+  ) %>%
+  add_count(orgao, onde, name = "n_pedidos") %>%
+  filter(onde) %>%
+  left_join(
+    select(pedidos_cgu, id_pedido, ts_resposta, data_resposta)
+  ) %>% 
+  mutate(
+    ts_resposta = dmy(ts_resposta),
+    vigencia_lgpd = ts_resposta >= ymd("2020-11-18"),
+    orgao_sigla = str_extract(orgao, rgx_sigla)
+  ) %>% 
+  select(
+    id_pedido, orgao, orgao_sigla, data_registro, 
+    vigencia_lgpd, decisao, contains("clean"), n_pedidos
+  )
+```
+
+```{r}
+plot_wordcloud_mencao_lgpd <- function(df, campo, nome_orgao, em_vigencia) {
+  
+  print(nome_orgao)
+  
+  df <- lgpd_nested %>% 
+    filter(orgao_sigla == nome_orgao) %>% 
+    select(id_pedido, vigencia_lgpd, campo)
+  
+  if (em_vigencia) {
+    df <- df %>% filter(vigencia_lgpd)
+  }
+
+  df <- df %>%
+    unnest_tokens(word, campo) %>%
+    anti_join(stopwords) %>%
+    mutate(
+      word = str_extract(word, "[a-z']+"),
+      word = if_else(word == "urltag", "link-url", word),
+      word = str_replace_all(word, "artigosexto", "Artigo 6"),
+      word = str_replace_all(word, "artigosetimo", "Artigo 7")
+    ) %>%
+    filter(!str_count(word) %in% c(1, 2)) %>%
+    count(word, sort = T)
+
+  titulo <- if_else(
+    campo == "resposta_clean",
+    "Frequência de palavras na resposta",
+    "Frequência de palavras no pedido"
+  )
+
+  titulo <- if_else(
+    em_vigencia,
+    str_glue("{titulo}\napós a vigência da LGPD"),
+    str_glue("{titulo}\ntodo período"),
+  )
+  
+  cor_do_campo <- if_else(
+    campo == "resposta_clean",
+    cores_aep[["rosa"]],
+    cores_tb[["azul"]]
+  )
+
+  layout(matrix(c(1, 2), nrow = 2), heights = c(.5, 6))
+  par(mar = rep(0, 4))
+  plot.new()
+  text(x = 0.5, y = 0.5, titulo)
+
+  df %>% with(
+    wordcloud(
+      word, n,
+      scale = c(6,.5),
+      max.words = 150,
+      random.order = F,
+      random.color = F,
+      main = title,
+      colors = cor_do_campo
+    )
+  )
+
+}
+```
+
+### GSI-PR – Gabinete de Segurança Institucional da Presidência da República
+
+O GSI fez as negaticas baseada na LGPD após a viggência da legislação;
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+lgpd_nested %>%
+  filter(orgao_sigla == "GSI-PR") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "detalhamento_solicitacao_clean",
+    nome_orgao = "GSI-PR",
+    em_vigencia = T
+  )
+  
+lgpd_nested %>%
+  filter(orgao_sigla == "GSI-PR") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "resposta_clean",
+    nome_orgao = "GSI-PR",
+    em_vigencia = T
+  )
+```
+</div>
+
+### MS – Ministério da Saúde
+
+#### Todo período
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+lgpd_nested %>%
+  filter(orgao_sigla == "MS") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "detalhamento_solicitacao_clean",
+    nome_orgao = "MS",
+    em_vigencia = F
+  )
+  
+lgpd_nested %>%
+  filter(orgao_sigla == "MS") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "resposta_clean",
+    nome_orgao = "MS",
+    em_vigencia = F
+  )
+```
+</div>
+
+#### Após a vigência da LGPD
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+lgpd_nested %>%
+  filter(orgao_sigla == "MS") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "detalhamento_solicitacao_clean",
+    nome_orgao = "MS",
+    em_vigencia = T
+  )
+  
+lgpd_nested %>%
+  filter(orgao_sigla == "MS") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "resposta_clean",
+    nome_orgao = "MS",
+    em_vigencia = T
+  )
+```
+</div>
+
+### ME - Ministério da Economia
+
+#### Todo período
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+lgpd_nested %>%
+  filter(orgao_sigla == "ME") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "detalhamento_solicitacao_clean",
+    nome_orgao = "ME",
+    em_vigencia = F
+  )
+  
+lgpd_nested %>%
+  filter(orgao_sigla == "ME") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "resposta_clean",
+    nome_orgao = "ME",
+    em_vigencia = F
+  )
+```
+</div>
+
+#### Após a vigência da LGPD
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+lgpd_nested %>%
+  filter(orgao_sigla == "ME") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "detalhamento_solicitacao_clean",
+    nome_orgao = "ME",
+    em_vigencia = T
+  )
+  
+lgpd_nested %>%
+  filter(orgao_sigla == "ME") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "resposta_clean",
+    nome_orgao = "ME",
+    em_vigencia = T
+  )
+```
+</div>
+
+### INSS – Instituto Nacional do Seguro Social
+
+#### Todo período
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+lgpd_nested %>%
+  filter(orgao_sigla == "INSS") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "detalhamento_solicitacao_clean",
+    nome_orgao = "INSS",
+    em_vigencia = F
+  )
+  
+lgpd_nested %>%
+  filter(orgao_sigla == "INSS") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "resposta_clean",
+    nome_orgao = "INSS",
+    em_vigencia = F
+  )
+```
+</div>
+
+#### Após a vigência da LGPD
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+lgpd_nested %>%
+  filter(orgao_sigla == "INSS") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "detalhamento_solicitacao_clean",
+    nome_orgao = "INSS",
+    em_vigencia = T
+  )
+  
+lgpd_nested %>%
+  filter(orgao_sigla == "INSE") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "resposta_clean",
+    nome_orgao = "INSS",
+    em_vigencia = T
+  )
+```
+</div>
+
+### INCRA – Instituto Nacional de Colonização e Reforma Agrária
+
+O INCRA fez as negaticas baseada na LGPD após a viggência da legislação;
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+lgpd_nested %>%
+  filter(orgao_sigla == "INCRA") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "detalhamento_solicitacao_clean",
+    nome_orgao = "INCRA",
+    em_vigencia = T
+  )
+  
+lgpd_nested %>%
+  filter(orgao_sigla == "INCRA") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "resposta_clean",
+    nome_orgao = "INCRA",
+    em_vigencia = T
+  )
+```
+</div>
+
+### CNPQ – Conselho Nacional de Desenvolvimento Científico e Tecnológico
+
+#### Todo período
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+lgpd_nested %>%
+  filter(orgao_sigla == "CNPQ") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "detalhamento_solicitacao_clean",
+    nome_orgao = "CNPQ",
+    em_vigencia = F
+  )
+  
+lgpd_nested %>%
+  filter(orgao_sigla == "CNPQ") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "resposta_clean",
+    nome_orgao = "CNPQ",
+    em_vigencia = F
+  )
+```
+</div>
+
+#### Após a vigência da LGPD
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+lgpd_nested %>%
+  filter(orgao_sigla == "CNPQ") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "detalhamento_solicitacao_clean",
+    nome_orgao = "CNPQ",
+    em_vigencia = T
+  )
+  
+lgpd_nested %>%
+  filter(orgao_sigla == "CNPQ") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "resposta_clean",
+    nome_orgao = "CNPQ",
+    em_vigencia = T
+  )
+```
+</div>
+
+### BB – Banco do Brasil S.A.
+
+#### Todo período
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+lgpd_nested %>%
+  filter(orgao_sigla == "BB") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "detalhamento_solicitacao_clean",
+    nome_orgao = "BB",
+    em_vigencia = F
+  )
+  
+lgpd_nested %>%
+  filter(orgao_sigla == "BB") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "resposta_clean",
+    nome_orgao = "BB",
+    em_vigencia = F
+  )
+```
+</div>
+
+#### Após a vigência da LGPD
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+lgpd_nested %>%
+  filter(orgao_sigla == "BB") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "detalhamento_solicitacao_clean",
+    nome_orgao = "BB",
+    em_vigencia = T
+  )
+  
+lgpd_nested %>%
+  filter(orgao_sigla == "BB") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "resposta_clean",
+    nome_orgao = "BB",
+    em_vigencia = T
+  )
+```
+</div>
+
+### INEP – Instituto Nacional de Estudos e Pesquisas Educacionais Anísio Teixeira
+
+#### Todo período
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+lgpd_nested %>%
+  filter(orgao_sigla == "INEP") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "detalhamento_solicitacao_clean",
+    nome_orgao = "INEP",
+    em_vigencia = F
+  )
+  
+lgpd_nested %>%
+  filter(orgao_sigla == "INEP") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "resposta_clean",
+    nome_orgao = "INEP",
+    em_vigencia = F
+  )
+```
+</div>
+
+#### Após a vigência da LGPD
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+lgpd_nested %>%
+  filter(orgao_sigla == "INEP") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "detalhamento_solicitacao_clean",
+    nome_orgao = "INEP",
+    em_vigencia = T
+  )
+  
+lgpd_nested %>%
+  filter(orgao_sigla == "INEP") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "resposta_clean",
+    nome_orgao = "INEP",
+    em_vigencia = T
+  )
+```
+</div>
+
+### ANEEL – Agência Nacional de Energia Elétrica
+
+#### Todo período
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+lgpd_nested %>%
+  filter(orgao_sigla == "ANEEL") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "detalhamento_solicitacao_clean",
+    nome_orgao = "ANEEL",
+    em_vigencia = F
+  )
+  
+lgpd_nested %>%
+  filter(orgao_sigla == "ANEEL") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "resposta_clean",
+    nome_orgao = "ANEEL",
+    em_vigencia = F
+  )
+```
+</div>
+
+#### Após a vigência da LGPD
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+lgpd_nested %>%
+  filter(orgao_sigla == "ANEEL") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "detalhamento_solicitacao_clean",
+    nome_orgao = "ANEEL",
+    em_vigencia = T
+  )
+  
+lgpd_nested %>%
+  filter(orgao_sigla == "ANEEL") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "resposta_clean",
+    nome_orgao = "ANEEL",
+    em_vigencia = T
+  )
+```
+</div>
+
+### MD – Ministério da Defesa
+
+#### Todo período
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+lgpd_nested %>%
+  filter(orgao_sigla == "MD") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "detalhamento_solicitacao_clean",
+    nome_orgao = "MD",
+    em_vigencia = F
+  )
+  
+lgpd_nested %>%
+  filter(orgao_sigla == "MD") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "resposta_clean",
+    nome_orgao = "MD",
+    em_vigencia = F
+  )
+```
+</div>
+
+#### Após a vigência da LGPD
+
+<div class="col2">
+```{r fig.height=6, fig.width=5}
+lgpd_nested %>%
+  filter(orgao_sigla == "MD") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "detalhamento_solicitacao_clean",
+    nome_orgao = "MD",
+    em_vigencia = T
+  )
+  
+lgpd_nested %>%
+  filter(orgao_sigla == "MD") %>% 
+  plot_wordcloud_mencao_lgpd(
+    campo = "resposta_clean",
+    nome_orgao = "MD",
+    em_vigencia = T
+  )
+```
+</div>
