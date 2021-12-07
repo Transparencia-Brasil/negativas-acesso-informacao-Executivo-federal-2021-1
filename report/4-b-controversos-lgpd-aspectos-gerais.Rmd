@@ -225,6 +225,7 @@ lgpd_counts <- lgpd %>%
 
 ```{r}
 my_lbl <- function(x) scales::percent(x, accuracy = 0.1, decimal.mark = ",")
+
 lgpd_counts %>% 
   count(mencao_lgpd, wt = n) %>%
   mutate(
@@ -236,7 +237,7 @@ lgpd_counts %>%
   geom_col(width = 1, color = cores_tb[["cinza_quase_branco"]]) +
   coord_polar("y", start = 0) +
   geom_text(
-    aes(y = ypos, label = str_glue("{n} pedidos\n{my_lbl(prop)}")),
+    aes(y = 1-ypos, label = str_glue("{n} pedidos\n{my_lbl(prop)}")),
     size = 4
   ) +
   labs(
@@ -253,7 +254,6 @@ lgpd_counts %>%
     axis.text = element_blank(),
     panel.grid = element_blank()
   )
-
 ```
 
 
