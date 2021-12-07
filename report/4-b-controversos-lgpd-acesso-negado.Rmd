@@ -425,7 +425,7 @@ lgpd %>%
   ) +
   scale_y_continuous(expand = c(0,0)) +
   labs(
-    title = "Acessos negados mencinando a LGPD na resposta",
+    title = "Acessos negados mencionando a LGPD na resposta",
     subtitle = "Solicitante não menciona LGPD no pedido",
     x = "Quantidade",
     y = NULL
@@ -460,7 +460,7 @@ lgpd %>%
   ) +
   scale_y_continuous(expand = c(0, 0), limits = c(0, 55)) +
   labs(
-    title = "Acessos negados mencinando a LGPD na resposta",
+    title = "Acessos negados mencionando a LGPD na resposta",
     subtitle = "Solicitante não menciona LGPD no pedido",
     x = "Quantidade",
     y = NULL
@@ -502,7 +502,7 @@ lgpd %>%
   ) +
   scale_y_continuous(expand = c(0, 0), limits = c(0, 55)) +
   labs(
-    title = "Acessos negados mencinando a LGPD na resposta - após a vigência da lei",
+    title = "Acessos negados mencionando a LGPD na resposta - após a vigência da lei",
     subtitle = "Considerando pedidos com data de registro da resposta após 18/09/2020.\nSolicitante não menciona LGPD no pedido",
     x = "Quantidade",
     y = NULL
@@ -717,7 +717,7 @@ lgpd %>%
   hrbrthemes::scale_y_percent(limits = c(0, .6)) +
   theme(strip.text = element_text(face = "bold", hjust = 0)) +
   labs(
-    title = "Acessos negados mencinando a LGPD na resposta - após a vigência da lei",
+    title = "Acessos negados mencionando a LGPD na resposta - após a vigência da lei",
     subtitle = "Considerando pedidos com data de registro da resposta após 18/09/2020.\nSolicitante não menciona LGPD no pedido.\nComo % do total de acessos negados de cada órgão",
     x = NULL,
     y = NULL
