@@ -203,7 +203,6 @@ lgpd %>%
   geom_col(position = "dodge") +
   geom_text(
     aes(label = if_else(n > 20, n, NA_real_)),
-    color = cores_tb[["cinza_quase_branco"]],
     position = position_dodge(width = .9),
     vjust = 1
   ) +
@@ -212,14 +211,21 @@ lgpd %>%
     position = position_dodge(width = .9),
     vjust = 0
   ) +
+  geom_text(
+    aes(label = if_else(n <= 5, n, NA_real_), color = decisao),
+    position = position_dodge(width = .9),
+    vjust = 0
+  ) +
   scale_fill_manual(values = cores_decisao_aux) +
+  scale_color_manual(values = cores_decisao_aux) +
   ylim(c(0, 600)) +
   facet_wrap(ano ~ ., scales = "free_x", ncol = 5, strip.position = "bottom") +
   labs(
     title = NULL,
     y = "Quantidade de pedidos",
     x = NULL,
-    fill = NULL
+    fill = NULL,
+    color = NULL
   ) +
   #guides(color = guide_legend(ncol = 1, title.position = "top")) +
   theme(
@@ -235,7 +241,6 @@ lgpd %>%
     title = "Respostas mencionando LGPD, por ano e decisão",
     subtitle = "Solicitante não menciona LGPD em assunto ou pedido"
   )
-
 ```
 
 ### Acesso negado
@@ -331,23 +336,19 @@ lgpd %>%
   ) %>%
   count(data_registro, onde) %>% 
   filter(onde) %>%
-  ggplot(aes(x = data_registro, y = n, fill = onde)) +
-  geom_col() +
+  ggplot(aes(x = data_registro, y = n)) +
+  geom_col(fill = cores_aep[["rosa"]]) +
   geom_text(
     aes(label = n),
     color = cores_aep[["rosa"]],
     vjust = -.5,
     hjust = 0,
-    size = 2.5,
+    size = 3,
     fontface = "bold",
     angle = 45
   ) +
-  scale_fill_manual(
-    values = cores_aep[["rosa"]],
-    labels = c("Órgão menciona LGPD na resposta, solicitante não menciona")
-  ) +
-  scale_y_continuous(expand = c(0.02, 0)) +
-  scale_x_date(date_breaks = "6 months", date_labels = "%b-%Y") +
+  scale_y_continuous(expand = c(0.02, 0), limits = c(0, 35)) +
+  scale_x_date(date_breaks = "6 months", date_labels = "%b8%Y") +
   theme(
     axis.ticks.x = element_line(),
     legend.position = "top",
@@ -355,9 +356,10 @@ lgpd %>%
     legend.justification = "left"
   ) +
   labs(
-    title = "Acessos negados e menção à LGPD",
+    title = "Acessos negados e menção à LGPD nas respostas de pedidos via LAI",
+    subtitle = "Solicitante não menciona LGPD no pedido",
     x = NULL,
-    y = "Quantidade de pedidos",
+    y = "Quantidade de pedidos\ncom acesso negado",
     fill = NULL
   )
 ```
@@ -393,7 +395,9 @@ lgpd %>%
   scale_x_date(date_breaks = "4 months", date_labels = "%b/%Y") +
   labs(
     title = "Proporção das negativas de acesso a informação via LAI com base na LGPD",
-    x = NULL, y = NULL
+    subtitle = "Solicitante não menciona LGPD no pedido",
+    y = "% de pedidos com acesso negado",
+    x = NULL
   ) +
   theme(axis.ticks.x = element_line())
 ```
@@ -435,7 +439,7 @@ lgpd %>%
 
 #### Acesso negado - por órgão (10 primeiros) 
 
-```{r}
+```{r fig.width=9}
 lgpd %>% 
   filter(
     decisao == "Acesso Negado",
@@ -449,7 +453,8 @@ lgpd %>%
   ) %>%
   count(orgao, onde) %>% 
   filter(onde) %>% 
-  mutate(orgao = str_extract(orgao, rgx_sigla)) %>%
+  mutate(orgao = str_wrap(orgao, 50)) %>%
+  #mutate(orgao = str_extract(orgao, rgx_sigla)) %>%
   slice_max(n = 10, order_by = n) %>% 
   ggplot(aes(x = reorder(orgao, n), y = n)) +
   geom_col(fill = cores_aep[["rosa"]]) +
@@ -458,19 +463,19 @@ lgpd %>%
     hjust = 1,
     color = cores_tb[["cinza_quase_branco"]]
   ) +
-  scale_y_continuous(expand = c(0, 0), limits = c(0, 55)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 52)) +
   labs(
-    title = "Acessos negados mencionando a LGPD na resposta",
+    title = "Acessos negados mencionando a LGPD na resposta - por órgão",
     subtitle = "Solicitante não menciona LGPD no pedido",
-    x = "Quantidade",
-    y = NULL
+    y = "Quantidade",
+    x = NULL
   ) +
   coord_flip()
 ```
 
 #### Acesso negado - por órgão (10 primeiros) - após 18/09/2020
 
-```{r}
+```{r fig.width=9}
 lgpd %>% 
   left_join(
     select(pedidos_cgu, id_pedido, ts_resposta, data_resposta)
@@ -491,7 +496,8 @@ lgpd %>%
   ) %>%
   count(orgao, onde) %>% 
   filter(onde) %>% 
-  mutate(orgao = str_extract(orgao, rgx_sigla)) %>%
+  mutate(orgao = str_wrap(orgao, 50)) %>%
+  #mutate(orgao = str_extract(orgao, rgx_sigla)) %>%
   slice_max(n = 10, order_by = n) %>% 
   ggplot(aes(x = reorder(orgao, n), y = n)) +
   geom_col(fill = cores_aep[["rosa"]]) +
@@ -500,12 +506,12 @@ lgpd %>%
     hjust = 1,
     color = cores_tb[["cinza_quase_branco"]]
   ) +
-  scale_y_continuous(expand = c(0, 0), limits = c(0, 55)) +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 52)) +
   labs(
-    title = "Acessos negados mencionando a LGPD na resposta - após a vigência da lei",
+    title = "Acessos negados mencionando a LGPD na resposta - por órgão\nApós a vigência da lei",
     subtitle = "Considerando pedidos com data de registro da resposta após 18/09/2020.\nSolicitante não menciona LGPD no pedido",
-    x = "Quantidade",
-    y = NULL
+    y = "Quantidade de pedidos",
+    x = NULL
   ) +
   coord_flip()
 ```
@@ -624,7 +630,7 @@ lgpd %>%
 
 #### Acesso negado - % por órgão (10 primeiros) 
 
-```{r fig.height=7}
+```{r fig.height=6}
 rgx_sigla <- "^[:upper:]+(?= )|^[:upper:]+-PR|^FUNRei|^MTur|UFCAT$"
 
 lgpd %>% 
@@ -658,7 +664,7 @@ lgpd %>%
     size = 2.8
   ) +
   coord_flip() +
-  hrbrthemes::scale_y_percent(limits = c(0, .2)) +
+  hrbrthemes::scale_y_percent(limits = c(0, .17)) +
   theme(strip.text = element_text(face = "bold", hjust = 0)) +
   labs(
     title = "Acessos negados pelos órgãos mencionando LGPD",
@@ -670,7 +676,7 @@ lgpd %>%
 
 #### Acesso negado - % por órgão (10 primeiros) - após 18/09/2020
 
-```{r fig.height=7, fig.width=9}
+```{r fig.height=6}
 rgx_sigla <- "^[:upper:]+(?= )|^[:upper:]+-PR|^FUNRei|^MTur|UFCAT$"
 
 lgpd %>% 
@@ -714,7 +720,7 @@ lgpd %>%
     size = 2.8
   ) +
   coord_flip() +
-  hrbrthemes::scale_y_percent(limits = c(0, .6)) +
+  hrbrthemes::scale_y_percent(limits = c(0, .55)) +
   theme(strip.text = element_text(face = "bold", hjust = 0)) +
   labs(
     title = "Acessos negados mencionando a LGPD na resposta - após a vigência da lei",
@@ -726,7 +732,7 @@ lgpd %>%
 
 #### Acesso negado - % por órgão e ano (10 primeiros) 
 
-```{r fig.height=7}
+```{r fig.height=6}
 rgx_sigla <- "^[:upper:]+(?= )|^[:upper:]+-PR|^FUNRei|^MTur|UFCAT$"
 lgpd %>% 
   filter(decisao == "Acesso Negado", data_registro > ymd("2017-06-01")) %>% 
