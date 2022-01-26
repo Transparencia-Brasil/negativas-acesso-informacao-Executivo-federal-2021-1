@@ -66,7 +66,7 @@ pedidos_painel <- "dados/load/rds/base-cgu.rds" %>%
   filter(!is.na(decisao), !is.na(data_resposta))
 ```
 
-```{r}
+```{r fig.height=10, fig.width=6}
 cores <- colorRampPalette(c(cores_aep[["marrom"]],
                                   cores_aep[["rosa"]],
                                   cores_aep[["laranja"]],
