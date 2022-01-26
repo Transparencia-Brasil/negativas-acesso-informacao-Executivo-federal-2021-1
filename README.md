@@ -103,6 +103,11 @@ Foram utilizadas duas bases de dados para as análises deste repositório:
     -   [**Base completa (Painel
         CGU)**](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/5-b-recursos.html)
 
+-   **Tempo de resposta**
+
+-   [7. tempo de resposta
+    pedidos](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/7-tempo-de-resposta-pedidos.html)
+
 ## Download
 
 ### Download da base bruta
