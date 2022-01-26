@@ -1,0 +1,135 @@
+---
+title: 'Pedidos de acesso a informação via LAI - prazos de resposta'
+subtitle: 'Órgãos e entidades do poder Executivo'
+output:
+  html_document: 
+    code_folding: hide
+    toc: yes
+    toc_depth: 4
+    theme: paper
+    df_print: default
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = T,
+  comment = "#>",
+  message = F,
+  warning = F,
+  echo = T,
+  fig.width = 8,
+  fig.height = 5
+)
+```
+
+```{r}
+library(tidyverse)
+library(here)
+library(glue)
+library(lubridate)
+`%notin%` <- function(x, y) !(x %in% y)
+```
+
+```{r}
+# aplica identidade visual da TB/AeP:
+source(here("src/0-paleta-de-cores.R"), encoding = "UTF-8")
+
+theme_set(theme_minimal())
+
+theme_update(
+  panel.grid.minor = element_blank(),
+  panel.background = element_rect(fill = cores_tb[["cinza_quase_branco"]],
+                                  color = "transparent")
+)
+```
+
+## Base utilizada
+
+* Base de dados do [painel da cgu](http://paineis.cgu.gov.br/lai/index.htm), disponível para download [neste link](https://falabr.cgu.gov.br/publico/DownloadDados/DownloadDadosLai.aspx)
+    * Esses dados vão de 2012 até 2021 mas não possuem os campos de texto dos pedidos, das respostas e dos recursos.
+    
+```{r}
+pedidos_painel <- "dados/load/rds/base-cgu.rds" %>%
+  here() %>%
+  readRDS() %>%
+  pluck("pedidos") %>%
+  janitor::clean_names() %>% 
+  mutate(
+    ts_registro = data_registro,
+    ts_resposta = data_resposta,
+    data_registro = dmy(data_registro),
+    data_resposta = dmy(data_resposta)
+  ) %>% 
+  rename(orgao = orgao_destinatario) %>% 
+  filter(!is.na(decisao), !is.na(data_resposta))
+```
+
+```{r}
+cores <- colorRampPalette(c(cores_aep[["marrom"]],
+                                  cores_aep[["rosa"]],
+                                  cores_aep[["laranja"]],
+                                  cores_tb[["laranja"]],
+                                  cores_tb[["azul"]]))(8)
+
+pedidos_painel %>% 
+  filter(year(data_registro) >= 2019) %>% 
+  filter(
+    decisao %notin% c(
+      "Pergunta Duplicada/Repetida",
+      "Não se trata de solicitação de informação" 
+    )
+  ) %>% 
+  transmute(id_pedido, 
+            orgao,
+            data_registro,
+            data_resposta,
+            dias_corridos = data_resposta - data_registro,
+            dias_corridos_fx = case_when(
+              dias_corridos == 0 ~  " 0 dias corridos",
+              dias_corridos <= 5 ~  " 1 até 5 dias",
+              dias_corridos <= 10 ~ " 6 até 10 dias",
+              dias_corridos <= 15 ~ "11 até 15 dias",
+              dias_corridos <= 20 ~ "16 até 20 dias",
+              dias_corridos <= 25 ~ "21 até 25 dias",
+              dias_corridos <= 30 ~ "26 até 30 dias",
+              TRUE ~  "Acima de 30 dias"
+            ),
+            dias_corridos_fx = ordered(dias_corridos_fx, levels = c(
+              " 0 dias corridos",
+              " 1 até 5 dias",
+              " 6 até 10 dias",
+              "11 até 15 dias",
+              "16 até 20 dias",
+              "21 até 25 dias",
+              "26 até 30 dias",
+              "Acima de 30 dias"
+            )),
+            prazo_atendimento = lubridate::dmy(prazo_atendimento)
+            # foi_prorrogado,
+            # foi_reencaminhado,
+            # id_solicitante,
+            # assunto_pedido,
+            # decisao,
+            # especificacao_decisao
+            ) %>% 
+  count(dias_corridos_fx, ano = year(data_registro), sort = TRUE) %>%
+  ggplot(aes(x = ano, y = n, fill = dias_corridos_fx)) +
+  geom_col(position = "dodge", show.legend = FALSE) +
+  geom_text(aes(label = n), hjust = 1) +
+  coord_flip() +
+  scale_fill_manual(values = cores) +
+  scale_y_continuous(expand = c(0, 0)) +
+  facet_wrap(~ dias_corridos_fx, ncol = 1) +
+  labs(
+    title = "Prazo de atendimento de pedidos de acesso a informação",
+    fill = "Dias corridos",
+    x = "Ano de registro do pedido",
+    y = "Quantidade de pedidos"
+  )+
+  theme(
+    strip.text = element_text(face = "bold", hjust = 0)
+  )
+```
+
