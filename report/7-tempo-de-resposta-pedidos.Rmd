@@ -29,6 +29,7 @@ library(tidyverse)
 library(here)
 library(glue)
 library(lubridate)
+library(tidytext)
 `%notin%` <- function(x, y) !(x %in% y)
 ```
 
@@ -73,8 +74,9 @@ cores <- colorRampPalette(c(cores_aep[["marrom"]],
                                   cores_tb[["laranja"]],
                                   cores_tb[["azul"]]))(8)
 
-pedidos_painel %>% 
-  filter(year(data_registro) >= 2019) %>% 
+pedidos_prazo <- pedidos_painel %>% 
+  filter(esfera == "Federal") %>% 
+  filter(!str_detect(orgao, "Órgão para Teste")) %>% 
   filter(
     decisao %notin% c(
       "Pergunta Duplicada/Repetida",
@@ -83,6 +85,7 @@ pedidos_painel %>%
   ) %>% 
   transmute(id_pedido, 
             orgao,
+            esfera,
             data_registro,
             data_resposta,
             dias_corridos = data_resposta - data_registro,
@@ -113,9 +116,15 @@ pedidos_painel %>%
             # assunto_pedido,
             # decisao,
             # especificacao_decisao
-            ) %>% 
+            )
+```
+
+
+```{r fig.height=10, fig.width=6}
+pedidos_prazo %>% 
+  filter(year(data_registro) >= 2019) %>% 
   count(dias_corridos_fx, ano = year(data_registro), sort = TRUE) %>%
-  ggplot(aes(x = ano, y = n, fill = dias_corridos_fx)) +
+  ggplot(aes(x = reorder(ano, -ano), y = n, fill = dias_corridos_fx)) +
   geom_col(position = "dodge", show.legend = FALSE) +
   geom_text(aes(label = n), hjust = 1) +
   coord_flip() +
@@ -127,9 +136,112 @@ pedidos_painel %>%
     fill = "Dias corridos",
     x = "Ano de registro do pedido",
     y = "Quantidade de pedidos"
-  )+
+  ) +
   theme(
     strip.text = element_text(face = "bold", hjust = 0)
   )
+```
+
+```{r fig.height=12, fig.width=7}
+pedidos_prazo %>% 
+  count(dias_corridos_fx,
+        data_registro = floor_date(data_registro, unit = "month"),
+        sort = TRUE) %>%
+  ggplot(aes(x = data_registro, y = n, fill = dias_corridos_fx)) +
+  geom_col(position = "dodge", show.legend = FALSE) +
+  scale_fill_manual(values = cores) +
+  scale_y_continuous() +
+  scale_x_date(date_breaks = "6 months", date_labels = "%b.%Y") +
+  facet_wrap(~ dias_corridos_fx, ncol = 1, scales = "free_x") +
+  labs(
+    title = "Prazo de atendimento de pedidos de acesso a informação",
+    fill = "Dias corridos",
+    x = "Mês de registro do pedido",
+    y = "Quantidade de pedidos"
+  ) +
+  theme(
+    strip.text = element_text(face = "bold"),
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, size = 6),
+    axis.ticks.x = element_line() 
+  )
+```
+
+```{r fig.height=12, fig.width=7}
+rgx_sigla_orgao <- c(
+  "^IF [:upper:]+",
+  "^([:upper:]+[:lower:]*-?[:upper:]*)( - [:upper:]+-?[:upper:]*)?(?= -?)",
+  "^GSI-PR",
+  "^Autoridade Portuária de Santos S\\.A\\.",
+  "^BBTur",
+  "^CEITEC\\/S\\.A\\.",
+  "^IRB-Brasil",
+  "^SEGOV\\/PR",
+  "^Liquigás",
+  "^Petrobras \\w+",
+  "CGT ELETROSUL$",
+  "Pré-Sal Petróleo S\\.A"
+) %>% paste(collapse = "|")
+
+pedidos_prazo %>% 
+  group_by(ano = year(data_registro), orgao) %>% 
+  summarise(media_dias_corridos_por_orgao_e_ano = mean(dias_corridos),
+            .groups = "drop") %>%
+  group_by(orgao) %>% 
+  mutate(media_dias_corridos_por_orgao = mean(media_dias_corridos_por_orgao_e_ano)) %>%
+  ungroup() %>% 
+  mutate(orgao = str_extract(orgao, rgx_sigla_orgao)) %>%
+  group_by(ano) %>% 
+  slice_max(n = 10, order_by = media_dias_corridos_por_orgao_e_ano) %>%
+  ungroup() %>% 
+  # group_by(ano) %>% 
+  # nest()
+  ggplot(aes(
+    x = reorder_within(orgao,
+                       media_dias_corridos_por_orgao_e_ano,
+                       ano),
+    y = media_dias_corridos_por_orgao_e_ano,
+    fill = media_dias_corridos_por_orgao_e_ano
+  )) +
+  geom_col() +
+  scale_x_reordered() +
+  scale_y_continuous(expand = c(0, 0)) +
+  coord_flip() +
+  facet_wrap(ano ~ ., scales = "free", ncol = 2) +
+  labs(
+    title = "Órgãos que mais demoraram para responder demandas",
+    y = "Quantidade de dias corridos após o pedido",
+    x = "Órgão (sigla)",
+    fill = "Dias corridos"
+  ) +
+  theme(strip.text = element_text(face = "bold", hjust = 0))
+```
+
+```{r fig.height=12, fig.width=7}
+pedidos_prazo %>% 
+  group_by(ano = year(data_registro)) %>% 
+  slice_max(order_by = dias_corridos, n = 10, with_ties = TRUE) %>% 
+  ungroup() %>% 
+  mutate(orgao = str_extract(orgao, rgx_sigla_orgao),
+         orgao = str_glue("{orgao} ({id_pedido})")
+         ) %>%
+  ggplot(aes(
+    x = reorder(orgao, dias_corridos),
+    y = as.integer(dias_corridos),
+    fill = as.integer(dias_corridos)
+  )) +
+  geom_col() +
+  geom_text(aes(label = as.integer(dias_corridos)), 
+            size = 3, hjust = 0, check_overlap = TRUE) +
+  scale_x_reordered() +
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 3000)) +
+  coord_flip() +
+  facet_wrap(as.integer(ano) ~ ., scales = "free_y", ncol = 2) +
+  labs(
+    title = "10 pedidos mais demorados para obter resposta - por ano",
+    y = "Quantidade de dias corridos após o pedido",
+    x = "Órgão (sigla e id do pedido)",
+    fill = "Dias corridos"
+  ) +
+  theme(strip.text = element_text(face = "bold", hjust = 0))
 ```
 
