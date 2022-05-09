@@ -112,12 +112,12 @@ getfiles_lai <- function(base) list.files(here::here("dados"), pattern = base, f
 #' pedidos dataset
 getfiles_lai("Pedidos") %>% 
   purrr::map_df(read_lai) %>% 
-  saveRDS(here::here("dados/load/rds/pedidos.rds"))
+  saveRDS(here::here("dados/load/rds/pedidos-cgu.rds"))
 
 #' recursos dataset
 getfiles_lai("Recursos") %>% 
   purrr::map_df(read_lai) %>% 
-  saveRDS(here::here("dados/load/rds/recursos.rds"))
+  saveRDS(here::here("dados/load/rds/recursos-cgu.rds"))
 
 #' remove extra datasets
 "dados" %>% 
