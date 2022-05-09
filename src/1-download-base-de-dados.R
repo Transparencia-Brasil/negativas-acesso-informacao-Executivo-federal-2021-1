@@ -73,7 +73,7 @@ read_lai <- function(arquivo) {
     stop(glue::glue("{arquivo} is not a LAI file!"))
   }
   
-  readr::read_csv2(
+  df <- readr::read_csv2(
     file = arquivo,
     col_names = colunas,
     col_types = readr::cols(.default = readr::col_character()),
@@ -81,24 +81,43 @@ read_lai <- function(arquivo) {
     locale = readr::locale(encoding = "UTF-16LE")
   )
   
+  #' Base de dados de pedidos/recursos pronta para uso
+  df <- df %>% 
+    dplyr::mutate(
+      ts_registro = data_registro,
+      ts_resposta = data_resposta,
+      data_registro = lubridate::dmy(data_registro) %>% lubridate::floor_date(unit = "month"),
+      data_resposta = lubridate::dmy(data_resposta) %>% lubridate::floor_date(unit = "month"),
+      governo_que_respondeu = dplyr::case_when(
+        data_resposta < lubridate::as_date("2016-05-12") ~ "Dilma II",
+        data_resposta < lubridate::as_date("2019-01-01") ~ "Temer",
+        TRUE ~ "Bolsonaro"
+      ),
+      governo_que_registrou = dplyr::case_when(
+        data_registro < lubridate::as_date("2016-05-12") ~ "Dilma II",
+        data_registro < lubridate::as_date("2019-01-01") ~ "Temer",
+        TRUE ~ "Bolsonaro"
+      ),
+      governo_que_respondeu = factor(governo_que_respondeu, levels = c("Dilma II", "Temer", "Bolsonaro")),
+      governo_que_registrou = factor(governo_que_registrou, levels = c("Dilma II", "Temer", "Bolsonaro"))
+  )
+  
+  return(df)
+  
 }
 
 #' local file path
-getfiles_lai <- function(base) {
-  list.files(here::here("dados"), pattern = base, full.names = T)
-}
+getfiles_lai <- function(base) list.files(here::here("dados"), pattern = base, full.names = T)
 
 #' pedidos dataset
-"Pedidos" %>% 
-  getfiles_lai() %>% 
+getfiles_lai("Pedidos") %>% 
   purrr::map_df(read_lai) %>% 
-  readr::write_csv(here::here("dados/pedidos.csv"))
+  saveRDS(here::here("dados/load/rds/pedidos.rds"))
 
 #' recursos dataset
-"Recursos" %>% 
-  getfiles_lai() %>% 
+getfiles_lai("Recursos") %>% 
   purrr::map_df(read_lai) %>% 
-  readr::write_csv(here::here("dados/recursos.csv"))
+  saveRDS(here::here("dados/load/rds/recursos.rds"))
 
 #' remove extra datasets
 "dados" %>% 
