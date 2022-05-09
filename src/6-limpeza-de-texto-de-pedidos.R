@@ -12,7 +12,7 @@ pedidos_clean <- "dados/load/rds/pedidos-cgu.rds" %>%
   readRDS() %>% 
   transmute(
     id_pedido = id_pedido,
-    across(c(detalhamento_solicitacao, resposta, resumo_solicitacao), limpando_texto, .names = "{.col}_clean")
+    across(c(detalhamento, resposta, resumo), limpando_texto, .names = "{.col}_clean")
   )
 
 #' base de dados de recursos, construída em um arquivo à
