@@ -2,39 +2,29 @@ library(glue)
 library(tidyverse)
 library(here)
 
-#' ano ref
-anos <- 2012:2022
-
-#' url-mãe onde estão os arquivos
-url_mae <- "https://dadosabertos-download.cgu.gov.br/FalaBR/Arquivos_FalaBR"
-
-#' lista de urls diretos para download arquivos de **pedidos**
-urls_pedidos <- glue("{url_mae}/Pedidos_csv_{anos}.zip")
-
-#' lista de urls diretos para download arquivos de **recursos**
-urls_recursos <- glue("{url_mae}/Recursos_Reclamacoes_csv_{anos}.zip")
-
-#' lista de caminhos relativos para armazenar os downloads de **pedidos**
-destfiles_pedidos <- glue(here("dados/load/reduzido/Pedidos_csv_{anos}.zip"))
-
-#' lista de caminhos relativos para armazenar os downloads de **pedidos**
-destfiles_recursos <- glue(here("dados/load/reduzido/Recursos_csv_{anos}.zip"))
-
-#' lista combinada de urls de **pedidos** e **recursos**
-urls <- cbind(urls_pedidos, urls_recursos)
-
-#' lista combinada de caminhos relativos para armazenar os downloads de **pedidos** e **recursos**
-destfiles <- cbind(destfiles_pedidos, destfiles_recursos)
-
-#' diretório que guardará os arquivos extraídos
-exdir <- here("dados/load/reduzido")
+#' cria uma pasta para gerenciar arquivos baixados
+exdir <- here("dados/load/temp")
+unlink(exdir, recursive = TRUE)
 dir.create(exdir)
 
+#' url e destino dos arquivos
+url_base <- "https://dadosabertos-download.cgu.gov.br/FalaBR/Arquivos_FalaBR/{interacao}_csv_{ano}.zip"
+destfile_base <- "{exdir}/{interacao}_csv_{ano}.zip"
+
+files_cgu <- tibble(ano = 2012:2022) %>%
+  expand(ano, interacao = c("Pedidos", "Recursos_Reclamacoes")) %>% 
+  mutate(
+    url = glue(url_base),
+    destfile = glue(destfile_base)
+  )
+
 #' download !
-walk2(urls, destfiles, download.file, mode = "wb")
+download.file_safe <- safely(download.file)
+walk2(files_cgu$url, files_cgu$destfile, download.file_safe, mode = "wb")
 
 #' unzip ! terminando o processo o caminho dos arquivos ficam armazenados no objeto como `string`
-csv_files <- map(destfiles, unzip, exdir = exdir)
+unzip_safe <- safely(unzip)
+walk(files_cgu$destfile, unzip_safe, exdir = exdir)
 
 #' extract data !
 read_lai <- function(arquivo) {
@@ -46,11 +36,11 @@ read_lai <- function(arquivo) {
       "id_pedido",
       "protocolo",
       "esfera",
+      "uf",
+      "municipio",
       "orgao",
       "situacao",
       "data_registro",
-      "resumo",
-      "detalhamento",
       "prazo",
       "foi_prorrogado",
       "foi_reencaminhado",
@@ -61,7 +51,6 @@ read_lai <- function(arquivo) {
       "sub_assunto",
       "tag",
       "data_resposta",
-      "resposta",
       "decisao",
       "especificacao_decisao"
     )
@@ -69,11 +58,13 @@ read_lai <- function(arquivo) {
     colunas <- c(
       "id_recurso",
       "id_recurso_precedente",
-      "desc_recurso",
       "id_pedido",
       "id_solicitante",
       "protocolo_pedido",
-      "orgao_destinatario",
+      "esfera",
+      "uf",
+      "municipio",
+      "orgao",
       "instancia",
       "situacao",
       "data_registro",
@@ -81,7 +72,6 @@ read_lai <- function(arquivo) {
       "origem_solicitacao",
       "tipo_recurso",
       "data_resposta",
-      "resposta_recurso",
       "tipo_resposta"
     )
   } else if (stringr::str_detect(arquivo, "Solicitantes")) {
@@ -107,26 +97,31 @@ read_lai <- function(arquivo) {
 #' * solicitantes_pedidos 
 #' * recursos_reclamacoes 
 #' * solicitantes_recursos
-base_cgu <- csv_files %>% 
-  enframe(name = "id", value = "path") %>% 
-  unnest(path) %>% 
-  mutate(
-    base = str_extract(path, "(?<=\\d{8}_).+(?=_csv_\\d{4}\\.csv$)"), 
-    base = snakecase::to_snake_case(base),
-    ano = str_extract(path, "\\d{4}(?=\\.csv$)"),
-    tabela = map(path, read_lai)
-  )
+files_cgu <- list.files(path = here("dados/load/temp"), pattern = "csv$",full.names = TRUE) %>% 
+  as_tibble_col(column_name = "csv") %>% 
+  mutate(ano = as.integer(str_extract(csv, "\\d+(?=\\.csv)")),
+         interacao = str_extract(csv, "(?<=_)Pedidos|Recursos_Reclamacoes")) %>% 
+  na.omit() %>% 
+  left_join(files_cgu, .) %>% 
+  mutate(tabela = map(csv, read_lai))
 
 #' salva todas as bases em um único arquivo
-saveRDS(base_cgu, here("dados/load/rds/base_cgu.rds"))
-
-#' deleta arquivos zip e xml
-"dados/load/reduzido" %>%
-  here() %>%
-  unlink(recursive = TRUE)
+saveRDS(files_cgu, here("dados/load/rds/base_cgu.rds"))
 
 #' teste
 readRDS(here("dados/load/rds/base_cgu.rds")) %>% 
-  filter(base == "pedidos") %>% 
+  filter(interacao == "Pedidos") %>% 
   unnest(tabela) %>% 
+  sample_n(1) %>% 
   glimpse()
+
+readRDS(here("dados/load/rds/base_cgu.rds")) %>% 
+  filter(interacao == "Recursos_Reclamacoes") %>% 
+  unnest(tabela) %>% 
+  sample_n(1) %>% 
+  glimpse()
+
+#' deleta arquivos zip e xml
+"dados/load/temp" %>%
+  here() %>%
+  unlink(recursive = TRUE)
