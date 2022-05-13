@@ -252,7 +252,6 @@ div.tocify {
 
 
 <h1 class="title toc-ignore">Negativas de acesso a informação no governo Federal</h1>
-<h3 class="subtitle">Órgãos e entidades do poder Executivo - janeiro de 2015 até 2022</h3>
 
 </div>
 
@@ -312,8 +311,8 @@ Sys.setlocale(&quot;LC_TIME&quot;, &quot;pt_BR&quot;)
 <p>Análises de pedidos de acesso a informação via LAI considerando a decisão de acesso.</p>
 <pre class="r"><code>pedidos_cgu &lt;- readRDS(here(&quot;dados/load/rds/pedidos-cgu.rds&quot;)) %&gt;% 
   select(id_pedido, data_registro, data_resposta, decisao)</code></pre>
-<div id="análise-de-pedidos-por-decisão-de-acesso" class="section level2">
-<h2>Análise de pedidos por decisão de acesso</h2>
+<div id="órgãos-e-entidades-do-poder-executivo---janeiro-de-2015-até-2022" class="section level2">
+<h2>Órgãos e entidades do poder Executivo - janeiro de 2015 até 2022</h2>
 <pre class="r"><code># pedidos_cgu &lt;- pedidos_cgu %&gt;% filter(orgao != &quot;CEF – Caixa Econômica Federal&quot;)
 glimpse(pedidos_cgu)
 #&gt; Rows: 643.572

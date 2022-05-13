@@ -1,6 +1,5 @@
 ---
 title: 'Negativas de acesso a informação no governo Federal'
-subtitle: 'Órgãos e entidades do poder Executivo - janeiro de 2015 até 2022'
 output:
   html_document: 
     code_folding: hide
@@ -93,7 +92,7 @@ pedidos_cgu <- readRDS(here("dados/load/rds/pedidos-cgu.rds")) %>%
   select(id_pedido, data_registro, data_resposta, decisao)
 ```
 
-## Análise de pedidos por decisão de acesso
+## Órgãos e entidades do poder Executivo - janeiro de 2015 até 2022
 
 ```{r}
 # pedidos_cgu <- pedidos_cgu %>% filter(orgao != "CEF – Caixa Econômica Federal")
