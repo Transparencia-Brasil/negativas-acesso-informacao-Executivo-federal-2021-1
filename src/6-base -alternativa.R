@@ -106,10 +106,10 @@ files_cgu <- list.files(path = here("dados/load/temp"), pattern = "csv$",full.na
   mutate(tabela = map(csv, read_lai))
 
 #' salva todas as bases em um único arquivo
-saveRDS(files_cgu, here("dados/load/rds/base_cgu.rds"))
+saveRDS(files_cgu, here("dados/load/rds/base-cgu.rds"))
 
 #' teste
-readRDS(here("dados/load/rds/base_cgu.rds")) %>% 
+readRDS(here("dados/load/rds/base-cgu.rds")) %>% 
   filter(interacao == "Pedidos") %>% 
   unnest(tabela) %>% 
   sample_n(1) %>% 
