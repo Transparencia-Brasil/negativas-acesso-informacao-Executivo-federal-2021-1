@@ -3,17 +3,19 @@ library(lubridate)
 library(glue)
 library(here)
 
-pedidos <- readRDS(here("dados/load/rds/pedidos-clean.rds"))
+pedidos  <- readRDS(here("dados/load/rds/pedidos-clean.rds"))
 recursos <- readRDS(here("dados/load/rds/recursos-clean.rds"))
 
 # termos controversos ----------------------------------------------------------
 
 pedidos_controversos_lgpd <- pedidos %>% 
-  rename(resposta_pedido = resposta) %>% 
-  mutate(controversos_lgpd_resposta = str_detect(resposta_pedido, regex_lgpd),
-         controversos_lgpd_pedido = str_detect(detalhamento_solicitacao, regex_lgpd)
+  rename(resposta_pedido = resposta_clean,
+         detalhamento = detalhamento_clean,
+         resumo = resumo_clean) %>% 
+  mutate(controversos_lgpd_resposta = str_detect(resposta_pedido, "LGPD"),
+         controversos_lgpd_pedido = str_detect(detalhamento, "LGPD")
          ) %>% 
-  select(id_pedido, data_resposta, orgao = orgaodestinatario, contains("controversos_lgpd")) %>% 
+  select(id_pedido, data_resposta, orgao, contains("controversos_lgpd")) %>% 
   mutate(
     controverso_id = "LGPD",
     tipo = case_when(
@@ -31,15 +33,16 @@ instancias_lvs <- c(
   "CGU",
   "CMRI",
   "Pedido de Revisão"
-) %>% fct_reorder(1:6)
+)
+instancias_lvs <- ordered(instancias_lvs, levels = instancias_lvs)
 
-recursos_controversos_lgpd <- recursos %>% 
+recursos_controversos_lgpd <- recursos %>%  
   mutate(instancia = if_else(instancia == "Terceira Instância", "CGU", instancia),
          instancia = ordered(instancia, levels = instancias_lvs),
-         controversos_lgpd_recurso = str_detect(desc_recurso, regex_lgpd),
-         controversos_lgpd_resposta_recurso = str_detect(desc_recurso, regex_lgpd)
+         controversos_lgpd_recurso = str_detect(desc_recurso_clean, "LGPD"),
+         controversos_lgpd_resposta_recurso = str_detect(resposta_recurso_clean, "LGPD")
          ) %>% 
-  select(id_pedido, data_resposta, instancia, orgao = orgaodestinatario, contains("controversos_lgpd")) %>%
+  select(id_pedido, id_recurso, data_resposta, instancia, contains("controversos_lgpd")) %>%
   mutate(
     controverso_id = "LGPD",
     tipo = case_when(
