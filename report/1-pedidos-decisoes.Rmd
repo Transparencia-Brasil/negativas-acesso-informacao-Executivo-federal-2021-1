@@ -1,16 +1,41 @@
 ---
 title: 'Negativas de acesso a informação no governo Federal'
-subtitle: 'Órgãos e entidades do poder Executivo - janeiro de 2015 até 2021'
+subtitle: 'Órgãos e entidades do poder Executivo - janeiro de 2015 até 2022'
 output:
   html_document: 
     code_folding: hide
     toc: yes
+    toc_float: true
     toc_depth: 4
     theme: paper
     df_print: default
 editor_options: 
   chunk_output_type: console
 ---
+
+<style type="text/css">
+
+body{ /* Normal  */
+      font-size: 14px;
+  }
+  
+h1 {
+  font-size:38px;
+  margin-top:30px;
+  margin-bottom:4px;
+}
+
+h1, h2 {
+  margin-top:30px;
+  margin-bottom:4px;
+}
+
+h3, h4 {
+  margin-top:50px;
+  margin-bottom:4px;
+}
+
+</style>
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
@@ -34,6 +59,7 @@ library(patchwork)
 library(kableExtra)
 library(hrbrthemes)
 library(tidytext)
+library(scales)
 ```
 
 ```{r set-options}
@@ -63,8 +89,8 @@ source(here("src/0-paleta-de-cores.R"), encoding = "utf-8")
 Análises de pedidos de acesso a informação via LAI considerando a decisão de acesso.
 
 ```{r}
-pedidos_cgu <- readRDS(here("dados/load/rds/pedidos-clean.rds")) %>%
-  rename(orgao = orgaodestinatario)
+pedidos_cgu <- readRDS(here("dados/load/rds/pedidos-cgu.rds")) %>% 
+  select(id_pedido, data_registro, data_resposta, decisao)
 ```
 
 ## Análise de pedidos por decisão de acesso
@@ -87,6 +113,8 @@ Não são consideradoe pedidos de acesso a informação:
 
 - Informação Inexistente
 - Pergunta Duplicada/Repetida
+
+### Total de manifestações para ógãos e entidades do governo executivo Federal
 
 ```{r}
 pedidos_cgu %>% 
@@ -131,35 +159,29 @@ pedidos_cgu %>%
       ungroup(),
     show.legend = FALSE
   ) +
-  geom_text(
-    data = . %>% filter(month(data_registro) == 2),
-    aes(label = year(data_registro), y = -200),
-    size = 3.5,
-    vjust = 1.3,
-    hjust = .25,
-    color = "gray20",
-    show.legend = F
-  ) +
   scale_fill_manual(values = cores_lai) +
   scale_color_manual(values = cores_lai, breaks = names(cores_lai)[c(3,1,2)]) +
   scale_x_date(
-    breaks = scales::date_breaks("3 months"),
-    date_labels = "%b",
-    expand = c(0, 0)) +
+    breaks = breaks_pretty(12), 
+    labels = label_date_short(),
+    #breaks = scales::date_breaks("3 months"),
+    #date_labels = "%b",
+    expand = c(0., 0)) +
   labs(
-    y = "Quantidade",
+    y = "Número de manifestações",
     x = NULL,
     fill = NULL,
     color = NULL,
-    title = "Manifestações para ógãos e entidades do governo executivo Federal",
-    subtitle = "Quantidades por mês"
+    title = NULL
   ) +
   theme(legend.position = "top",
         legend.justification = "left",
-        legend.text = element_text(margin = margin(2, 5, 2, 5, "pt")))
+        legend.text = element_text(margin = margin(2, 5, 2, 5, "pt")),
+        axis.title.y = element_text(vjust = 1)
+        )
 ```
 
-## Histórico de pedidos de acesso a informação por decisão de acesso
+### Taxa de atendimento de pedidos de acesso a informação por decisão de acesso
 
 ```{r fig.height=11, fig.width=10}
 # tipo respostas mais comuns histórico -----------------------------------------
@@ -256,13 +278,12 @@ p1 <- decisao %>%
   labs(
     x = NULL,
     y = NULL,
-    title = "Pedidos de acesso a informação conforme decisão sobre o acesso",
-    subtitle = "Como % do total de pedidos de acesso a informação via LAI - mês a mês",
+    title = NULL,
+    subtitle = "% mês a mês",
     color = NULL,
     fill = NULL
   ) +
   facet_wrap(~ reorder(decisao, -qt), scales = 'free', ncol = 1)
-
 # plot direito -----------------------------------------------------------------
 p2 <- decisao %>%
   count(ano = year(data_resposta), decisao, wt = qt, name = "qt") %>%
@@ -278,7 +299,7 @@ p2 <- decisao %>%
   scale_fill_manual(values = cores_decisao) +
   scale_color_manual(values = cores_decisao2) +
   scale_x_percent(breaks = c(0,.3, .6, .9)) +
-  scale_y_discrete(labels = glue("'{21:15}"), expand = c(0, 0)) +
+  scale_y_discrete(labels = glue("'{22:15}"), expand = c(0, 0)) +
   #coord_flip() +
   theme(
     plot.subtitle = element_text(),
@@ -294,9 +315,8 @@ p2 <- decisao %>%
     x = NULL,
     y = NULL,
     fill = NULL,
-    subtitle = "% respostas por ano*"
+    subtitle = "% por ano*"
   )
-
 comb <- p1 + p2 & theme(legend.position = "none")
 comb + 
   plot_layout(widths = c(3, 1))
@@ -308,11 +328,11 @@ rm(p2)
 rm(comb)
 ```
 
-## Negativas de acesso a informação
+### Acessos negados por mês - comparação entre períodos iguais
 
 ```{r}
 decisao %>%
-  mutate(mesmo_periodo = month(data_resposta) <= 8) %>%
+  mutate(mesmo_periodo = month(data_resposta) <= 5) %>%
   add_count(data_resposta, mesmo_periodo, wt = qt, name = "qt_mes") %>%
   mutate(perc = qt / qt_mes) %>%
   filter(decisao == "Acesso Negado") %>%
@@ -324,17 +344,10 @@ decisao %>%
     xintercept = seq(ymd("2015-01-01"), ymd("2022-01-01"), by = "year"),
     lty = 3
   ) +
-  geom_text(
-    data = . %>% filter(month(data_resposta) == 2),
-    aes(label = year(data_resposta), y = .002),
-    size = 3.5,
-    fontface = "bold",
-    hjust = 0.1
-  ) +
-  geom_col(alpha = .5) +
+  geom_col(alpha = .7) +
   geom_point(aes(y = media_perc), shape = 95, size = 4) +
   geom_text(
-    data = . %>% filter(month(data_resposta) == 6),
+    data = . %>% filter(month(data_resposta) == 4),
     check_overlap = TRUE,
     fontface = "bold",
     aes(
@@ -344,10 +357,10 @@ decisao %>%
     nudge_y = .002
   ) +
   geom_curve(
-    aes(x = ymd("2015-05-01"),
-        y = 0.115, 
-        xend = ymd("2015-05-01"),
-        yend = 0.075),
+    aes(x = ymd("2015-04-01"),
+        y = 0.1, 
+        xend = ymd("2015-04-01"),
+        yend = 0.073),
     colour = "black",
     size = 0.6,
     curvature = .35,
@@ -355,7 +368,7 @@ decisao %>%
   ) +
   geom_label(
     data = . %>% filter(data_resposta == ymd("2015-06-01")),
-    aes(label = "Média anual\n(mesmo período)", y = .115),
+    aes(label = "Média anual\n(mesmo período)", y = .1),
     fill = "white",
     size = 3,
     label.size = NA
@@ -363,86 +376,88 @@ decisao %>%
   scale_fill_manual(values = c("gray70", cores_decisao[["Acesso Negado"]])) +
   hrbrthemes::scale_y_percent() +
   scale_x_date(
-    breaks = ymd(c(glue("{2015:2021}-01-01"), glue("{2015:2021}-08-01"))),
-    date_labels = "%b",
-    expand = c(0, 0)
-    ) +
+    breaks = breaks_pretty(56), 
+    labels = label_date_short(),
+    expand = c(0, 0),
+    limits = c(ymd("2014-12-01", "2022-12-01"))
+  ) +
   theme_minimal() +
-  theme(legend.position = "none", panel.grid.minor = element_blank()) +
+  theme(legend.position = "none", panel.grid.minor = element_blank(),
+        axis.ticks.x = element_line()) +
   labs(
     x = NULL,
-    y = "%",
-    title = "Acessos negados por mês - comparação entre períodos iguais",
-    subtitle = "Como % do total de acessos negados"
+    y = "% de manifestações com acessos negados",
+    title = NULL,
+    subtitle = NULL
   )
 ```
 
-## Análise de decisão "Não se trata de do solicitação de informação"
+### Ministério da Cidadania e classificação "Não se trata de solicitação de informação"
 
 ```{r fig.height=30, fig.width=11}
 pedidos_clean <- readRDS(here("dados/load/rds/pedidos-clean.rds"))
 
-not_lai <- pedidos_painel <- "dados/load/rds/base-cgu.rds" %>%
+not_lai <- "dados/load/rds/base-cgu.rds" %>%
   here() %>%
   readRDS() %>%
-  pluck("pedidos") %>%
-  janitor::clean_names() %>% 
+  filter(interacao == "Pedidos") %>% 
+  unnest(tabela) %>% 
   mutate(
     ts_registro = data_registro,
     ts_resposta = data_resposta,
     data_registro = dmy(data_registro) %>% floor_date(unit = "month"),
-    data_resposta = dmy(data_resposta) %>% floor_date(unit = "month")) %>% 
-  rename(orgao = orgao_destinatario) %>%
-  filter(!is.na(decisao),
-         !is.na(data_resposta),
-         data_registro < ymd("2021-10-01"), 
-         esfera == "Federal") %>% 
-  filter(decisao == "Não se trata de solicitação de informação",
-         str_detect(orgao, "^MCIDADANIA"),
-         year(data_registro) == 2020) %>%
-  select(id_pedido, assunto_pedido, orgao, data_registro, decisao)
+    data_resposta = dmy(data_resposta) %>% floor_date(unit = "month")
+  ) %>% 
+  filter(
+    !is.na(decisao),
+    !is.na(data_resposta),
+    data_registro < ymd("2021-10-01"), 
+    esfera == "Federal"
+  ) %>% 
+  filter(
+    decisao == "Não se trata de solicitação de informação",
+    str_detect(orgao, "^MCIDADANIA"),
+    year(data_registro) == 2020
+  ) %>%
+  select(id_pedido, assunto, orgao, data_registro, decisao)
+
+mcidadania <- left_join(not_lai, pedidos_clean)
 ```
 
-```{r}
-mcidadania <- left_join(not_lai, pedidos_clean)
+> Em 2020 foram `r format(nrow(mcidadania), big.mark = '.')`, solicitações classificadas como "Não se trata de solicitação de informação" pelo Ministério da Cidadania
 
+```{r}
 mcidadania %>% 
-  count(orgao, assunto_pedido, sort = T) %>% 
+  count(orgao, assunto, sort = T) %>% 
   filter(n > 10) %>% 
-  ggplot(aes(x = reorder(assunto_pedido, n), y = n)) +
+  ggplot(aes(x = reorder(assunto, n), y = n)) +
   geom_col(fill = cores_decisao2[2], color = "gray60") +
-  geom_label(aes(
-    x = "Atendimento",
-    y = 7500,
-    label = glue("Em 2020 foram {format(nrow(mcidadania), big.mark = '.')}\n",
-                 "solicitações classificadas como\n",
-                 "\"Não se trata de solicitação de informação\"\n",
-                 "pelo {str_wrap(orgao, 30)}"),
-  ), label.size = NA) +
   coord_flip() +
   labs(
-    title = glue("Ministério da Cidadania - Assuntos mais frequentes para decisão\n",
-                 "não se trata de solicitação de informação - Ano de 2020"),
+    title = NULL,
+    subtitle = "Frequência de assuntos",
     x = NULL,
     y = "Quantidade de manifestações em 2020"
   ) +
   theme_minimal()
 ``` 
 
+### Ministério da cidadania - núvem de palavras para pedidos com decisão "Não se trata de solicitação de informação"
+
 A núvem de palavras foi extraída do resumo da solicitação, onde o usuário escreve um texto curto sobre o conteúdo abordado na solicitação. A homogeneidade de tamanhos entre as palavras revela uma frequência semelhante do uso do termo. 
 
 ```{r fig.height=7, fig.width=7}
-source(here("src/5-funcao-limpando-texto.R"))
+source(here("src/3-funcao-limpando-texto.R"))
 
 library(tidytext)
 library(wordcloud)
 mcidadania %>% 
-  filter(!is.na(detalhamento_solicitacao)) %>% 
+  filter(!is.na(detalhamento_clean)) %>% 
   transmute(
     id_pedido,
-    assunto_pedido,
-    resumo_solicitacao = limpando_texto(resumo_solicitacao)) %>% 
-  unnest_tokens(word, resumo_solicitacao) %>% 
+    assunto,
+    resumo = resumo_clean) %>% 
+  unnest_tokens(word, resumo) %>% 
   anti_join(stopwords) %>%
   filter(!word %in% c(
     "dostaria",
@@ -461,31 +476,3 @@ mcidadania %>%
           random.color = F,
           colors = c(cores_aep[2], cores_tb[5])))
 ```
-
-```{r}
-mcidadania %>% 
-  filter(!is.na(detalhamento_solicitacao)) %>% 
-  transmute(
-    id_pedido,
-    assunto_pedido,
-    resumo_solicitacao = limpando_texto(resumo_solicitacao)) %>% 
-  unnest_tokens(word, resumo_solicitacao) %>% 
-  anti_join(stopwords) %>%
-  filter(!word %in% c(
-    "dostaria",
-    "solicito",
-    "liguei",
-    "fiz",
-    "venho",
-    "gostaria",
-    "pq",
-    "porque",
-    "aux"
-  )) %>%
-  count(word, sort = TRUE) %>%
-  slice_max(order_by = n, n = 30) %>% 
-  ggplot(aes(x = reorder(word, n), y = n)) +
-  geom_col() +
-  coord_flip()
-```
-
