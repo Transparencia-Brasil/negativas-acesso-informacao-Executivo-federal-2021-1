@@ -1,10 +1,9 @@
 ---
-title: 'Negativas de acesso a informação no governo Federal'
-subtite: '2015 até 04/2021'
+title: 'Monitoramento da Lei de Acesso a informação'
 output:
-    github_document:
-      toc: true
-      toc_depth: 3
+    html_document:
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -18,93 +17,73 @@ knitr::opts_chunk$set(
 )
 ```
 
-## Relatório
-
-* Pedidos por tipo de resposta do órgão (decisão) [CLIQUE AQUI](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/1-pedidos-decisoes.html)
-
-* Pedidos por órgão:
-  * Acesso Negado [CLIQUE AQUI](https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1/2-pedidos-orgaos-acesso-negado.html)
-
-
-## Base de dados
-
-* Site do e-SIC/CGU - [clique aqui](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx)
-* Dicionário de variáveis - [clique aqui](http://www.consultaesic.cgu.gov.br/arquivosRelatorios/PedidosRespostas/Dicionario-Dados-Exportacao.txt)
-
-#### Download da base bruta
-
-* Os dados brutos estão disponíveis ano a ano no site do e-sic da Controladoria Geral da União. Para baixar manualmente [acesse o site do esic](http://www.consultaesic.cgu.gov.br/busca/_layouts/15/DownloadPedidos/DownloadDados.aspx), selecione ano e formato (trabalhamos com XML) e clique em download.  
-
-##### Arquivos:
-
-```{r fig.width=15}
+```{r}
+library(tidyverse)
 library(here)
-library(tibble)
-library(dplyr)
-library(stringr)
-library(glue)
-# check
-"dados/raw" %>% 
+library(xml2)
+
+docs <- list.files(here("docs")) %>% 
+  paste0("docs/", .)
+
+get_tags_h <- function(x, xpath) {
+  x %>% 
+    here() %>% 
+    read_html() %>% 
+    xml_find_all(xpath = xpath) %>% 
+    xml_text() %>% 
+    as_tibble_col(column_name = "section_title") %>% 
+    mutate(tag = str_remove_all(xpath, "[:punct:]"))
+}
+
+tags_h <- c("//h1", "//h2", "//h3") %>% 
+  map_df(get_tags_h, x = docs[3]) %>% 
+  group_by(tag) %>% 
+  mutate(
+    ord_h3 = if_else(tag == "h3", row_number(), NA_integer_),
+    ord_h2 = if_else(tag == "h2", row_number(), NA_integer_),
+    ord_h1 = if_else(tag == "h1", row_number(), NA_integer_)
+  ) %>% 
+  ungroup()
+  
+
+toc <- docs[3] %>% 
   here() %>% 
-  list.files(recursive = T, full.names = T) %>% 
+  read_html() %>% 
+  xml_find_all("//h3") %>% 
+  xml_parents() %>% 
+  map_df(xml_attrs) %>% 
+  filter(str_detect(class, "section level")) %>% 
+  mutate(tag = str_replace(class, "section level", "h")) %>% 
+  group_by(tag) %>% 
+  mutate(
+    ord_h3 = if_else(tag == "h3", row_number(), NA_integer_),
+    ord_h2 = if_else(tag == "h2", row_number(), NA_integer_),
+    ord_h1 = if_else(tag == "h1", row_number(), NA_integer_)
+  ) %>% 
+  ungroup() %>% 
+  left_join(tags_h, .) %>% 
+  mutate(
+    id = if_else(is.na(id), docs[3], paste0(docs[3], "#", id)) %>% 
+      str_replace("docs", "https://transparencia-brasil.github.io/negativas-acesso-informacao-Executivo-federal-2021-1")
+  ) %>% 
+  arrange(ord_h1, ord_h2, ord_h3)
+
+criado_em <- here("dados/load/rds") %>% 
+  list.files(pattern = "pedidos-cgu", full.names = T) %>%
   file.info() %>% 
-  tibble(Arquivo = str_remove(rownames(.), "^.+dados\\/raw\\/")) %>%  
-  transmute(
-    Arquivo, 
-    `Tamanho (mb)` = round(size/(1024^2),1),
-    `Data do download` = ctime
-  ) %>% kableExtra::kbl(format = "pipe", align = "lcl",format.args = list(decimal.mark = ","))
+  pull(ctime) %>%
+  format.Date("%d.%b.%Y às %Hh.%mmin.%Ss")
 ```
 
-```{r eval = FALSE}
-### Descrição dos arquivos XML
-here(glue("dados/load/xml")) %>% 
-  list.files(pattern = ".xml$", full.names = T) %>% 
-  file.info() %>% 
-  tibble(Arquivo = str_remove(rownames(.), "^.+dados\\/load\\/xml\\/")) %>%  
-  as_tibble() %>% 
-  transmute(
-    Tipo = str_extract(Arquivo, "Pedidos|Recursos"),
-    Ano = str_extract(Arquivo, "_\\d{4}") %>% str_remove("_"),
-    Arquivo, 
-    `Tamanho (mb)` = round(size/(1024^2),1)
-  ) %>%
-  arrange(Tipo, Ano) %>% 
-  kableExtra::kbl(format = "pipe", align = "cccr", format.args = list(decimal.mark = ","))
-```
 
-#### Download da base pré-processada
+- **Manifestações totais e pedidos de acesso por decisão**
+  + [`r toc$section_title[2]`](`r toc$id[2]`)
+    + [`r toc$section_title[3]`](`r toc$id[3]`)
+    + [`r toc$section_title[4]`](`r toc$id[4]`)
+    + [`r toc$section_title[5]`](`r toc$id[5]`)
+    + [`r toc$section_title[6]`](`r toc$id[6]`)
+    + [`r toc$section_title[7]`](`r toc$id[7]`)
 
-##### RDS
+---
 
-* **PEDIDOS** - formato RDS ([link para download](https://drive.google.com/file/d/1TKnHS2YLZW6BC9ubKqvvoTG9Dg1vVyOO/view?usp=sharing))
-* **RECURSOS** - formato RDS ([link para download](https://drive.google.com/file/d/17Kh-jtamT-Q-nBZExwHXQjj3L1kDgmZJ/view?usp=sharing))
-
-##### CSV
-
-* **PEDIDOS** - formato CSV ([link para download](https://drive.google.com/file/d/1R8_M5AVYJfS_8jYFP9NVuVfFtJQrbtlb/view?usp=sharing))
-* **RECURSOS** - formato CSV ([link para download](https://drive.google.com/file/d/1ZyMi4AFHq32WayrXPc0wrsgMcv3dG7tp/view?usp=sharing))
-
-##### Preview: pedidos 
-```{r}
-glimpse(readRDS(here("dados/load/rds/pedidos-cgu.rds")))
-```
-
-##### Preview: recursos
-```{r}
-glimpse(readRDS(here("dados/load/rds/recursos-cgu.rds")))
-```
-
-### Código
-
-```{r echo = FALSE, eval = FALSE}
-glue::glue("* [`{list.files('src')}`](`src/{list.files('src')}`)")
-```
-
-* [`1-download-funcao-crawler-esic.R`](`src/1-download-funcao-crawler-esic.R`)
-* [`2-download-crawler-exec.R`](`src/2-download-crawler-exec.R`)
-* [`3-pedidos-cgu-pre-processamento.R`](`src/3-pedidos-cgu-pre-processamento.R`)
-* [`4-solicitantes-cgu-pre-processamento.R`](`src/4-solicitantes-cgu-pre-processamento.R`)
-* [`5-pedidos-cgu-nlp.R`](`src/5-pedidos-cgu-nlp.R`)
-* [`6-termos-controversos.R`](`src/6-termos-controversos.R`)
-* [`download_dados_cgu.ipynb`](`src/download_dados_cgu.ipynb`)
+**Última atualização:** `r criado_em`
